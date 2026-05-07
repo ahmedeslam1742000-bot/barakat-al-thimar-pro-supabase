@@ -17,7 +17,7 @@ import { supabase } from '../lib/supabaseClient';
 // Utility Imports
 import { normalizeArabic, checkNearDuplicates } from '../lib/arabicTextUtils';
 import { useDebounce } from '../hooks/useDebounce';
-import html2canvas from 'html2canvas';
+
 import StockInwardModal from './StockInwardModal';
 
 // --- Professional Invoice Template for Capture ---
@@ -1590,6 +1590,8 @@ export default function Dashboard() {
         
         const element = document.getElementById('invoice-capture-area');
         if (element) {
+          const html2canvasModule = await import('html2canvas');
+          const html2canvas = html2canvasModule.default || html2canvasModule;
           const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
           const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
           const imageUrl = await uploadToCloudinary(blob, invData);

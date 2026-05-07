@@ -13,7 +13,7 @@ import { useAudio } from '../../contexts/AudioContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { normalizeArabic } from '../../lib/arabicTextUtils';
-import html2canvas from 'html2canvas';
+import { useDebounce } from '../../hooks/useDebounce';
 
 const formatDate = (date) => {
   if (!date) return '';
@@ -605,10 +605,12 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
     return groups;
   }, [voucherTxs]);
 
+  const debouncedSearch = useDebounce(filterSearch, 300);
+
   const filteredGroups = useMemo(() => {
     return voucherGroups.filter((g) => {
-      if (filterSearch.trim()) {
-        const q = normalizeArabic(filterSearch);
+      if (debouncedSearch.trim()) {
+        const q = normalizeArabic(debouncedSearch);
         const header = (kind === 'in' ? g.supplier : g.rep) || '';
         const headerMatch = normalizeArabic(header).includes(q);
         const itemMatch = g.lines.some((l) => normalizeArabic(l.item || '').includes(q));
@@ -619,7 +621,7 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
       if (filterDateTo && g.date && g.date > filterDateTo) return false;
       return true;
     });
-  }, [voucherGroups, filterSearch, filterDateFrom, filterDateTo, kind]);
+  }, [voucherGroups, debouncedSearch, filterDateFrom, filterDateTo, kind]);
 
   const triggerExport = (group, mode) => setExportJob({ group, mode });
 
@@ -1226,6 +1228,8 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
           const el = elRef.current;
           if (!el) { setExportJob(null); setIsExporting(false); return; }
 
+          const html2canvasModule = await import('html2canvas');
+          const html2canvas = html2canvasModule.default || html2canvasModule;
           const canvas = await html2canvas(el, {
             scale: 3,
             backgroundColor: '#ffffff',

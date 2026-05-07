@@ -3,12 +3,26 @@ import {
   ClipboardList, Search, Snowflake, Thermometer, Package, PackageX,
   Printer, LogOut, LayoutGrid, Box, FileDown
 } from 'lucide-react';
-import * as ExcelJS from 'exceljs';
-import { saveAs } from 'file-saver';
+import { RefreshCw, Search, Download, Printer, Filter, ChevronDown, PackageOpen, FileSpreadsheet, Box, Archive, X, CheckCircle, Flame, Snowflake, LogOut } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
+import { useDebounce } from '../hooks/useDebounce';
+
+const InventoryItemRow = React.memo(({ item, idx }) => (
+  <tr className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+    <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-r border-slate-100 dark:border-slate-800 rounded-r-2xl text-center text-sm font-black text-slate-400 group-hover:text-[#279489] transition-colors">{idx + 1}</td>
+    <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800">
+      <div className="font-bold text-sm text-slate-800 dark:text-white">
+        {item.name}<span className="text-slate-400 font-normal"> - {item.company || 'بدون شركة'}</span>
+      </div>
+    </td>
+    <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800 text-center"><span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-bold">{item.cat || 'أخرى'}</span></td>
+    <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800 text-center"><span className="inline-flex items-center px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs font-bold">{item.unit || '-'}</span></td>
+    <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-l border-slate-100 dark:border-slate-800 rounded-l-2xl text-center"><div className="text-lg font-black text-[#279489]">{Number(item.stockQty) || 0}</div></td>
+  </tr>
+));
 
 export default function StockInventory({ setActiveView }) {
   const [items, setItems] = useState([]);
@@ -51,9 +65,11 @@ export default function StockInventory({ setActiveView }) {
     });
   }, [items]);
 
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
   const filteredItems = useMemo(() => {
     let result = sortedItems.filter(i => {
-      const q = normalizeArabic(searchTerm);
+      const q = normalizeArabic(debouncedSearchTerm);
       const matchesSearch = normalizeArabic(i.name || '').includes(q) || 
              normalizeArabic(i.company || '').includes(q) || 
              normalizeArabic(i.cat || '').includes(q);
@@ -61,7 +77,7 @@ export default function StockInventory({ setActiveView }) {
       return matchesSearch && matchesCat;
     });
     return result;
-  }, [sortedItems, searchTerm, catFilter]);
+  }, [sortedItems, debouncedSearchTerm, catFilter]);
   const getCategoryIcon = (cat) => {
     if (!cat) return <Box size={16} />;
     if (cat.includes('مجمدات')) return <Snowflake size={16} />;
@@ -158,6 +174,10 @@ export default function StockInventory({ setActiveView }) {
   };
 
   const handleExportExcel = async () => {
+    const [ExcelJS, { saveAs }] = await Promise.all([
+      import('exceljs'),
+      import('file-saver')
+    ]);
     const workbook = new ExcelJS.Workbook();
     const dateStr = new Date().toLocaleDateString('ar-SA', { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -318,17 +338,7 @@ export default function StockInventory({ setActiveView }) {
               </thead>
               <tbody>
                 {filteredItems.map((item, idx) => (
-                  <tr key={item.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-r border-slate-100 dark:border-slate-800 rounded-r-2xl text-center text-sm font-black text-slate-400 group-hover:text-[#279489] transition-colors">{idx + 1}</td>
-                    <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800">
-                      <div className="font-bold text-sm text-slate-800 dark:text-white">
-                        {item.name}<span className="text-slate-400 font-normal"> - {item.company || 'بدون شركة'}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800 text-center"><span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-bold">{item.cat || 'أخرى'}</span></td>
-                    <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800 text-center"><span className="inline-flex items-center px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs font-bold">{item.unit || '-'}</span></td>
-                    <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-l border-slate-100 dark:border-slate-800 rounded-l-2xl text-center"><div className="text-lg font-black text-[#279489]">{Number(item.stockQty) || 0}</div></td>
-                  </tr>
+                  <InventoryItemRow key={item.id} item={item} idx={idx} />
                 ))}
                 {filteredItems.length === 0 && (
                   <tr>

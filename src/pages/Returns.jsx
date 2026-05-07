@@ -10,9 +10,6 @@ import { toast } from 'sonner';
 import { useAudio } from '../contexts/AudioContext';
 import { useAuth } from '../contexts/AuthContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import html2canvas from 'html2canvas';
 import { getItemName, getCompany, getCategory, getUnit } from '../lib/itemFields';
 
 const formatDate = (date) => {
@@ -565,6 +562,13 @@ export default function Returns({ setActiveView }) {
     
     document.body.appendChild(el);
     try {
+      const [html2canvasModule, jsPDFModule] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf')
+      ]);
+      const html2canvas = html2canvasModule.default || html2canvasModule;
+      const jsPDF = jsPDFModule.default || jsPDFModule;
+      
       const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff' });
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });

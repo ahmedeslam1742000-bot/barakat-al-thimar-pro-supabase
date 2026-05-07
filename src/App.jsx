@@ -1,20 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import MainLayout from './components/MainLayout';
-import Dashboard from './components/Dashboard';
-import Items from './components/Items';
-import StockOut from './components/StockOut';
-import Returns from './pages/Returns';
-import VoucherOutward from './pages/VoucherOutward';
-import Reps from './pages/Reps';
-import Settings from './pages/Settings';
-import StockInventory from './pages/StockInventory';
-import InboundRecords from './pages/InboundRecords';
-import InboundItems from './pages/InboundItems';
-import StockCard from './pages/StockCard';
-import PriceList from './pages/PriceList';
-import ReceiptVouchers from './pages/ReceiptVouchers';
 import Placeholder from './components/Placeholder';
 import Login from './components/Login';
+
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const Items = lazy(() => import('./components/Items'));
+const StockOut = lazy(() => import('./components/StockOut'));
+const Returns = lazy(() => import('./pages/Returns'));
+const VoucherOutward = lazy(() => import('./pages/VoucherOutward'));
+const Reps = lazy(() => import('./pages/Reps'));
+const Settings = lazy(() => import('./pages/Settings'));
+const StockInventory = lazy(() => import('./pages/StockInventory'));
+const InboundRecords = lazy(() => import('./pages/InboundRecords'));
+const InboundItems = lazy(() => import('./pages/InboundItems'));
+const StockCard = lazy(() => import('./pages/StockCard'));
+const PriceList = lazy(() => import('./pages/PriceList'));
+const ReceiptVouchers = lazy(() => import('./pages/ReceiptVouchers'));
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SettingsProvider } from './contexts/SettingsContext';
@@ -69,7 +70,16 @@ function AuthenticatedApp() {
     if (!config) return <Dashboard />;
     if (config.component) {
       const Component = config.component;
-      return <Component setActiveView={setActiveView} activeView={activeView} />;
+      return (
+        <Suspense fallback={
+          <div className="flex flex-col items-center justify-center h-full w-full gap-4 opacity-50">
+            <div className="w-12 h-12 border-4 border-slate-200 border-t-primary rounded-full animate-spin"></div>
+            <span className="font-bold text-slate-400">جاري تحميل الصفحة...</span>
+          </div>
+        }>
+          <Component setActiveView={setActiveView} activeView={activeView} />
+        </Suspense>
+      );
     }
     return <Placeholder title={config.title} icon={config.icon} />;
   };
