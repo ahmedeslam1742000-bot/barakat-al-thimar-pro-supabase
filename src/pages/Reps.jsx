@@ -110,7 +110,7 @@ export default function Reps({ setActiveView }) {
       const { data: repsData } = await supabase.from('reps').select('id, name, phone, zone, created_at').order('created_at', { ascending: false });
       if (repsData) setReps(repsData.map(d => ({ ...d, createdAt: d.created_at })));
 
-      const { data: transData } = await supabase.from('transactions').select('id, type, timestamp, rep, qty, date, item_id, item, balance_after').order('timestamp', { ascending: false });
+      const { data: transData } = await supabase.from('transactions').select('id, type, timestamp, rep, qty, date, item_id, item, balance_after').order('timestamp', { ascending: false }).limit(400);
       if (transData) setTransactions(transData);
     };
 
@@ -119,7 +119,15 @@ export default function Reps({ setActiveView }) {
 
     const channels = [
       supabase.channel('public:reps').on('postgres_changes', { event: '*', schema: 'public', table: 'reps' }, fetchInitialData).subscribe(),
-      supabase.channel('public:transactions:reps').on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, fetchInitialData).subscribe()
+      supabase.channel('public:transactions:reps').on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setTransactions((prev) => [payload.new, ...prev].slice(0, 400));
+        } else if (payload.eventType === 'UPDATE') {
+          setTransactions((prev) => prev.map(t => t.id === payload.new.id ? payload.new : t));
+        } else if (payload.eventType === 'DELETE') {
+          setTransactions((prev) => prev.filter(t => t.id !== payload.old.id));
+        }
+      }).subscribe()
     ];
 
     return () => { channels.forEach(c => supabase.removeChannel(c)); };

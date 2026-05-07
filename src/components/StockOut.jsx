@@ -38,12 +38,20 @@ export default function StockOut({ setActiveView }) {
       const { data: itemsData } = await supabase.from('products').select('*');
       if (itemsData) setItems(itemsData);
       
-      const { data: transData } = await supabase.from('transactions').select('*').order('timestamp', { ascending: false });
+      const { data: transData } = await supabase.from('transactions').select('*').order('timestamp', { ascending: false }).limit(400);
       if (transData) setTransactions(transData);
       setLoading(false);
     };
     fetchInitialData();
-    const channel = supabase.channel('stock-out-sync').on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, fetchInitialData).subscribe();
+    const channel = supabase.channel('stock-out-sync').on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
+      if (payload.eventType === 'INSERT') {
+        setTransactions((prev) => [payload.new, ...prev].slice(0, 400));
+      } else if (payload.eventType === 'UPDATE') {
+        setTransactions((prev) => prev.map(t => t.id === payload.new.id ? payload.new : t));
+      } else if (payload.eventType === 'DELETE') {
+        setTransactions((prev) => prev.filter(t => t.id !== payload.old.id));
+      }
+    }).subscribe();
     return () => supabase.removeChannel(channel);
   }, []);
 

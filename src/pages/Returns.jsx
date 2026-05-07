@@ -171,7 +171,7 @@ export default function Returns({ setActiveView }) {
       const { data: itemsData } = await supabase.from('products').select('id, name, company, cat, unit, stock_qty');
       if (itemsData) setItems(itemsData.map(d => ({ ...d, stockQty: d.stock_qty, damagedQty: d.damaged_qty })));
 
-      const { data: transData } = await supabase.from('transactions').select('id, type, timestamp, item_id, item, company, qty, unit, cat, status, rep, beneficiary, date, batch_id, is_summary, total_qty, balance_after').order('timestamp', { ascending: false });
+      const { data: transData } = await supabase.from('transactions').select('id, type, timestamp, item_id, item, company, qty, unit, cat, status, rep, beneficiary, date, batch_id, is_summary, total_qty, balance_after').order('timestamp', { ascending: false }).limit(400);
       if (transData) setTransactions(transData.map(d => ({ ...d, itemId: d.item_id })));
     };
 
@@ -179,7 +179,16 @@ export default function Returns({ setActiveView }) {
 
     const channels = [
       supabase.channel('public:products:returns').on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchInitialData).subscribe(),
-      supabase.channel('public:transactions:returns').on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, fetchInitialData).subscribe()
+      supabase.channel('public:transactions:returns').on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          const newTx = { ...payload.new, itemId: payload.new.item_id };
+          setTransactions((prev) => [newTx, ...prev].slice(0, 400));
+        } else if (payload.eventType === 'UPDATE') {
+          setTransactions((prev) => prev.map(t => t.id === payload.new.id ? { ...payload.new, itemId: payload.new.item_id } : t));
+        } else if (payload.eventType === 'DELETE') {
+          setTransactions((prev) => prev.filter(t => t.id !== payload.old.id));
+        }
+      }).subscribe()
     ];
 
     return () => { channels.forEach(c => supabase.removeChannel(c)); };

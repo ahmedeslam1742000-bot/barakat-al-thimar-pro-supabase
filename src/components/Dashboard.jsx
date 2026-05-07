@@ -819,8 +819,37 @@ export default function Dashboard() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchInitialData)
       .subscribe();
 
+    const processTx = (d) => ({
+      ...d, 
+      itemId: d.item_id, 
+      referenceNumber: d.reference_number,
+      voucherCode: d.reference_number || '',
+      voucherGroupId: d.batch_id,
+      batchId: d.batch_id,
+      isInvoice: d.status === 'مفوتر' || (d.notes && d.notes.includes('[تم إصدار الفاتورة]')),
+      isTransfer: (d.notes && d.notes.includes('[نوع: تحويل مخزني]')),
+      isFunctional: d.type === 'سند إدخال' || d.type === 'سند إخراج' || d.type === 'outward' || d.type === 'in' || (d.item && (d.item.includes('ملخص') || d.item.includes('عهده'))),
+      isEdited: (d.notes && d.notes.includes('[تعديل حديث]')),
+      historyLog: (() => {
+        if (!d.notes) return null;
+        const match = d.notes.match(/<!--(\{.*\})-->/);
+        if (match) {
+          try { return JSON.parse(match[1]); } catch(e) { return null; }
+        }
+        return null;
+      })()
+    });
+
     const transChannel = supabase.channel('public:transactions:dashboard')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, fetchInitialData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setDbTransactionsList(prev => [processTx(payload.new), ...prev].slice(0, 200));
+        } else if (payload.eventType === 'UPDATE') {
+          setDbTransactionsList(prev => prev.map(t => t.id === payload.new.id ? processTx(payload.new) : t));
+        } else if (payload.eventType === 'DELETE') {
+          setDbTransactionsList(prev => prev.filter(t => t.id !== payload.old.id));
+        }
+      })
       .subscribe();
 
     return () => {

@@ -629,7 +629,7 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
       if (itemsError) throw itemsError;
       if (itemsData) setItems(itemsData.map(d => ({ ...d, stockQty: d.stock_qty })));
 
-      const { data: transData, error: transError } = await supabase.from('transactions').select('id, type, timestamp, item_id, batch_id, reference_number, beneficiary, item, company, qty, unit, cat, notes, date, balance_after, receipt_image, is_summary, status').order('timestamp', { ascending: false });
+      const { data: transData, error: transError } = await supabase.from('transactions').select('id, type, timestamp, item_id, batch_id, reference_number, beneficiary, item, company, qty, unit, cat, notes, date, balance_after, receipt_image, is_summary, status').eq('type', KIND_CONFIG[kind].txType).order('timestamp', { ascending: false }).limit(300);
       if (transError) throw transError;
       if (transData) setTransactions(transData.map(d => ({ 
         ...d, 
@@ -653,7 +653,20 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
 
     const channels = [
       supabase.channel(`public:products:vouchers:${kind}`).on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchInitialData).subscribe(),
-      supabase.channel(`public:transactions:vouchers:${kind}`).on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, fetchInitialData).subscribe()
+      supabase.channel(`public:transactions:vouchers:${kind}`).on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          if (payload.new.type !== KIND_CONFIG[kind].txType) return;
+          const d = payload.new;
+          const newTx = { ...d, itemId: d.item_id, voucherGroupId: d.batch_id, voucherCode: d.reference_number, lineNote: d.notes, supplier: d.beneficiary, rep: d.beneficiary, status: d.status || 'قيد المراجعة', line_note: d.notes || '', attachment: d.receipt_image || null };
+          setTransactions((prev) => [newTx, ...prev].slice(0, 300));
+        } else if (payload.eventType === 'UPDATE') {
+          const d = payload.new;
+          const updatedTx = { ...d, itemId: d.item_id, voucherGroupId: d.batch_id, voucherCode: d.reference_number, lineNote: d.notes, supplier: d.beneficiary, rep: d.beneficiary, status: d.status || 'قيد المراجعة', line_note: d.notes || '', attachment: d.receipt_image || null };
+          setTransactions((prev) => prev.map(t => t.id === d.id ? updatedTx : t));
+        } else if (payload.eventType === 'DELETE') {
+          setTransactions((prev) => prev.filter(t => t.id !== payload.old.id));
+        }
+      }).subscribe()
     ];
 
     return () => { channels.forEach(c => supabase.removeChannel(c)); };
@@ -671,41 +684,52 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
     }
   }, [voucherGroups]);
 
+  // Fix Event Listener Leak: Use a ref to hold latest state closures
+  const stateRef = useRef({});
+  useEffect(() => {
+    stateRef.current = {
+      isConfirmCloseOpen, isConfirmSaveOpen, isResetConfirmOpen, isAddModalOpen, 
+      isEditOpen, isDeleteOpen, isDeleteGroupOpen, expandedGroupId,
+      triggerCloseAddModal, closeAddModal, executeSave, handleResetStatusSubmit, handleDeleteGroupSubmit
+    };
+  });
+
   // Handle ESC key to exit or close modals
   useEffect(() => {
     const handleKeyboard = (e) => {
+      const s = stateRef.current;
       if (e.key === 'Escape') {
-        if (isConfirmCloseOpen) setIsConfirmCloseOpen(false);
-        else if (isConfirmSaveOpen) setIsConfirmSaveOpen(false);
-        else if (isResetConfirmOpen) setIsResetConfirmOpen(false);
-        else if (isAddModalOpen) triggerCloseAddModal();
-        else if (isEditOpen) setIsEditOpen(false);
-        else if (isDeleteOpen) setIsDeleteOpen(false);
-        else if (isDeleteGroupOpen) setIsDeleteGroupOpen(false);
-        else if (expandedGroupId) setExpandedGroupId(null);
+        if (s.isConfirmCloseOpen) setIsConfirmCloseOpen(false);
+        else if (s.isConfirmSaveOpen) setIsConfirmSaveOpen(false);
+        else if (s.isResetConfirmOpen) setIsResetConfirmOpen(false);
+        else if (s.isAddModalOpen) s.triggerCloseAddModal();
+        else if (s.isEditOpen) setIsEditOpen(false);
+        else if (s.isDeleteOpen) setIsDeleteOpen(false);
+        else if (s.isDeleteGroupOpen) setIsDeleteGroupOpen(false);
+        else if (s.expandedGroupId) setExpandedGroupId(null);
         else window.location.hash = '#dashboard';
       } else if (e.key === 'Enter') {
         // Prevent submission if user is in an input (except for specific modals)
-        if (e.target.tagName === 'INPUT' && isAddModalOpen && !isConfirmSaveOpen && !isConfirmCloseOpen) return;
+        if (e.target.tagName === 'INPUT' && s.isAddModalOpen && !s.isConfirmSaveOpen && !s.isConfirmCloseOpen) return;
 
-        if (isConfirmCloseOpen) {
+        if (s.isConfirmCloseOpen) {
           e.preventDefault();
-          closeAddModal();
-        } else if (isConfirmSaveOpen) {
+          s.closeAddModal();
+        } else if (s.isConfirmSaveOpen) {
           e.preventDefault();
-          executeSave();
-        } else if (isResetConfirmOpen) {
+          s.executeSave();
+        } else if (s.isResetConfirmOpen) {
           e.preventDefault();
-          handleResetStatusSubmit();
-        } else if (isDeleteGroupOpen) {
+          s.handleResetStatusSubmit();
+        } else if (s.isDeleteGroupOpen) {
           e.preventDefault();
-          handleDeleteGroupSubmit();
+          s.handleDeleteGroupSubmit();
         }
       }
     };
     window.addEventListener('keydown', handleKeyboard);
     return () => window.removeEventListener('keydown', handleKeyboard);
-  }); // Run on every render to capture fresh closures for closeAddModal/executeSave
+  }, []); // Run ONCE, no more lag on typing
 
   // ─── EMERGENCY AUTO-SAVE ───
   const DRAFT_KEY = `barakat_voucher_draft_${kind}`;
