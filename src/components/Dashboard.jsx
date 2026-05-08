@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Package, TrendingUp, Truck, AlertTriangle, ArrowUpRight, ArrowDownRight, ArrowDownLeft,
@@ -21,6 +21,7 @@ import InvoiceTemplate from './InvoiceTemplate';
 import StatsCards from './StatsCards';
 import StockInwardModal from './StockInwardModal';
 import { useInvoiceModal } from '../hooks/useInvoiceModal';
+import { useReturnModal } from '../hooks/useReturnModal';
 
 
 
@@ -267,7 +268,6 @@ export default function Dashboard() {
 
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [isStockInModalOpen, setIsStockInModalOpen] = useState(false);
-  const [isReturnsModalOpen, setIsReturnsModalOpen] = useState(false);
 
   // ---  RENAMED STATE VARIABLES TO FORCIBLY BYPASS VITE HMR --- //
   const [items, setItems] = useState([]);
@@ -312,22 +312,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
 
-
-  const [returnForm, setReturnForm] = useState({ rep: '', date: new Date().toISOString().split('T')[0], query: '', selectedItem: null, qty: '', reason: 'سليم (يعود للمخزون)', cat: '', returnee: '' });
-  const [returnErrors, setReturnErrors] = useState({});
-  const [returnItems, setReturnItems] = useState([]);
-  const [showReturnExitConfirm, setShowReturnExitConfirm] = useState(false);
-  const [showReturnSaveConfirm, setShowReturnSaveConfirm] = useState(false);
-  const returnSearchInputRef = useRef(null);
-
-  // Reset return form when modal opens
-  useEffect(() => {
-    if (isReturnsModalOpen) {
-      setReturnForm({ rep: '', date: new Date().toISOString().split('T')[0], query: '', selectedItem: null, qty: '', returnStatus: 'سليم', cat: '', returnee: '', unit: '' });
-      setReturnItems([]);
-      setReturnErrors({});
-    }
-  }, [isReturnsModalOpen]);
 
 
 
@@ -445,7 +429,6 @@ export default function Dashboard() {
   }, [showNewItemPrompt, promptItemName, promptSource]);
   
 
-  const [returnSearchActiveIndex, setReturnSearchActiveIndex] = useState(-1);
   const [isTransactionDetailOpen, setIsTransactionDetailOpen] = useState(false);
   const [selectedBatchTransactions, setSelectedBatchTransactions] = useState([]);
   const [invoiceItemSuggestions, setInvoiceItemSuggestions] = useState([]);
@@ -484,6 +467,33 @@ export default function Dashboard() {
     setInvoiceDataForCapture,
     setInvoiceTimestamps,
     setStockSearchActiveIndex,
+  });
+
+  // ─── Return Modal (extracted to useReturnModal hook) ────────────────
+  const {
+    isReturnsModalOpen, setIsReturnsModalOpen,
+    returnForm, setReturnForm,
+    returnErrors, setReturnErrors,
+    returnItems, setReturnItems,
+    returnSearchActiveIndex, setReturnSearchActiveIndex,
+    showReturnExitConfirm, setShowReturnExitConfirm,
+    showReturnSaveConfirm, setShowReturnSaveConfirm,
+    returnSearchInputRef,
+    openReturnModal,
+    handleCloseReturnModal,
+    performReturnReset,
+    handleAddReturnItemToTable,
+    handleEditReturnItem,
+    handleAddReturn,
+    performReturnSave,
+  } = useReturnModal({
+    items,
+    setLoading,
+    playWarning,
+    playSuccess,
+    fetchInitialData,
+    setStockSearchActiveIndex,
+    currentUser,
   });
 
   const [chartMode, setChartMode] = useState('category'); // 'category' | 'item'
@@ -1052,153 +1062,6 @@ export default function Dashboard() {
   }, [isReturnsModalOpen]);
   
   // Exit guard
-  const hasReturnUnsavedData = () => {
-    return (
-      returnForm.returnee.trim() !== '' || 
-      returnForm.rep.trim() !== '' || 
-      returnForm.query.trim() !== '' || 
-      returnItems.length > 0
-    );
-  };
-  
-  const handleCloseReturnModal = () => {
-    console.log("handleCloseReturnModal triggered. Unsaved data:", hasReturnUnsavedData());
-    if (hasReturnUnsavedData()) {
-      setShowReturnExitConfirm(true);
-      console.log("setShowReturnExitConfirm(true) called");
-    } else {
-      performReturnReset();
-    }
-  };
-  
-  const performReturnReset = () => {
-    setIsReturnsModalOpen(false);
-    setReturnForm({ rep: '', date: new Date().toISOString().split('T')[0], query: '', selectedItem: null, qty: '', returnStatus: 'سليم', cat: '', returnee: '', unit: '' });
-    setReturnItems([]);
-    setReturnErrors({});
-    setShowReturnExitConfirm(false);
-     setShowReturnSaveConfirm(false);
-    setShowReturnSaveConfirm(false);
-    setStockSearchActiveIndex(-1);
-  };
-
-  const openReturnModal = () => {
-    setReturnForm({ rep: '', date: new Date().toISOString().split('T')[0], query: '', selectedItem: null, qty: '', returnStatus: 'سليم', cat: '', returnee: '', unit: '' });
-    setReturnItems([]);
-    setReturnErrors({});
-    setIsReturnsModalOpen(true);
-  };
-  
-  // Add return item to table
-  const handleAddReturnItemToTable = () => {
-    if (!returnForm.selectedItem) return toast.error("حدد الصنف أولاً!");
-    if (!returnForm.cat) return toast.error("القسم غير محدد!");
-    if (!returnForm.qty || returnForm.qty <= 0) return toast.error("أدخل كمية صحيحة!");
-    
-    setReturnItems([...returnItems, {
-      name: returnForm.query,
-      cat: returnForm.cat,
-      unit: returnForm.unit || 'كرتونة',
-      qty: Number(returnForm.qty),
-      selectedItem: returnForm.selectedItem,
-      returnStatus: returnForm.returnStatus || 'سليم'
-    }]);
-    setReturnForm({...returnForm, query: '', selectedItem: null, cat: '', unit: '', qty: ''});
-    setTimeout(() => returnSearchInputRef.current?.focus(), 50);
-  };
-
-  const handleEditReturnItem = (idx) => {
-    const item = returnItems[idx];
-    setReturnForm({
-      ...returnForm,
-      query: item.name,
-      selectedItem: item.selectedItem,
-      cat: item.cat,
-      unit: item.unit,
-      qty: item.qty,
-      returnStatus: item.returnStatus
-    });
-    setReturnItems(returnItems.filter((_, i) => i !== idx));
-    setTimeout(() => returnSearchInputRef.current?.focus(), 50);
-  };
-
-  // --- 4. ADD RETURN (Enhanced with Table & Stock Increment) --- //
-  const handleAddReturn = (e) => {
-    if (e) e.preventDefault();
-    if (!returnForm.returnee.trim()) { setReturnErrors({ returnee: true }); return toast.error("يرجى تحديد الشخص أو الجهة التي قامت بالترجيع"); }
-    if (!returnForm.rep || !returnForm.rep.trim()) { setReturnErrors({ rep: true }); return toast.error("يرجى تحديد المندوب المستلم أولاً"); }
-    if (returnItems.length === 0) return toast.error("لا توجد أصناف مرتجعة!");
-    
-    setReturnErrors({});
-    setShowReturnSaveConfirm(true);
-  };
-
-  const performReturnSave = async () => {
-    setShowReturnSaveConfirm(false);
-    setLoading(true);
-    try {
-        const batchId = Date.now().toString();
-        const userId = currentUser?.email?.split('@')[0] || 'مدير النظام';
-        const now = new Date().toISOString();
-
-        const additions = {};
-        returnItems.forEach(it => {
-            if (it.returnStatus === 'سليم') {
-                if (!additions[it.selectedItem.id]) additions[it.selectedItem.id] = { id: it.selectedItem.id, qty: 0 };
-                additions[it.selectedItem.id].qty += Number(it.qty);
-            }
-        });
-        for (const [id, payload] of Object.entries(additions)) {
-            const currentItem = items.find(i => i.id === id);
-            if (currentItem) {
-                await supabase.from('products').update({ stock_qty: currentItem.stockQty + payload.qty }).eq('id', id);
-            }
-        }
-
-        const txsToInsert = returnItems.map(it => ({
-             item: `${it.name}`,
-             type: 'return',
-             qty: Number(it.qty),
-             date: returnForm.date || new Date().toISOString().split('T')[0],
-             timestamp: now,
-             status: it.returnStatus === 'سليم' ? 'مكتمل' : 'مرتجع تالف',
-             loc: returnForm.returnee,
-             rep: returnForm.rep,
-             beneficiary: returnForm.returnee,
-             user_id: null,
-             batch_id: batchId,
-             item_id: it.selectedItem?.id
-        }));
-        await supabase.from('transactions').insert(txsToInsert);
-
-        const damagedItems = returnItems.filter(it => it.returnStatus === 'تالف');
-        if (damagedItems.length > 0) {
-            const discrepanciesToInsert = damagedItems.map(it => ({
-                item_id: it.selectedItem?.id || null,
-                item_name: it.name || it.selectedItem?.name || '',
-                expected_qty: 0,
-                actual_qty: 0,
-                diff: Number(it.qty),
-                note: `مرتجع تالف - من: ${returnForm.returnee}${returnForm.rep ? ` / مندوب: ${returnForm.rep}` : ''}`,
-                status: 'pending',
-                created_at: now
-            }));
-            await supabase.from('discrepancies').insert(discrepanciesToInsert);
-            toast.warning(`تم تسجيل ${damagedItems.length} صنف في قسم التوالف ❤️`);
-        }
-
-        toast.success(`تم تسجيل المرتجع بنجاح ✅`);
-        playSuccess();
-        performReturnReset();
-        fetchInitialData();
-    } catch (err) {
-        console.error('❌ performReturnSave error:', err);
-        toast.error("حدث خطأ أثناء حفظ المرتجع.");
-    } finally {
-        setLoading(false);
-    }
-  };
-
   // --- 5. MORNING BRIEF PROCESSING --- //
 
   const findItemFromVoucherLine = (line) => {
