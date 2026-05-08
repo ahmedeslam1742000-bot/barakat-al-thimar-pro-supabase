@@ -176,10 +176,7 @@ export function VoucherDetailModal({
                        <div className="flex items-center gap-3">
                           {!isCompleted && !voucher.isTransfer && (
                              <button
-                               onClick={() => {
-                                  setSelectedVoucher(voucher);
-                                  setIsVoucherModalOpen(true);
-                               }}
+                               onClick={() => handleMarkAsInvoiced(voucher)}
                                className="flex items-center gap-2.5 px-7 py-3.5 rounded-2xl bg-emerald-600 text-white text-sm font-black hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 font-tajawal"
                              >
                                 <CheckCircle2 size={18} /> {isIn ? 'اعتماد الإدخال' : 'إصدار فاتورة'}
