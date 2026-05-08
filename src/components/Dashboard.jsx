@@ -22,6 +22,7 @@ import StatsCards from './StatsCards';
 import StockInwardModal from './StockInwardModal';
 import { useInvoiceModal } from '../hooks/useInvoiceModal';
 import { useReturnModal } from '../hooks/useReturnModal';
+import { useVoucherDetail } from '../hooks/useVoucherDetail';
 
 
 
@@ -273,7 +274,6 @@ export default function Dashboard() {
   const [items, setItems] = useState([]);
   const [dbTransactionsList, setDbTransactionsList] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
-  const [showVoucherHistory, setShowVoucherHistory] = useState(false);
 
   // --- Invoice Capture State & Utils ---
   const [invoiceDataForCapture, setInvoiceDataForCapture] = useState(null);
@@ -496,6 +496,39 @@ export default function Dashboard() {
     currentUser,
   });
 
+  // ─── Voucher Detail (extracted to useVoucherDetail hook) ─────────────
+  const {
+    showVoucherHistory, setShowVoucherHistory,
+    voucherTransactions, setVoucherTransactions,
+    isVoucherModalOpen, setIsVoucherModalOpen,
+    selectedVoucher, setSelectedVoucher,
+    activeVoucherId, setActiveVoucherId,
+    isVoucherDetailOpen, setIsVoucherDetailOpen,
+    detailVoucher, setDetailVoucher,
+    invoiceTimestamps, setInvoiceTimestamps,
+    openVoucherModal,
+    closeVoucherDetail,
+    findItemFromVoucherLine,
+    finalizeInboundVoucher,
+    handleExportInvoiceToInvoice,
+    handleDeleteVoucher,
+    handleEditVoucher,
+    handleMarkAsInvoiced,
+  } = useVoucherDetail({
+    items,
+    setLoading,
+    playWarning,
+    playSuccess,
+    fetchInitialData,
+    setActiveView,
+    // Invoice bridge from useInvoiceModal
+    setSourceVoucher,
+    setInvoiceForm,
+    setCurrentInvoiceItem,
+    setIsVoucherInvoice,
+    setIsSalesModalOpen,
+  });
+
   const [chartMode, setChartMode] = useState('category'); // 'category' | 'item'
   const [chartItemFilter, setChartItemFilter] = useState('الكل');
   const [chartItemSearchQuery, setChartItemSearchQuery] = useState('');
@@ -515,16 +548,6 @@ export default function Dashboard() {
   const [repsList, setRepsList] = useState([]);
 
   // Voucher Status Tracking State
-  const [voucherTransactions, setVoucherTransactions] = useState([]);
-  const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
-  const [selectedVoucher, setSelectedVoucher] = useState(null);
-  const [activeVoucherId, setActiveVoucherId] = useState(null);
-  const voucherOpenLockRef = useRef({ id: null, at: 0 });
-  
-  // Voucher Detail View State
-  const [isVoucherDetailOpen, setIsVoucherDetailOpen] = useState(false);
-  const [detailVoucher, setDetailVoucher] = useState(null);
-  const [invoiceTimestamps, setInvoiceTimestamps] = useState({}); // { voucherId: timestamp }
   
   // Global Keyboard Shortcuts for Modals
   useEffect(() => {
@@ -820,16 +843,6 @@ export default function Dashboard() {
     [functionalVoucherGroups]
   );
 
-  const openVoucherModal = useCallback((voucher) => {
-    const now = Date.now();
-    if (voucherOpenLockRef.current.id === voucher.id && now - voucherOpenLockRef.current.at < 250) return;
-
-    voucherOpenLockRef.current = { id: voucher.id, at: now };
-    setActiveVoucherId(voucher.id);
-    setSelectedVoucher(voucher);
-    setIsVoucherModalOpen(true);
-  }, []);
-
   // --- Shift-Based Aggregations (Starting 7:00 AM Daily) --- //
   const getShiftStartTime = () => {
     const now = new Date();
@@ -1063,202 +1076,6 @@ export default function Dashboard() {
   
   // Exit guard
   // --- 5. MORNING BRIEF PROCESSING --- //
-
-  const findItemFromVoucherLine = (line) => {
-    if (line.itemId) {
-      const byId = items.find(item => item.id === line.itemId);
-      if (byId) return byId;
-    }
-
-    const itemName = line.item || '';
-    return (
-      items.find(item => `${item.name} - ${item.company}` === itemName) ||
-      items.find(item => itemName.includes(item.name) && (item.company === 'بدون شركة' || itemName.includes(item.company))) ||
-      items.find(item => itemName.includes(item.name)) ||
-      null
-    );
-  };
-
-  const finalizeInboundVoucher = async (voucher) => {
-    // Stock was already increased when the voucher was created.
-    // This function only marks the voucher as invoiced (financial record).
-    try {
-      for (const line of voucher.lines) {
-        await supabase.from('transactions').update({ invoiced: true, deducted: true }).eq('id', line.id);
-      }
-      setIsVoucherModalOpen(false);
-      setSelectedVoucher(null);
-      toast.success('تم اعتماد سند الإدخال بنجاح ✅');
-      playSuccess();
-    } catch {
-      toast.error('تعذر اعتماد سند الإدخال.');
-      playWarning();
-    }
-  };
-
-  // --- 5. EXPORT VOUCHER TO INVOICE (from voucher detail modal) --- //
-  const handleExportInvoiceToInvoice = (voucher) => {
-    if (!voucher) return;
-    
-    // Build line items from voucher
-    const lineItems = (voucher.lines || [])
-      .map((line) => {
-        const matchedItem = findItemFromVoucherLine(line);
-        if (!matchedItem) return null;
-
-        return {
-          selectedItem: matchedItem,
-          name: `${matchedItem.name} - ${matchedItem.company}`,
-          cat: matchedItem.cat,
-          unit: matchedItem.unit,
-          qty: Number(line.qty || 0)
-        };
-      })
-      .filter(Boolean);
-
-    // Set source voucher with deducted=true to prevent stock movement
-    const sourceVoucherData = {
-      ...voucher,
-      deducted: true,
-      kind: voucher.kind === 'in' ? 'in' : 'outward'
-    };
-    setSourceVoucher(sourceVoucherData);
-
-    // Pre-fill invoice form
-    if (lineItems.length > 0) {
-      setInvoiceForm({
-        client: voucher.clientName || voucher.recipient || 'عميل نقدي',
-        rep: '',
-        date: new Date().toISOString().split('T')[0],
-        items: lineItems
-      });
-      setCurrentInvoiceItem({
-        name: '',
-        selectedItem: null,
-        cat: '',
-        unit: '',
-        qty: ''
-      });
-    } else {
-      // Fallback: create empty invoice with just recipient
-      setInvoiceForm({
-        client: voucher.clientName || voucher.recipient || 'عميل نقدي',
-        rep: '',
-        date: new Date().toISOString().split('T')[0],
-        items: []
-      });
-      setCurrentInvoiceItem({
-        name: '',
-        selectedItem: null,
-        cat: '',
-        unit: '',
-        qty: ''
-      });
-    }
-
-    // Close voucher detail modal and open invoice modal
-    setIsVoucherDetailOpen(false); setShowVoucherHistory(false);
-    setIsVoucherInvoice(true); // Enable read-only mode
-    setIsSalesModalOpen(true);
-  };
-
-  // --- 6. VOUCHER ACTIONS (Delete, Edit, Mark as Invoiced) --- //
-  const handleDeleteVoucher = async (voucher) => {
-    if (!window.confirm('هل أنت متأكد من حذف هذا السند نهائياً؟ سيتم استرجاع الكميات للمخزن.')) return;
-    
-    try {
-      setLoading(true);
-      const lines = voucher.lines || [];
-      
-      // 1. Return stock for each line if it was deducted
-      for (const line of lines) {
-        if (line.deducted !== false) { // Assuming vouchers usually deduct stock
-           const currentItem = items.find(i => i.id === line.item_id);
-           if (currentItem) {
-             const type = line.type || '';
-             const isIn = type.includes('إدخال') || type === 'Restock';
-             const isOut = type.includes('إخراج') || type === 'Issue' || type === 'out';
-             
-             // If it was Inbound (+stock), subtract to reverse
-             // If it was Outbound (-stock), add to reverse
-             const delta = isIn ? -Number(line.qty) : Number(line.qty);
-             const newStock = currentItem.stockQty + delta;
-             
-             await supabase.from('products').update({ stock_qty: Math.max(0, newStock) }).eq('id', line.item_id);
-           }
-        }
-      }
-      
-      // 2. Delete transactions from DB
-      const { error } = await supabase.from('transactions').delete().eq('batch_id', voucher.id);
-      if (error) throw error;
-      
-      toast.success('تم حذف السند وإرجاع الكميات للمخزن بنجاح ✅');
-      playSuccess();
-      setIsVoucherDetailOpen(false); setShowVoucherHistory(false);
-      fetchInitialData();
-    } catch (err) {
-      toast.error('حدث خطأ أثناء حذف السند.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEditVoucher = (voucher) => {
-    const view = voucher.kind === 'in' ? 'voucher-in' : 'voucher-outward';
-    // Use localStorage to pass the editing context to the workspace
-    localStorage.setItem('edit_voucher_id', voucher.id);
-    setActiveView(view);
-    setIsVoucherDetailOpen(false); setShowVoucherHistory(false);
-  };
-
-  const handleMarkAsInvoiced = async (voucher = null) => {
-    const v = voucher || selectedVoucher;
-    if (!v) return;
-
-    if (v.kind === 'in') {
-      // For inbound vouchers: just mark as invoiced/completed in DB
-      try {
-        setLoading(true);
-        const now = new Date();
-        const invoiceTimestamp = now.toLocaleDateString('ar-SA', {
-          year: 'numeric', month: 'long', day: 'numeric'
-        });
-
-        // Update all voucher line transactions sequentially
-        const lines = v.lines || [];
-        for (const line of lines) {
-            await supabase.from('transactions').update({
-                status: 'مفوتر',
-                notes: line.notes ? `${line.notes} [تم إصدار الفاتورة] ${invoiceTimestamp}` : `[تم إصدار الفاتورة] ${invoiceTimestamp}`
-            }).eq('id', line.id);
-        }
-
-        // Update local state
-        setInvoiceTimestamps(prev => ({...prev, [v.id]: invoiceTimestamp}));
-        setVoucherTransactions(prev =>
-          prev.map(item => item.id === v.id ? { ...item, invoiced: true, deducted: true, invoiceDate: invoiceTimestamp } : item)
-        );
-        if (detailVoucher && detailVoucher.id === v.id) {
-          setDetailVoucher(prev => ({...prev, invoiced: true, deducted: true, invoiceDate: invoiceTimestamp}));
-        }
-
-        toast.success('تم اعتماد السند بنجاح ✅');
-        playSuccess();
-        fetchInitialData();
-      } catch (err) {
-        toast.error('تعذر اعتماد السند.');
-        playWarning();
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    // For outbound vouchers: stock was already deducted at voucher creation.
-    // Open the invoice modal with voucher data pre-filled
-    handleExportInvoiceToInvoice(v);
-  };
 
   // --- Transactions Chart Processing --- //
   const now = new Date();
