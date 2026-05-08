@@ -76,7 +76,7 @@ export default function StockCard({ setActiveView }) {
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
-        .or(`item_id.eq.${item.id},item.ilike.%${item.name}%`)
+        .or(`item_id.eq.${item.id},item.eq.${item.name}`)
         .eq('is_summary', false)
         .order('timestamp', { ascending: true });
 
