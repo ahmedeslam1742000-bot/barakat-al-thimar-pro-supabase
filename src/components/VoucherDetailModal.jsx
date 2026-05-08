@@ -99,10 +99,10 @@ export function VoucherDetailModal({
                           </div>
                        </div>
                        <div className="p-5 rounded-[20px] bg-slate-50/50 border border-slate-100">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5 font-readex">إجمالي الكمية</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5 font-readex">الحالة</p>
                           <div className="flex items-center gap-3">
-                             <div className="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center text-slate-400"><Layers size={18} /></div>
-                             <p className="text-sm font-black text-[#0F2747] font-readex tabular-nums">{voucher.quantity} وحدة</p>
+                             <div className={`w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center ${isCompleted ? 'text-emerald-500' : 'text-amber-500'}`}><CheckCircle2 size={18} /></div>
+                             <p className={`text-sm font-black font-tajawal ${isCompleted ? 'text-emerald-600' : 'text-amber-600'}`}>{isCompleted ? 'تمت الفوترة' : 'قيد الانتظار'}</p>
                           </div>
                        </div>
                     </div>
@@ -129,18 +129,21 @@ export function VoucherDetailModal({
                           <table className="w-full text-right border-collapse">
                              <thead className="bg-slate-50/80 border-b border-slate-100">
                                 <tr>
-                                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest font-readex">الصنف والشركة</th>
+                                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest font-readex w-12 text-center">م</th>
+                                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest font-readex">اسم الصنف</th>
+                                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest font-readex">الشركة</th>
                                    <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest font-readex text-center">الكمية</th>
-                                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest font-readex text-center">الوحدة</th>
+                                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest font-readex text-center">القسم</th>
+                                   <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest font-readex text-center">وحدة القياس</th>
                                    {!isCompleted && <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest font-readex text-center">إجراء</th>}
                                 </tr>
                              </thead>
                              <tbody className="divide-y divide-slate-50">
                                 {lines.map((line, idx) => (
                                    <tr key={line.id || idx} className="group hover:bg-slate-50/50 transition-colors">
+                                      <td className="px-6 py-4 text-center text-slate-400 font-readex text-sm">{idx + 1}</td>
                                       <td className="px-6 py-4">
                                          <p className="text-sm font-bold text-[#0F2747] font-tajawal">{line.item}</p>
-                                         <p className="text-[10px] text-slate-400 font-readex mt-0.5">{line.company} • {line.cat}</p>
                                       </td>
                                       <td className="px-6 py-4 text-center">
                                          <span className="text-sm font-black text-[#0F2747] font-readex tabular-nums">{line.qty}</span>
@@ -171,18 +174,7 @@ export function VoucherDetailModal({
                     {/* Action Bar */}
                     <div className="flex items-center justify-between gap-4 mt-auto pt-6 border-t border-slate-100">
                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => printVoucher(voucher)}
-                            className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-[#0F2747] text-white text-sm font-bold hover:bg-[#15345b] shadow-lg shadow-indigo-900/20 transition-all active:scale-95 font-tajawal"
-                          >
-                             <Printer size={18} /> طباعة السند
-                          </button>
-                          <button
-                            onClick={() => duplicateVoucher(voucher)}
-                            className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-white border border-slate-200 text-[#0F2747] text-sm font-bold hover:bg-slate-50 transition-all active:scale-95 font-tajawal"
-                          >
-                             <RotateCcw size={18} /> تكرار السند
-                          </button>
+                          {/* Print and Duplicate removed by user request */}
                        </div>
                        
                        <div className="flex items-center gap-3">
