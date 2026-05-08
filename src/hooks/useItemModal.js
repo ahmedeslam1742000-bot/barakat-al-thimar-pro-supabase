@@ -280,22 +280,26 @@ export function useItemModal({
     setShowSaveConfirm(false);
     if (setLoading) setLoading(true);
     try {
-      for (const item of sessionItems) {
-        await supabase.from('products').insert({
-          name: item.name,
-          company: item.company,
-          cat: item.cat,
-          unit: item.unit,
-          stock_qty: 0,
-          search_key: `${item.name} ${item.company}`.toLowerCase(),
-        }).select().single();
-      }
+      // Prepare bulk data
+      const insertData = sessionItems.map(item => ({
+        name: item.name,
+        company: item.company,
+        cat: item.cat,
+        unit: item.unit,
+        stock_qty: 0,
+        search_key: `${item.name} ${item.company}`.toLowerCase(),
+      }));
+
+      const { error } = await supabase.from('products').insert(insertData);
+      
+      if (error) throw error;
+
       toast.success('تم التسجيل واعتماد القائمة بنجاح! ✅');
       setSessionItems([]);
       setIsItemModalOpen(false);
       if (fetchInitialData) fetchInitialData();
     } catch (err) {
-      toast.error(err.message);
+      toast.error(err.message || 'حدث خطأ أثناء الحفظ');
     } finally {
       if (setLoading) setLoading(false);
     }
