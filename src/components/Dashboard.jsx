@@ -17,136 +17,10 @@ import { supabase } from '../lib/supabaseClient';
 // Utility Imports
 import { normalizeArabic, checkNearDuplicates } from '../lib/arabicTextUtils';
 import { useDebounce } from '../hooks/useDebounce';
-
+import InvoiceTemplate from './InvoiceTemplate';
 import StockInwardModal from './StockInwardModal';
 
-// --- Professional Invoice Template for Capture ---
-const InvoiceTemplate = ({ data }) => {
-  if (!data) return null;
-  const isSale = data.type === 'sale';
-  
-  return (
-    <div 
-      id="invoice-capture-area" 
-      style={{ 
-        width: '800px', 
-        padding: '60px', 
-        backgroundColor: '#fff', 
-        direction: 'rtl', 
-        fontFamily: "'Tajawal', sans-serif",
-        color: '#0f172a',
-        minHeight: '1000px',
-        display: 'flex',
-        flexDirection: 'column',
-        boxSizing: 'border-box'
-      }}
-    >
-                <div className="bg-white border-2 border-slate-200 shadow-2xl rounded-3xl p-10 print:shadow-none print:p-0 print:border-none relative mx-auto" style={{ width: '210mm', minHeight: '297mm', direction: 'rtl', fontFamily: "'Tajawal', sans-serif", color: '#0f172a', display: 'flex', flexDirection: 'column' }}>
-                  
-                  {/* Header Section */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '56px', position: 'relative', paddingTop: '8px' }}>
-                    
-                    {/* Right: Logo */}
-                    <div style={{ width: '33%', display: 'flex', justifyContent: 'flex-start' }}>
-                      <img src="/src/logo.jpg" alt="بركة الثمار" style={{ height: '100px', width: 'auto', objectFit: 'contain', mixBlendMode: 'multiply', filter: 'contrast(1.1) brightness(1.05)', marginLeft: 'auto' }} onError={(e) => e.target.style.display='none'} />
-                    </div>
 
-                    {/* Center: Title */}
-                    <div style={{ width: '33%', display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
-                      <div style={{ position: 'relative' }}>
-                         <h1 style={{ fontSize: '56px', fontWeight: '900', color: '#0f172a', letterSpacing: '-2px', margin: '0', fontFamily: "'Reem Kufi', 'Changa', sans-serif" }}>
-                           فاتورة
-                         </h1>
-                         <div style={{ position: 'absolute', bottom: '-12px', left: '50%', transform: 'translateX(-50%)', width: '48px', height: '6px', backgroundColor: '#4f46e5', borderRadius: '4px' }}></div>
-                      </div>
-                    </div>
-
-                    {/* Left: Invoice Info */}
-                    <div style={{ width: '33%', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', textAlign: 'right', marginTop: '4px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px', fontWeight: 'bold', color: '#475569' }}>
-                        {data.voucherCode && (
-                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px', marginBottom: '4px' }}>
-                              <span style={{ color: '#94a3b8', fontSize: '10px' }}>رقم المرجع:</span>
-                              <span style={{ color: '#0f172a', backgroundColor: '#f8fafc', border: '1px solid #f1f5f9', padding: '2px 8px', borderRadius: '6px', fontSize: '11px', fontFamily: 'monospace' }}>#{data.voucherCode.slice(-8).toUpperCase()}</span>
-                           </div>
-                        )}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px' }}>
-                           <span style={{ color: '#94a3b8' }}>التاريخ:</span>
-                           <span style={{ color: '#0f172a', fontFamily: 'monospace' }}>{data.date}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px' }}>
-                           <span style={{ color: '#94a3b8' }}>النوع:</span>
-                           <span style={{ color: '#0f172a' }}>{isSale ? 'مبيعات' : 'سند إخراج'}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '12px' }}>
-                           <span style={{ color: '#94a3b8' }}>المستفيد:</span>
-                           <span style={{ color: '#0f172a', fontWeight: '900', fontSize: '16px' }}>{data.clientName || data.client || '—'}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Table Section */}
-                  <div style={{ flex: 1, marginTop: '16px' }}>
-                    <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0' }}>
-                      <thead>
-                        <tr>
-                          <th style={{ backgroundColor: '#f1f5f9', padding: '20px 12px', textAlign: 'center', fontSize: '12px', fontWeight: '900', color: '#64748b', width: '48px', borderTopRightRadius: '12px', borderBottomRightRadius: '12px' }}>م</th>
-                          <th style={{ backgroundColor: '#f1f5f9', padding: '20px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '900', color: '#64748b' }}>اسم الصنف</th>
-                          <th style={{ backgroundColor: '#f1f5f9', padding: '20px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '900', color: '#64748b', width: '128px' }}>التصنيف</th>
-                          <th style={{ backgroundColor: '#f1f5f9', padding: '20px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '900', color: '#64748b', width: '112px' }}>الكمية</th>
-                          <th style={{ backgroundColor: '#f1f5f9', padding: '20px 12px', textAlign: 'center', fontSize: '12px', fontWeight: '900', color: '#64748b', width: '96px', borderTopLeftRadius: '12px', borderBottomLeftRadius: '12px' }}>الوحدة</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {data.items.map((item, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '24px 12px', textAlign: 'center', fontSize: '13px', fontWeight: 'bold', color: '#94a3b8' }}>{idx + 1}</td>
-                            <td style={{ padding: '24px 16px' }}>
-                                <span style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>
-                                  {item.name || item.item}
-                                  {item.company && item.company !== 'بدون شركة' && (
-                                    <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#94a3b8', marginRight: '6px' }}> - {item.company}</span>
-                                  )}
-                                </span>
-                            </td>
-                            <td style={{ padding: '24px 16px', textAlign: 'center' }}>
-                              <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#64748b' }}>{item.cat || '—'}</span>
-                            </td>
-                            <td style={{ padding: '24px 16px', textAlign: 'center' }}>
-                               <span style={{ fontSize: '18px', fontWeight: '900', color: '#0f172a', fontFamily: 'monospace' }}>{item.qty}</span>
-                            </td>
-                            <td style={{ padding: '24px 12px', textAlign: 'center' }}>
-                               <span style={{ fontSize: '13px', fontWeight: 'bold', color: '#64748b' }}>{item.unit}</span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-      {/* Footer Section */}
-      <div style={{ marginTop: '48px', paddingTop: '24px', borderTop: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-           <p style={{ margin: 0, fontSize: '11px', fontWeight: '900', color: '#94a3b8' }}>ملاحظات</p>
-           <p style={{ margin: 0, fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>هذه الفاتورة صدرت إلكترونياً ولا تحتاج إلى توقيع.</p>
-        </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-              <span style={{ fontSize: '11px', fontWeight: '900', color: '#94a3b8', marginBottom: '4px' }}>إجمالي الأصناف</span>
-              <span style={{ fontSize: '24px', fontWeight: '900', color: '#4f46e5', fontFamily: 'monospace', lineHeight: '1' }}>{data.items.length}</span>
-           </div>
-        </div>
-      </div>
-      
-      <div style={{ marginTop: '32px', textAlign: 'center' }}>
-         <p style={{ margin: 0, fontSize: '10px', fontWeight: 'bold', color: '#cbd5e1', letterSpacing: '1px', textTransform: 'uppercase' }}>Baraket Althemar System • {new Date().getFullYear()}</p>
-      </div>
-      </div>
-    </div>
-  );
-};
 
 const salesData = [
   { name: 'يناير', sales: 0 }, { name: 'فبراير', sales: 0 },
@@ -769,7 +643,6 @@ export default function Dashboard() {
   // ---  LIVE SUPABASE CONNECTIVITY --- //
   const fetchInitialData = useCallback(async () => {
     try {
-      console.log("🔍 Dashboard: fetching initial data...");
       const { data: repsData } = await supabase.from('reps').select('name');
       if (repsData) setRepsList(repsData.map(r => r.name));
       const { data: itemsData, error: itemsError } = await supabase.from('products').select('id, name, company, cat, unit, stock_qty, search_key, created_at');
@@ -777,18 +650,18 @@ export default function Dashboard() {
       if (itemsData) {
         setItems(itemsData.map(d => ({ ...d, stockQty: d.stock_qty, searchKey: d.search_key, createdAt: d.created_at })));
       }
-      
+
       const { data: transData, error: transError } = await supabase
         .from('transactions')
         .select('id, type, timestamp, item, company, qty, unit, cat, supplier, beneficiary, loc, location, rep, recipient, reference_number, batch_id, is_summary, item_id, notes, status')
         .order('timestamp', { ascending: false })
         .limit(200);
-        
+
       if (transError) throw transError;
       if (transData) {
-        setDbTransactionsList(transData.map(d => ({ 
-          ...d, 
-          itemId: d.item_id, 
+        setDbTransactionsList(transData.map(d => ({
+          ...d,
+          itemId: d.item_id,
           referenceNumber: d.reference_number,
           voucherCode: d.reference_number || '',
           voucherGroupId: d.batch_id,
@@ -808,7 +681,7 @@ export default function Dashboard() {
         })));
       }
     } catch (err) {
-      console.error("❌ Dashboard: Error fetching initial data:", err);
+      if (import.meta.env.DEV) console.error('Dashboard fetchInitialData error:', err);
     }
   }, [supabase]);
 
@@ -862,43 +735,30 @@ export default function Dashboard() {
     fetchInitialData();
   }, [fetchInitialData]);
 
-  // Build functional voucher groups from transaction lines in real time.
-  useEffect(() => {
-    if (dbTransactionsList.length === 0) return;
-
-    const outboundTx = dbTransactionsList.filter(tx =>
-      tx.type === 'Issue' || tx.type === 'سند إخراج' || tx.type === 'سند إخراج صوري'
-    ).map(tx => {
-      const txItemStr = tx.item || 'غير محدد';
-      const matchedItem = items.find(i => i.id === tx.itemId || txItemStr.includes(i.name));
-      const txDate = tx.timestamp ? new Date(tx.timestamp) : new Date();
-      return {
+  // Build functional voucher groups — pure derivation, no extra setState re-render needed
+  const voucherTransactionsMemo = useMemo(() => {
+    if (dbTransactionsList.length === 0) return [];
+    const outboundTx = dbTransactionsList
+      .filter(tx => tx.type === 'Issue' || tx.type === 'سند إخراج' || tx.type === 'سند إخراج صوري')
+      .map(tx => ({
         ...tx,
         clientName: tx.rep || tx.loc || tx.beneficiary || 'غير محدد',
         itemName: tx.item || 'صنف غير محدد',
         quantity: Number(tx.qty || 0),
-        timestamp: txDate,
+        timestamp: tx.timestamp ? new Date(tx.timestamp) : new Date(),
         batchId: tx.batchId,
         invoiced: tx.invoiced === true,
         voucherCode: tx.voucherCode || '',
-      };
-    });
-
-    const normalizedVouchers = outboundTx
+      }));
+    return outboundTx
       .filter(v => v.documentary === true && (v.type === 'سند إخراج صوري' || v.type === 'Issue'))
       .reduce((acc, voucher) => {
         if (!voucher?.id || acc.some(v => v.id === voucher.id)) return acc;
-        acc.push({
-          ...voucher,
-          invoiced: voucher.invoiced === true,
-          deducted: voucher.deducted === true,
-        });
+        acc.push({ ...voucher, invoiced: voucher.invoiced === true, deducted: voucher.deducted === true });
         return acc;
       }, [])
       .sort((a, b) => b.timestamp - a.timestamp);
-
-    setVoucherTransactions(normalizedVouchers);
-  }, [dbTransactionsList, items]);
+  }, [dbTransactionsList]);
 
   const canonicalVoucherTransactions = useMemo(() => {
     const groupedVouchers = new Map();
@@ -1035,38 +895,29 @@ export default function Dashboard() {
     return shiftStart;
   };
 
-  const shiftStartTime = getShiftStartTime();
+  const shiftStartTime = useMemo(() => getShiftStartTime(), []);
 
-  const stockInCount = dbTransactionsList
-    .filter(t => t.is_summary !== true && t.status !== 'cancelled')
-    .filter(t => {
+  // Single-pass computation for all 4 daily stats — avoids 4 separate filter+reduce chains
+  const { stockInCount, salesCount, returnsCount, damageCount } = useMemo(() => {
+    let stockIn = 0, sales = 0, returns = 0, damage = 0;
+    for (const t of dbTransactionsList) {
+      if (t.is_summary === true) continue;
       const txTime = t.timestamp ? new Date(t.timestamp) : new Date();
-      return txTime >= shiftStartTime;
-    })
-    .filter(t => t.type === 'in' || t.type === 'Restock' || (t.type === FUNCTIONAL_INBOUND_TYPE && t.isFunctional === true))
-    .reduce((sum, t) => sum + Number(t.qty || 0), 0);
-
-  const salesCount = dbTransactionsList
-    .filter(t => t.is_summary !== true && t.status !== 'cancelled')
-    .filter(t => {
-      const txTime = t.timestamp ? new Date(t.timestamp) : new Date();
-      return txTime >= shiftStartTime;
-    })
-    .filter(t => t.type === 'Issue' || t.type === 'out' || t.type === 'صادر' || (t.type === FUNCTIONAL_OUTBOUND_TYPE && t.isFunctional === true))
-    .reduce((sum, t) => sum + Math.abs(Number(t.qty || 0)), 0);
-
-  const returnsCount = dbTransactionsList
-    .filter(t => t.is_summary !== true && t.status !== 'cancelled')
-    .filter(t => {
-      const txTime = t.timestamp ? new Date(t.timestamp) : new Date();
-      return txTime >= shiftStartTime;
-    })
-    .filter(t => t.type === 'Return' || t.type === 'مرتجع' || t.type === 'return')
-    .reduce((sum, t) => sum + Number(t.qty || 0), 0);
-
-  const damageCount = dbTransactionsList
-    .filter(t => t.is_summary !== true && t.status === 'مرتجع تالف' && t.status !== 'cancelled')
-    .reduce((sum, t) => sum + Number(t.qty || 0), 0);
+      const inShift = txTime >= shiftStartTime;
+      const notCancelled = t.status !== 'cancelled';
+      if (notCancelled && inShift) {
+        if (t.type === 'in' || t.type === 'Restock' || (t.type === FUNCTIONAL_INBOUND_TYPE && t.isFunctional === true))
+          stockIn += Number(t.qty || 0);
+        if (t.type === 'Issue' || t.type === 'out' || t.type === 'صادر' || (t.type === FUNCTIONAL_OUTBOUND_TYPE && t.isFunctional === true))
+          sales += Math.abs(Number(t.qty || 0));
+        if (t.type === 'Return' || t.type === 'مرتجع' || t.type === 'return')
+          returns += Number(t.qty || 0);
+      }
+      if (t.is_summary !== true && t.status === 'مرتجع تالف')
+        damage += Number(t.qty || 0);
+    }
+    return { stockInCount: stockIn, salesCount: sales, returnsCount: returns, damageCount: damage };
+  }, [dbTransactionsList, shiftStartTime]);
 
 
 
