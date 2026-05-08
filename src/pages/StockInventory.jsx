@@ -18,8 +18,8 @@ const InventoryItemRow = React.memo(({ item, idx, lowStockThreshold }) => {
 
   return (
   <tr className={`group transition-colors ${isCritical ? 'hover:bg-rose-50/70 dark:hover:bg-rose-950/20' : isWarning ? 'hover:bg-amber-50/70 dark:hover:bg-amber-950/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
-    <td className={`px-4 py-2 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 text-center text-sm font-black transition-colors ${isCritical ? 'text-rose-500 group-hover:text-rose-600' : isWarning ? 'text-amber-500 group-hover:text-amber-600' : 'text-slate-400 group-hover:text-[#279489]'}`}>{idx + 1}</td>
-    <td className={`px-4 py-2 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 ${isCritical ? 'border-r-4 border-r-rose-400' : isWarning ? 'border-r-4 border-r-amber-400' : ''}`}>
+    <td className={`px-4 py-2 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 text-center text-sm font-black transition-colors border-r-4 ${isCritical ? 'border-r-rose-400 text-rose-500 group-hover:text-rose-600' : isWarning ? 'border-r-amber-400 text-amber-500 group-hover:text-amber-600' : 'border-r-transparent text-slate-400 group-hover:text-[#279489]'}`}>{idx + 1}</td>
+    <td className="px-4 py-2 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
       <div className="flex items-center justify-between gap-3">
       <div className="font-bold text-sm text-slate-800 dark:text-white">
         {item.name}<span className="text-slate-400 font-normal"> - {item.company || 'بدون شركة'}</span>
@@ -440,12 +440,12 @@ export default function StockInventory({ setActiveView }) {
             <table className="w-full text-right border-separate border-spacing-0">
               <thead className="sticky top-0 z-10">
                 <tr>
-                  <th className="bg-slate-100 dark:bg-slate-800/80 backdrop-blur-xl px-4 py-2.5 text-slate-500 dark:text-slate-400 font-bold text-[13px] border-b border-slate-200 dark:border-slate-700 w-16 text-center">م</th>
+                  <th className="bg-slate-100 dark:bg-slate-800/80 backdrop-blur-xl px-4 py-2.5 text-slate-500 dark:text-slate-400 font-bold text-[13px] border-b border-slate-200 dark:border-slate-700 w-16 text-center rounded-tr-xl border-r-4 border-r-transparent">م</th>
                   <th className="bg-slate-100 dark:bg-slate-800/80 backdrop-blur-xl px-4 py-2.5 text-slate-500 dark:text-slate-400 font-bold text-[13px] border-b border-slate-200 dark:border-slate-700">اسم الصنف</th>
                   <th className="bg-slate-100 dark:bg-slate-800/80 backdrop-blur-xl px-4 py-2.5 text-slate-500 dark:text-slate-400 font-bold text-[13px] border-b border-slate-200 dark:border-slate-700 text-center w-32">القسم</th>
                   <th className="bg-slate-100 dark:bg-slate-800/80 backdrop-blur-xl px-4 py-2.5 text-slate-500 dark:text-slate-400 font-bold text-[13px] border-b border-slate-200 dark:border-slate-700 text-center w-28">الوحدة</th>
                   <th className="bg-slate-100 dark:bg-slate-800/80 backdrop-blur-xl px-4 py-2.5 text-emerald-600 dark:text-emerald-400 font-bold text-[13px] border-b border-slate-200 dark:border-slate-700 text-center w-32">السليم</th>
-                  <th className="bg-slate-100 dark:bg-slate-800/80 backdrop-blur-xl px-4 py-2.5 text-rose-600 dark:text-rose-400 font-bold text-[13px] border-b border-slate-200 dark:border-slate-700 text-center w-32">التالف</th>
+                  <th className="bg-slate-100 dark:bg-slate-800/80 backdrop-blur-xl px-4 py-2.5 text-rose-600 dark:text-rose-400 font-bold text-[13px] border-b border-slate-200 dark:border-slate-700 text-center w-32 rounded-tl-xl">التالف</th>
                 </tr>
               </thead>
               <tbody>
