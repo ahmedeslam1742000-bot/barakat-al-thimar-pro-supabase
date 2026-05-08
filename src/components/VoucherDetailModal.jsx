@@ -81,9 +81,9 @@ export function VoucherDetailModal({
 
                 {/* Modal Body */}
                 <div className="flex flex-1 overflow-hidden">
-                  <div className={`flex-1 flex flex-col overflow-y-auto custom-scrollbar p-8 ${showVoucherHistory ? 'border-l border-slate-100' : ''}`}>
+                  <div className={`flex-1 flex flex-col overflow-y-auto custom-scrollbar p-6 ${showVoucherHistory ? 'border-l border-slate-100' : ''}`}>
                     {/* Voucher Meta Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
                        <div className="p-5 rounded-[20px] bg-slate-50/50 border border-slate-100">
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5 font-readex">الجهة / المستلم</p>
                           <div className="flex items-center gap-3">
@@ -108,7 +108,7 @@ export function VoucherDetailModal({
                     </div>
 
                     {/* Items Table */}
-                    <div className="mb-10">
+                    <div className="mb-6">
                        <div className="flex items-center justify-between mb-5">
                           <h4 className="text-sm font-bold text-[#0F2747] font-tajawal">الأصناف المسجلة</h4>
                           <span className="text-[10px] font-bold text-slate-400 font-readex">{lines.length} صنف</span>
@@ -155,12 +155,12 @@ export function VoucherDetailModal({
                     </div>
 
                     {/* Note Editor */}
-                    <div className="mb-10 p-7 rounded-[24px] bg-slate-50/50 border border-slate-100 border-dashed">
+                    <div className="mb-6 p-5 rounded-[24px] bg-slate-50/50 border border-slate-100 border-dashed">
                        <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 font-readex flex items-center gap-2">
                           <Activity size={14} /> ملاحظات السند
                        </h4>
                        <textarea
-                         className="w-full bg-white border border-slate-200 rounded-2xl p-4 text-sm font-bold text-slate-600 outline-none focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 transition-all font-tajawal min-h-[100px] resize-none"
+                         className="w-full bg-white border border-slate-200 rounded-2xl p-4 text-sm font-bold text-slate-600 outline-none focus:border-indigo-300 focus:ring-4 focus:ring-indigo-50 transition-all font-tajawal min-h-[60px] resize-none"
                          defaultValue={voucher.line_note?.split(/\[تعديل حديث\]|<!--/)[0].trim() || ''}
                          placeholder="أضف ملاحظاتك هنا..."
                          onBlur={(e) => updateVoucherNote(voucher, e.target.value)}
@@ -168,7 +168,7 @@ export function VoucherDetailModal({
                     </div>
 
                     {/* Action Bar */}
-                    <div className="flex items-center justify-between gap-4 mt-auto pt-8 border-t border-slate-100">
+                    <div className="flex items-center justify-between gap-4 mt-auto pt-6 border-t border-slate-100">
                        <div className="flex items-center gap-3">
                           <button
                             onClick={() => printVoucher(voucher)}
