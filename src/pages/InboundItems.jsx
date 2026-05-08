@@ -41,24 +41,20 @@ export default function InboundItems({ setActiveView }) {
       if (error) throw error;
 
       const itemIds = [...new Set((data || []).filter(t => t.item_id && !t.is_summary).map(t => t.item_id))];
-      let productsMap = {};
 
-      if (itemIds.length > 0) {
-        const { data: productsData, error: productsError } = await supabase
-          .from('products')
-          .select('id, stock_qty, damaged_qty')
-          .in('id', itemIds);
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select('id, stock_qty, damaged_qty');
 
-        if (productsError) throw productsError;
+      if (productsError) throw productsError;
 
-        productsMap = (productsData || []).reduce((acc, product) => {
-          acc[product.id] = {
-            stockQty: Number(product.stock_qty || 0),
-            damagedQty: Number(product.damaged_qty || 0),
-          };
-          return acc;
-        }, {});
-      }
+      let productsMap = (productsData || []).reduce((acc, product) => {
+        acc[product.id] = {
+          stockQty: Number(product.stock_qty || 0),
+          damagedQty: Number(product.damaged_qty || 0),
+        };
+        return acc;
+      }, {});
 
       setTransactions((data || []).map((row) => ({
         ...row,

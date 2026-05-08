@@ -42,11 +42,7 @@ export default function MainLayout({ children, activeView, setActiveView }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  const [currentTime, setCurrentTime] = useState(new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  // Removed unused currentTime interval to prevent unnecessary re-renders
 
   // Fetch critical items for the bell notification
   useEffect(() => {

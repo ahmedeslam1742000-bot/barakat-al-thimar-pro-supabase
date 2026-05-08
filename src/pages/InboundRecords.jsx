@@ -66,18 +66,16 @@ export default function InboundRecords({ setActiveView }) {
       )];
 
       let stockMap = {};
-      if (itemIds.length > 0) {
-        const { data: productData } = await supabase
-          .from('products')
-          .select('id, stock_qty, damaged_qty')
-          .in('id', itemIds);
-        (productData || []).forEach(p => {
-          stockMap[p.id] = {
-            currentStock: Number(p.stock_qty ?? 0),
-            currentDamaged: Number(p.damaged_qty ?? 0),
-          };
-        });
-      }
+      const { data: productData } = await supabase
+        .from('products')
+        .select('id, stock_qty, damaged_qty');
+        
+      (productData || []).forEach(p => {
+        stockMap[p.id] = {
+          currentStock: Number(p.stock_qty ?? 0),
+          currentDamaged: Number(p.damaged_qty ?? 0),
+        };
+      });
 
       // 3. التجميع حسب batch_id
       const grouped = (data || []).reduce((acc, current) => {
