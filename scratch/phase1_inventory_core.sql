@@ -2311,3 +2311,70 @@ exception
     );
 end;
 $$;
+
+create or replace function public.inventory_dashboard_today(
+  p_target_date date default current_date,
+  p_timezone text default 'Asia/Riyadh'
+)
+returns table (
+  target_date date,
+  day_start timestamptz,
+  day_end timestamptz,
+  total_inbound_qty numeric,
+  total_sales_qty numeric,
+  total_returns_qty numeric,
+  total_damaged_qty numeric
+)
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_day_start timestamptz;
+  v_day_end   timestamptz;
+begin
+  /*
+    Dashboard daily window is calculated in the requested business timezone,
+    then converted back to timestamptz so comparisons stay index-friendly.
+  */
+  v_day_start := (p_target_date::timestamp at time zone p_timezone);
+  v_day_end := ((p_target_date + 1)::timestamp at time zone p_timezone);
+
+  return query
+  with day_tx as (
+    select
+      t.type,
+      t.status,
+      coalesce(t.qty, 0)::numeric as qty,
+      coalesce(t.is_summary, false) as is_summary
+    from public.transactions t
+    where t.timestamp >= v_day_start
+      and t.timestamp < v_day_end
+  )
+  select
+    p_target_date,
+    v_day_start,
+    v_day_end,
+    coalesce(sum(case
+      when is_summary = false
+       and coalesce(status, '') <> 'cancelled'
+       and type in ('in', 'Restock', 'سند إدخال')
+      then qty else 0 end), 0) as total_inbound_qty,
+    coalesce(sum(case
+      when is_summary = false
+       and coalesce(status, '') <> 'cancelled'
+       and type in ('out', 'Issue', 'صادر', 'سند إخراج', 'سند إخراج صوري')
+      then abs(qty) else 0 end), 0) as total_sales_qty,
+    coalesce(sum(case
+      when is_summary = false
+       and coalesce(status, '') <> 'cancelled'
+       and type in ('Return', 'مرتجع', 'return')
+      then qty else 0 end), 0) as total_returns_qty,
+    coalesce(sum(case
+      when is_summary = false
+       and coalesce(status, '') <> 'cancelled'
+       and type in ('Return', 'مرتجع', 'return')
+       and coalesce(status, '') in ('تالف', 'مرتجع تالف')
+      then qty else 0 end), 0) as total_damaged_qty
+  from day_tx;
+end;
+$$;

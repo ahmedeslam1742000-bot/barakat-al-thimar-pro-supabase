@@ -34,12 +34,36 @@ export default function InboundItems({ setActiveView }) {
     try {
       const { data, error } = await supabase
         .from('transactions')
-        .select('id, item, qty, company, cat, unit, date, beneficiary, timestamp, reference_number, is_summary')
+        .select('id, item, item_id, qty, company, cat, unit, date, beneficiary, timestamp, reference_number, is_summary')
         .eq('type', 'in')
         .order('timestamp', { ascending: false });
 
       if (error) throw error;
-      setTransactions(data || []);
+
+      const itemIds = [...new Set((data || []).filter(t => t.item_id && !t.is_summary).map(t => t.item_id))];
+      let productsMap = {};
+
+      if (itemIds.length > 0) {
+        const { data: productsData, error: productsError } = await supabase
+          .from('products')
+          .select('id, stock_qty, damaged_qty')
+          .in('id', itemIds);
+
+        if (productsError) throw productsError;
+
+        productsMap = (productsData || []).reduce((acc, product) => {
+          acc[product.id] = {
+            stockQty: Number(product.stock_qty || 0),
+            damagedQty: Number(product.damaged_qty || 0),
+          };
+          return acc;
+        }, {});
+      }
+
+      setTransactions((data || []).map((row) => ({
+        ...row,
+        productSnapshot: row.item_id ? (productsMap[row.item_id] || { stockQty: 0, damagedQty: 0 }) : { stockQty: 0, damagedQty: 0 },
+      })));
     } catch (err) {
       console.error('Error fetching inbound items:', err);
       toast.error('حدث خطأ أثناء تحميل سجلات الوارد');
@@ -53,7 +77,7 @@ export default function InboundItems({ setActiveView }) {
     const groups = {};
     
     allItems.forEach(it => {
-      const key = `${it.item}-${it.cat}-${it.unit}`;
+      const key = it.item_id || `${it.item}-${it.company}-${it.cat}-${it.unit}`;
       if (!groups[key]) {
         groups[key] = { 
           item: it.item,
@@ -61,10 +85,14 @@ export default function InboundItems({ setActiveView }) {
           qty: 0,
           cat: it.cat,
           unit: it.unit,
+          stockQty: Number(it.productSnapshot?.stockQty || 0),
+          damagedQty: Number(it.productSnapshot?.damagedQty || 0),
           uniqueId: key
         };
       }
       groups[key].qty += Number(it.qty) || 0;
+      groups[key].stockQty = Number(it.productSnapshot?.stockQty || groups[key].stockQty || 0);
+      groups[key].damagedQty = Number(it.productSnapshot?.damagedQty || groups[key].damagedQty || 0);
     });
 
     return Object.values(groups).filter(it => {
@@ -121,8 +149,10 @@ export default function InboundItems({ setActiveView }) {
 
   const stats = useMemo(() => {
     const totalQty = filteredItems.reduce((sum, it) => sum + Number(it.qty || 0), 0);
+    const totalGoodQty = filteredItems.reduce((sum, it) => sum + Number(it.stockQty || 0), 0);
+    const totalDamagedQty = filteredItems.reduce((sum, it) => sum + Number(it.damagedQty || 0), 0);
     const distinctItems = new Set(filteredItems.map(it => it.item)).size;
-    return { totalQty, distinctItems, count: filteredItems.length };
+    return { totalQty, totalGoodQty, totalDamagedQty, distinctItems, count: filteredItems.length };
   }, [filteredItems]);
 
   return (
@@ -180,7 +210,27 @@ export default function InboundItems({ setActiveView }) {
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden p-6">
-        <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden h-full flex flex-col">
+        <div className="h-full flex flex-col gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 shrink-0">
+            <div className="bg-white rounded-[1.5rem] border border-slate-100 shadow-sm p-4">
+              <div className="text-[11px] font-black text-slate-400 mb-2">الأصناف الظاهرة</div>
+              <div className="text-2xl font-black text-slate-800 tabular-nums">{stats.count}</div>
+            </div>
+            <div className="bg-white rounded-[1.5rem] border border-emerald-100 shadow-sm p-4">
+              <div className="text-[11px] font-black text-emerald-600 mb-2">إجمالي الوارد</div>
+              <div className="text-2xl font-black text-emerald-600 tabular-nums">{stats.totalQty}</div>
+            </div>
+            <div className="bg-white rounded-[1.5rem] border border-teal-100 shadow-sm p-4">
+              <div className="text-[11px] font-black text-teal-600 mb-2">السليم الحالي</div>
+              <div className="text-2xl font-black text-teal-600 tabular-nums">{stats.totalGoodQty}</div>
+            </div>
+            <div className="bg-white rounded-[1.5rem] border border-rose-100 shadow-sm p-4">
+              <div className="text-[11px] font-black text-rose-600 mb-2">التالف الحالي</div>
+              <div className="text-2xl font-black text-rose-600 tabular-nums">{stats.totalDamagedQty}</div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex-1 flex flex-col">
           <div className="flex-1 overflow-auto custom-scrollbar">
             {loading ? (
               <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
@@ -201,7 +251,9 @@ export default function InboundItems({ setActiveView }) {
                     <th className="px-4 py-3 text-center w-14 border-x border-slate-100">م</th>
                     <th className="px-4 py-3 text-center border-x border-slate-100">اسم الصنف الوارد</th>
                     <th className="px-4 py-3 text-center w-64 border-x border-slate-100">الشركة</th>
-                    <th className="px-4 py-3 text-center w-32 border-x border-slate-100">الكمية</th>
+                    <th className="px-4 py-3 text-center w-32 border-x border-slate-100">إجمالي الوارد</th>
+                    <th className="px-4 py-3 text-center w-32 border-x border-slate-100 text-teal-600">السليم الحالي</th>
+                    <th className="px-4 py-3 text-center w-32 border-x border-slate-100 text-rose-600">التالف الحالي</th>
                     <th className="px-4 py-3 text-center w-48 border-x border-slate-100">القسم</th>
                     <th className="px-4 py-3 text-center w-48 border-x border-slate-100">وحدة القياس</th>
                   </tr>
@@ -224,6 +276,16 @@ export default function InboundItems({ setActiveView }) {
                          </span>
                       </td>
                       <td className="px-4 py-2.5 text-center align-middle">
+                         <span className="inline-flex items-center px-3 py-1 bg-teal-50 text-teal-700 rounded-lg text-[12px] font-black border border-teal-100 shadow-sm">
+                            {it.stockQty}
+                         </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-center align-middle">
+                         <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[12px] font-black border shadow-sm ${Number(it.damagedQty) > 0 ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
+                            {it.damagedQty}
+                         </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-center align-middle">
                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border bg-slate-50 text-slate-600 border-slate-100 text-[10px] font-black transition-all">
                             {getCatIcon(it.cat)}
                             {it.cat}
@@ -239,6 +301,7 @@ export default function InboundItems({ setActiveView }) {
             )}
           </div>
         </div>
+        </div>
       </div>
 
       {/* ═══ PREVIEW MODAL ═══ */}
@@ -248,7 +311,7 @@ export default function InboundItems({ setActiveView }) {
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white shrink-0 shadow-sm">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600"><FileText size={20} /></div>
-                <div><h3 className="text-lg font-black text-slate-800">معاينة تقرير الوارد</h3><p className="text-[11px] text-slate-500 mt-0.5">{Object.keys(groupedItems).length} قسم • {filteredItems.length} صنف</p></div>
+                <div><h3 className="text-lg font-black text-slate-800">معاينة تقرير الوارد</h3><p className="text-[11px] text-slate-500 mt-0.5">{Object.keys(groupedItems).length} قسم • {filteredItems.length} صنف • التالف الحالي {stats.totalDamagedQty}</p></div>
               </div>
               <div className="flex items-center gap-3">
                 <button onClick={handlePrintPDF} className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg hover:bg-emerald-700 transition-all active:scale-95"><Printer size={18} />طباعة التقرير</button>
@@ -278,8 +341,10 @@ export default function InboundItems({ setActiveView }) {
                           <th className="border border-black py-2 px-3 text-sm font-bold text-center" style={{ width: '40px' }}>م</th>
                           <th className="border border-black py-2 px-3 text-sm font-bold text-right" style={{ width: '35%' }}>اسم الصنف</th>
                           <th className="border border-black py-2 px-3 text-sm font-bold text-right" style={{ width: '25%' }}>الشركة</th>
-                          <th className="border border-black py-2 px-3 text-sm font-bold text-center" style={{ width: '15%' }}>الكمية</th>
-                          <th className="border border-black py-2 px-3 text-sm font-bold text-center" style={{ width: '20%' }}>وحدة القياس</th>
+                          <th className="border border-black py-2 px-3 text-sm font-bold text-center" style={{ width: '13%' }}>إجمالي الوارد</th>
+                          <th className="border border-black py-2 px-3 text-sm font-bold text-center" style={{ width: '12%' }}>السليم</th>
+                          <th className="border border-black py-2 px-3 text-sm font-bold text-center" style={{ width: '12%' }}>التالف</th>
+                          <th className="border border-black py-2 px-3 text-sm font-bold text-center" style={{ width: '13%' }}>وحدة القياس</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -289,6 +354,8 @@ export default function InboundItems({ setActiveView }) {
                             <td className="border border-black py-2 px-3 text-right text-sm">{item.item}</td>
                             <td className="border border-black py-2 px-3 text-right text-sm">{item.company}</td>
                             <td className="border border-black py-2 px-3 text-center text-sm">{item.qty}</td>
+                            <td className="border border-black py-2 px-3 text-center text-sm">{item.stockQty}</td>
+                            <td className="border border-black py-2 px-3 text-center text-sm">{item.damagedQty}</td>
                             <td className="border border-black py-2 px-3 text-center text-sm">{item.unit}</td>
                           </tr>
                         ))}

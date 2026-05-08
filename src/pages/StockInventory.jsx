@@ -9,19 +9,40 @@ import { useAuth } from '../contexts/AuthContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { useDebounce } from '../hooks/useDebounce';
 
-const InventoryItemRow = React.memo(({ item, idx }) => (
-  <tr className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-    <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-r border-slate-100 dark:border-slate-800 rounded-r-2xl text-center text-sm font-black text-slate-400 group-hover:text-[#279489] transition-colors">{idx + 1}</td>
-    <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800">
+const InventoryItemRow = React.memo(({ item, idx, lowStockThreshold }) => {
+  const safeThreshold = Number(lowStockThreshold || 0);
+  const goodQty = Number(item.stockQty) || 0;
+  const isCritical = safeThreshold > 0 && goodQty <= Math.max(1, Math.floor(safeThreshold / 2));
+  const isWarning = safeThreshold > 0 && !isCritical && goodQty <= safeThreshold;
+
+  return (
+  <tr className={`group transition-colors ${isCritical ? 'hover:bg-rose-50/70 dark:hover:bg-rose-950/20' : isWarning ? 'hover:bg-amber-50/70 dark:hover:bg-amber-950/20' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+    <td className={`px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-r border-slate-100 dark:border-slate-800 rounded-r-2xl text-center text-sm font-black transition-colors ${isCritical ? 'text-rose-500 group-hover:text-rose-600' : isWarning ? 'text-amber-500 group-hover:text-amber-600' : 'text-slate-400 group-hover:text-[#279489]'}`}>{idx + 1}</td>
+    <td className={`px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800 ${isCritical ? 'border-r-4 border-r-rose-400' : isWarning ? 'border-r-4 border-r-amber-400' : ''}`}>
+      <div className="flex items-center justify-between gap-3">
       <div className="font-bold text-sm text-slate-800 dark:text-white">
         {item.name}<span className="text-slate-400 font-normal"> - {item.company || 'بدون شركة'}</span>
+      </div>
+      {(isCritical || isWarning) && (
+        <span className={`shrink-0 inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black border ${isCritical ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+          {isCritical ? 'حرج' : 'تنبيه'}
+        </span>
+      )}
       </div>
     </td>
     <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800 text-center"><span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[11px] font-bold">{item.cat || 'أخرى'}</span></td>
     <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800 text-center"><span className="inline-flex items-center px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-xs font-bold">{item.unit || '-'}</span></td>
-    <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-l border-slate-100 dark:border-slate-800 rounded-l-2xl text-center"><div className="text-lg font-black text-[#279489]">{Number(item.stockQty) || 0}</div></td>
+    <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-slate-100 dark:border-slate-800 text-center">
+      <div className={`text-lg font-black ${isCritical ? 'text-rose-600' : isWarning ? 'text-amber-600' : 'text-emerald-600'}`}>{goodQty}</div>
+      <div className="text-[10px] font-bold text-slate-400 mt-1">سليم</div>
+    </td>
+    <td className="px-4 py-3.5 bg-white dark:bg-slate-900 border-y border-l border-slate-100 dark:border-slate-800 rounded-l-2xl text-center">
+      <div className={`text-lg font-black ${Number(item.damagedQty) > 0 ? 'text-rose-600' : 'text-slate-300 dark:text-slate-600'}`}>{Number(item.damagedQty) || 0}</div>
+      <div className="text-[10px] font-bold text-slate-400 mt-1">تالف</div>
+    </td>
   </tr>
-));
+  );
+});
 
 export default function StockInventory({ setActiveView }) {
   const [items, setItems] = useState([]);
@@ -29,12 +50,19 @@ export default function StockInventory({ setActiveView }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [catFilter, setCatFilter] = useState('الكل');
   const { isViewer } = useAuth();
+  const { settings } = useSettings();
 
   // ── SUPABASE FETCH ─────────────────────────────────────────────────────
   const fetchItems = useCallback(async () => {
-    const { data: itemsData } = await supabase.from('products').select('id, name, company, cat, unit, stock_qty');
+    const { data: itemsData } = await supabase.from('products').select('id, name, company, cat, unit, stock_qty, damaged_qty');
     if (itemsData) {
-      setItems(itemsData.map(d => ({ ...d, stockQty: d.stock_qty, searchKey: d.search_key, createdAt: d.created_at })));
+      setItems(itemsData.map(d => ({
+        ...d,
+        stockQty: d.stock_qty,
+        damagedQty: d.damaged_qty,
+        searchKey: d.search_key,
+        createdAt: d.created_at
+      })));
     }
     setLoading(false);
   }, []);
@@ -94,6 +122,18 @@ export default function StockInventory({ setActiveView }) {
     return groups;
   }, [filteredItems]);
 
+  const totals = useMemo(() => ({
+    itemCount: filteredItems.length,
+    goodQty: filteredItems.reduce((sum, item) => sum + Number(item.stockQty || 0), 0),
+    damagedQty: filteredItems.reduce((sum, item) => sum + Number(item.damagedQty || 0), 0),
+  }), [filteredItems]);
+
+  const lowStockThreshold = Number(settings?.lowStockThreshold ?? 50);
+  const lowStockItemsCount = useMemo(
+    () => filteredItems.filter((item) => Number(item.stockQty || 0) <= lowStockThreshold).length,
+    [filteredItems, lowStockThreshold]
+  );
+
   const handlePrintPDF = () => {
     const date = new Date().toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -112,7 +152,8 @@ export default function StockInventory({ setActiveView }) {
           <td style="border:1px solid #cbd5e1;padding:10px 12px;text-align:center;font-size:14px;font-weight:700;color:#334155;">${idx + 1}</td>
           <td style="border:1px solid #cbd5e1;padding:10px 12px;text-align:right;font-size:14px;font-weight:700;color:#1e293b;">${item.name}<span style="color:#64748b;font-weight:700;"> - ${item.company || 'بدون شركة'}</span></td>
           <td style="border:1px solid #cbd5e1;padding:10px 12px;text-align:center;font-size:14px;font-weight:700;color:#334155;">${item.unit || '-'}</td>
-          <td style="border:1px solid #cbd5e1;padding:10px 12px;text-align:center;font-size:16px;font-weight:900;color:#279489;">${Number(item.stockQty) || 0}</td>
+          <td style="border:1px solid #cbd5e1;padding:10px 12px;text-align:center;font-size:16px;font-weight:900;color:#059669;">${Number(item.stockQty) || 0}</td>
+          <td style="border:1px solid #cbd5e1;padding:10px 12px;text-align:center;font-size:16px;font-weight:900;color:#e11d48;">${Number(item.damagedQty) || 0}</td>
         </tr>`;
       });
       tablesHtml += `
@@ -124,7 +165,8 @@ export default function StockInventory({ setActiveView }) {
                 <th style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#279489;border:1px solid #279489;padding:11px 12px;text-align:center;font-size:14px;width:48px;color:#ffffff;font-weight:700;">م</th>
                 <th style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#279489;border:1px solid #279489;padding:11px 12px;text-align:right;font-size:14px;color:#ffffff;font-weight:700;">اسم الصنف</th>
                 <th style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#279489;border:1px solid #279489;padding:11px 12px;text-align:center;font-size:14px;width:120px;color:#ffffff;font-weight:700;">وحدة القياس</th>
-                <th style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#279489;border:1px solid #279489;padding:11px 12px;text-align:center;font-size:14px;width:90px;color:#ffffff;font-weight:700;">الكمية</th>
+                <th style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#279489;border:1px solid #279489;padding:11px 12px;text-align:center;font-size:14px;width:90px;color:#ffffff;font-weight:700;">السليم</th>
+                <th style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#279489;border:1px solid #279489;padding:11px 12px;text-align:center;font-size:14px;width:90px;color:#ffffff;font-weight:700;">التالف</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -197,11 +239,12 @@ export default function StockInventory({ setActiveView }) {
         { key: 'name', width: 45 },
         { key: 'company', width: 30 },
         { key: 'unit', width: 15 },
-        { key: 'qty', width: 15 }
+        { key: 'goodQty', width: 15 },
+        { key: 'damagedQty', width: 15 }
       ];
 
       // Header Row
-      const headerRow = catSheet.addRow(['م', 'اسم الصنف', 'الشركة', 'الوحدة', 'الكمية']);
+      const headerRow = catSheet.addRow(['م', 'اسم الصنف', 'الشركة', 'الوحدة', 'السليم', 'التالف']);
       headerRow.height = 30;
       headerRow.eachCell((cell) => {
         cell.font = { name: 'Segoe UI', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
@@ -222,7 +265,8 @@ export default function StockInventory({ setActiveView }) {
           name: item.name,
           company: item.company || '—',
           unit: item.unit || '—',
-          qty: Number(item.stockQty) || 0
+          goodQty: Number(item.stockQty) || 0,
+          damagedQty: Number(item.damagedQty) || 0
         });
 
         row.height = 25;
@@ -243,11 +287,14 @@ export default function StockInventory({ setActiveView }) {
           if (colNumber === 5 && item.stockQty <= 0) {
             cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFE11D48' } };
           }
+          if (colNumber === 6 && Number(item.damagedQty) > 0) {
+            cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFE11D48' } };
+          }
         });
       });
 
       // Enable AutoFilter
-      catSheet.autoFilter = `A1:E1`;
+      catSheet.autoFilter = `A1:F1`;
     });
 
     // ─── 2. GENERATE FILE ───
@@ -320,6 +367,21 @@ export default function StockInventory({ setActiveView }) {
           ))}
         </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
+          <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-slate-200 dark:border-slate-700 shadow-sm p-4">
+            <div className="text-[11px] font-black text-slate-400 mb-2">عدد الأصناف الظاهرة</div>
+            <div className="text-2xl font-black text-slate-800 dark:text-white tabular-nums">{totals.itemCount}</div>
+          </div>
+          <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-emerald-100 dark:border-emerald-900/40 shadow-sm p-4">
+            <div className="text-[11px] font-black text-emerald-600 mb-2">إجمالي السليم</div>
+            <div className="text-2xl font-black text-emerald-600 tabular-nums">{totals.goodQty}</div>
+          </div>
+          <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] border border-rose-100 dark:border-rose-900/40 shadow-sm p-4">
+            <div className="text-[11px] font-black text-rose-600 mb-2">إجمالي التالف</div>
+            <div className="text-2xl font-black text-rose-600 tabular-nums">{totals.damagedQty}</div>
+          </div>
+        </div>
+
         {/* ═══ TABLE ═══ */}
         <div className="flex-1 overflow-hidden flex flex-col bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-700 shadow-sm">
           <div className="flex-1 overflow-y-auto custom-scrollbar p-2 relative">
@@ -330,16 +392,22 @@ export default function StockInventory({ setActiveView }) {
                   <th className="bg-slate-100 dark:bg-slate-800/80 backdrop-blur-xl px-4 py-3.5 text-slate-500 dark:text-slate-400 font-bold text-[13px] border-y border-slate-200 dark:border-slate-700">اسم الصنف</th>
                   <th className="bg-slate-100 dark:bg-slate-800/80 backdrop-blur-xl px-4 py-3.5 text-slate-500 dark:text-slate-400 font-bold text-[13px] border-y border-slate-200 dark:border-slate-700 text-center w-32">القسم</th>
                   <th className="bg-slate-100 dark:bg-slate-800/80 backdrop-blur-xl px-4 py-3.5 text-slate-500 dark:text-slate-400 font-bold text-[13px] border-y border-slate-200 dark:border-slate-700 text-center w-28">الوحدة</th>
-                  <th className="bg-slate-100 dark:bg-slate-800/80 backdrop-blur-xl px-4 py-3.5 text-slate-500 dark:text-slate-400 font-bold text-[13px] rounded-l-2xl border-y border-l border-slate-200 dark:border-slate-700 text-center w-32">الكمية</th>
+                  <th className="bg-slate-100 dark:bg-slate-800/80 backdrop-blur-xl px-4 py-3.5 text-emerald-600 dark:text-emerald-400 font-bold text-[13px] border-y border-slate-200 dark:border-slate-700 text-center w-32">السليم</th>
+                  <th className="bg-slate-100 dark:bg-slate-800/80 backdrop-blur-xl px-4 py-3.5 text-rose-600 dark:text-rose-400 font-bold text-[13px] rounded-l-2xl border-y border-l border-slate-200 dark:border-slate-700 text-center w-32">التالف</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredItems.map((item, idx) => (
-                  <InventoryItemRow key={item.id} item={item} idx={idx} />
+                  <InventoryItemRow 
+                    key={item.id} 
+                    item={item} 
+                    idx={idx} 
+                    lowStockThreshold={settings?.lowStockThreshold} 
+                  />
                 ))}
                 {filteredItems.length === 0 && (
                   <tr>
-                    <td colSpan="5" className="px-4 py-12 text-center bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl">
+                    <td colSpan="6" className="px-4 py-12 text-center bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl">
                       <div className="flex flex-col items-center justify-center text-slate-400"><PackageX size={48} className="mb-4 opacity-50" strokeWidth={1.5} /><p className="text-lg font-bold">لا توجد أصناف مطابقة للبحث</p></div>
                     </td>
                   </tr>
@@ -374,7 +442,8 @@ export default function StockInventory({ setActiveView }) {
                   <th className="border-2 border-slate-900 py-4 px-3 w-16 text-xl font-black">م</th>
                   <th className="border-2 border-slate-900 py-4 px-3 text-xl font-black">اسم الصنف والشركة</th>
                   <th className="border-2 border-slate-900 py-4 px-3 w-40 text-xl font-black">وحدة القياس</th>
-                  <th className="border-2 border-slate-900 py-4 px-3 w-32 text-xl font-black">الكمية</th>
+                  <th className="border-2 border-slate-900 py-4 px-3 w-32 text-xl font-black">السليم</th>
+                  <th className="border-2 border-slate-900 py-4 px-3 w-32 text-xl font-black">التالف</th>
                 </tr>
               </thead>
               <tbody>
@@ -385,7 +454,8 @@ export default function StockInventory({ setActiveView }) {
                       {item.name} <span className="text-slate-600 font-bold"> - {item.company || 'بدون شركة'}</span>
                     </td>
                     <td className="border-x-2 border-slate-900 py-3 px-3 text-lg font-bold">{item.unit}</td>
-                    <td className="border-x-2 border-slate-900 py-3 px-3 text-2xl font-black">{Number(item.stockQty) || 0}</td>
+                    <td className="border-x-2 border-slate-900 py-3 px-3 text-2xl font-black text-emerald-700">{Number(item.stockQty) || 0}</td>
+                    <td className="border-x-2 border-slate-900 py-3 px-3 text-2xl font-black text-rose-700">{Number(item.damagedQty) || 0}</td>
                   </tr>
                 ))}
               </tbody>

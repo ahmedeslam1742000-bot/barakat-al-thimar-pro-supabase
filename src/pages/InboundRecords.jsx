@@ -69,9 +69,14 @@ export default function InboundRecords({ setActiveView }) {
       if (itemIds.length > 0) {
         const { data: productData } = await supabase
           .from('products')
-          .select('id, stock_qty')
+          .select('id, stock_qty, damaged_qty')
           .in('id', itemIds);
-        (productData || []).forEach(p => { stockMap[p.id] = Number(p.stock_qty ?? 0); });
+        (productData || []).forEach(p => {
+          stockMap[p.id] = {
+            currentStock: Number(p.stock_qty ?? 0),
+            currentDamaged: Number(p.damaged_qty ?? 0),
+          };
+        });
       }
 
       // 3. التجميع حسب batch_id
@@ -94,7 +99,8 @@ export default function InboundRecords({ setActiveView }) {
           acc[id].summaryRow = current;
           return acc;
         }
-        acc[id].items.push({ ...current, currentStock: stockMap[current.item_id] ?? null });
+        const stockSnapshot = stockMap[current.item_id] || { currentStock: null, currentDamaged: null };
+        acc[id].items.push({ ...current, ...stockSnapshot });
         if (current.cat) acc[id].categories.add(current.cat);
         return acc;
       }, {});
@@ -149,6 +155,18 @@ export default function InboundRecords({ setActiveView }) {
   const handlePrint = () => {
     window.print();
   };
+
+  const selectedRecordSummary = useMemo(() => {
+    if (!selectedRecord) {
+      return { inboundQty: 0, goodQty: 0, damagedQty: 0, lineCount: 0 };
+    }
+    return {
+      inboundQty: selectedRecord.items.reduce((sum, item) => sum + Number(item.qty || 0), 0),
+      goodQty: selectedRecord.items.reduce((sum, item) => sum + Number(item.currentStock || 0), 0),
+      damagedQty: selectedRecord.items.reduce((sum, item) => sum + Number(item.currentDamaged || 0), 0),
+      lineCount: selectedRecord.items.length,
+    };
+  }, [selectedRecord]);
 
   return (
     <div className="flex flex-col h-full bg-slate-50/30 dark:bg-slate-900 font-tajawal" dir="rtl">
@@ -420,6 +438,24 @@ export default function InboundRecords({ setActiveView }) {
                            <Package size={14} className="text-teal-600" />
                            قائمة الأصناف المستلمة
                         </h4>
+                        <div className="grid grid-cols-4 gap-3">
+                           <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
+                              <span className="text-[10px] font-black text-slate-400 block mb-1 uppercase">عدد الأصناف</span>
+                              <span className="text-lg font-black text-slate-800 dark:text-white tabular-nums block">{selectedRecordSummary.lineCount}</span>
+                           </div>
+                           <div className="bg-emerald-50 dark:bg-emerald-500/10 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-500/20">
+                              <span className="text-[10px] font-black text-emerald-600 block mb-1 uppercase">إجمالي الوارد</span>
+                              <span className="text-lg font-black text-emerald-600 tabular-nums block">{selectedRecordSummary.inboundQty}</span>
+                           </div>
+                           <div className="bg-teal-50 dark:bg-teal-500/10 p-4 rounded-2xl border border-teal-100 dark:border-teal-500/20">
+                              <span className="text-[10px] font-black text-teal-600 block mb-1 uppercase">السليم الحالي</span>
+                              <span className="text-lg font-black text-teal-600 tabular-nums block">{selectedRecordSummary.goodQty}</span>
+                           </div>
+                           <div className="bg-rose-50 dark:bg-rose-500/10 p-4 rounded-2xl border border-rose-100 dark:border-rose-500/20">
+                              <span className="text-[10px] font-black text-rose-600 block mb-1 uppercase">التالف الحالي</span>
+                              <span className="text-lg font-black text-rose-600 tabular-nums block">{selectedRecordSummary.damagedQty}</span>
+                           </div>
+                        </div>
                         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
                            <table className="w-full text-right text-[11px]">
                               <thead className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-black uppercase text-[9px] tracking-widest">
@@ -428,7 +464,8 @@ export default function InboundRecords({ setActiveView }) {
                                     <th className="px-3 py-3 border-x border-slate-100">اسم الصنف</th>
                                     <th className="px-3 py-3 border-x border-slate-100">الشركة</th>
                                     <th className="px-3 py-3 text-center border-x border-slate-100 w-16">الوارد</th>
-                                    <th className="px-3 py-3 text-center border-x border-slate-100 w-20">الرصيد الحالي</th>
+                                    <th className="px-3 py-3 text-center border-x border-slate-100 w-20 text-teal-600">السليم الحالي</th>
+                                    <th className="px-3 py-3 text-center border-x border-slate-100 w-20 text-rose-600">التالف الحالي</th>
                                     <th className="px-3 py-3 text-center border-x border-slate-100">القسم</th>
                                     <th className="px-3 py-3 text-center border-x border-slate-100">الوحدة</th>
                                  </tr>
@@ -444,9 +481,19 @@ export default function InboundRecords({ setActiveView }) {
                                           {it.currentStock !== null
                                             ? <span className={`font-black text-xs px-2 py-0.5 rounded-lg ${
                                                 it.currentStock > 0
-                                                  ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10'
+                                                  ? 'text-teal-600 bg-teal-50 dark:bg-teal-500/10'
                                                   : 'text-rose-500 bg-rose-50 dark:bg-rose-500/10'
                                               }`}>{it.currentStock}</span>
+                                            : <span className="text-slate-300 text-xs">—</span>
+                                          }
+                                       </td>
+                                       <td className="px-3 py-2 text-center tabular-nums border-x border-slate-100">
+                                          {it.currentDamaged !== null
+                                            ? <span className={`font-black text-xs px-2 py-0.5 rounded-lg ${
+                                                Number(it.currentDamaged) > 0
+                                                  ? 'text-rose-600 bg-rose-50 dark:bg-rose-500/10'
+                                                  : 'text-slate-400 bg-slate-50 dark:bg-slate-800/60'
+                                              }`}>{it.currentDamaged}</span>
                                             : <span className="text-slate-300 text-xs">—</span>
                                           }
                                        </td>

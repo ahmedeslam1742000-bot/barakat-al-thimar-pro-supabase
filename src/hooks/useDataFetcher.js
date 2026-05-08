@@ -51,6 +51,13 @@ export function useDataFetcher({ currentUser }) {
   const [items, setItems] = useState([]);
   const [dbTransactionsList, setDbTransactionsList] = useState([]);
   const [repsList, setRepsList] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState({
+    stockInCount: 0,
+    salesCount: 0,
+    returnsCount: 0,
+    damageCount: 0,
+  });
+  const [hasDashboardStats, setHasDashboardStats] = useState(false);
 
   // ─── Fetch ────────────────────────────────────────────────────────────
   const fetchInitialData = useCallback(async () => {
@@ -60,12 +67,13 @@ export function useDataFetcher({ currentUser }) {
 
       const { data: itemsData, error: itemsError } = await supabase
         .from('products')
-        .select('id, name, company, cat, unit, stock_qty, search_key, created_at');
+        .select('id, name, company, cat, unit, stock_qty, damaged_qty, search_key, created_at');
       if (itemsError) throw itemsError;
       if (itemsData) {
         setItems(itemsData.map(d => ({
           ...d,
           stockQty: d.stock_qty,
+          damagedQty: d.damaged_qty,
           searchKey: d.search_key,
           createdAt: d.created_at,
         })));
@@ -80,7 +88,22 @@ export function useDataFetcher({ currentUser }) {
       if (transData) {
         setDbTransactionsList(transData.map(processTx));
       }
+
+      const { data: dashboardRpcData, error: dashboardRpcError } = await supabase.rpc('inventory_dashboard_today');
+      if (!dashboardRpcError && dashboardRpcData) {
+        const payload = Array.isArray(dashboardRpcData) ? dashboardRpcData[0] : dashboardRpcData;
+        setDashboardStats({
+          stockInCount: Number(payload?.total_inbound_qty || 0),
+          salesCount: Number(payload?.total_sales_qty || 0),
+          returnsCount: Number(payload?.total_returns_qty || 0),
+          damageCount: Number(payload?.total_damaged_qty || 0),
+        });
+        setHasDashboardStats(true);
+      } else {
+        setHasDashboardStats(false);
+      }
     } catch (err) {
+      setHasDashboardStats(false);
       if (import.meta.env.DEV) console.error('useDataFetcher fetchInitialData error:', err);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -253,7 +276,7 @@ export function useDataFetcher({ currentUser }) {
     return shiftStart;
   }, []);
 
-  const { stockInCount, salesCount, returnsCount, damageCount } = useMemo(() => {
+  const fallbackDashboardStats = useMemo(() => {
     let stockIn = 0, sales = 0, returns = 0, damage = 0;
     for (const t of dbTransactionsList) {
       if (t.is_summary === true) continue;
@@ -273,6 +296,11 @@ export function useDataFetcher({ currentUser }) {
     }
     return { stockInCount: stockIn, salesCount: sales, returnsCount: returns, damageCount: damage };
   }, [dbTransactionsList, shiftStartTime]);
+
+  const stockInCount = hasDashboardStats ? dashboardStats.stockInCount : fallbackDashboardStats.stockInCount;
+  const salesCount = hasDashboardStats ? dashboardStats.salesCount : fallbackDashboardStats.salesCount;
+  const returnsCount = hasDashboardStats ? dashboardStats.returnsCount : fallbackDashboardStats.returnsCount;
+  const damageCount = hasDashboardStats ? dashboardStats.damageCount : fallbackDashboardStats.damageCount;
 
   // ─── Morning Brief Data ──────────────────────────────────────────────
   const morningBriefData = useMemo(() => {
