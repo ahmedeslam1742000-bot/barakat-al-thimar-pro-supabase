@@ -14,6 +14,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { normalizeArabic } from '../../lib/arabicTextUtils';
 import { useDebounce } from '../../hooks/useDebounce';
+import localforage from 'localforage';
 
 const formatDate = (date) => {
   if (!date) return '';
@@ -676,14 +677,15 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
 
   // ─── External Edit Trigger from Dashboard ───
   useEffect(() => {
-    const editId = localStorage.getItem('edit_voucher_id');
-    if (editId && voucherGroups.length > 0) {
+    if (voucherGroups.length === 0) return;
+    localforage.getItem('edit_voucher_id').then((editId) => {
+      if (!editId) return;
       const groupToEdit = voucherGroups.find(g => g.groupId === editId);
       if (groupToEdit) {
-        localStorage.removeItem('edit_voucher_id');
+        localforage.removeItem('edit_voucher_id');
         openEditGroup(groupToEdit);
       }
-    }
+    });
   }, [voucherGroups]);
 
   // Fix Event Listener Leak: Use a ref to hold latest state closures

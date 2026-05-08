@@ -1,7 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
-
-const LS_KEY = 'wms_app_settings_v3';
 
 export const DEFAULT_SETTINGS = {
   // ─── 1. Default Values
@@ -98,26 +96,35 @@ export function SettingsProvider({ children }) {
     };
   }, []);
 
-  const updateSettings = async (patch) => {
-    const newSettings = { ...settings, ...patch };
-    setSettings(newSettings);
+  // ─── Memoized to prevent re-renders in all consuming components ──────
+  const updateSettings = useCallback(async (patch) => {
+    setSettings(prev => {
+      const newSettings = { ...prev, ...patch };
+      // Fire-and-forget DB sync (optimistic update pattern)
+      supabase
+        .from('system_settings')
+        .update({ settings: newSettings, updated_at: new Date().toISOString() })
+        .eq('id', '00000000-0000-0000-0000-000000000001');
+      return newSettings;
+    });
+  }, []);
 
-    await supabase
-      .from('system_settings')
-      .update({ settings: newSettings, updated_at: new Date().toISOString() })
-      .eq('id', '00000000-0000-0000-0000-000000000001');
-  };
-
-  const resetSettings = async () => {
+  const resetSettings = useCallback(async () => {
     setSettings(DEFAULT_SETTINGS);
     await supabase
       .from('system_settings')
       .update({ settings: DEFAULT_SETTINGS, updated_at: new Date().toISOString() })
       .eq('id', '00000000-0000-0000-0000-000000000001');
-  };
+  }, []);
+
+  // ─── Memoize context value so Provider doesn't re-render consumers ───
+  const contextValue = useMemo(
+    () => ({ settings, updateSettings, resetSettings }),
+    [settings, updateSettings, resetSettings]
+  );
 
   return (
-    <SettingsContext.Provider value={{ settings, updateSettings, resetSettings }}>
+    <SettingsContext.Provider value={contextValue}>
       {!loading && children}
     </SettingsContext.Provider>
   );

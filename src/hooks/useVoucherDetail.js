@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabaseClient';
+import localforage from 'localforage';
 
 /**
  * useVoucherDetail — State & action handlers for the Voucher Detail Modal.
@@ -179,11 +180,15 @@ export function useVoucherDetail({
   }, [setLoading, playSuccess, closeVoucherDetail, fetchInitialData]);
 
   // ─── Navigate to voucher edit page ───────────────────────────────────
-  const handleEditVoucher = useCallback((voucher) => {
+  const handleEditVoucher = useCallback(async (voucher) => {
     const view = voucher.kind === 'in' ? 'voucher-in' : 'voucher-outward';
-    localStorage.setItem('edit_voucher_id', voucher.id);
-    if (setActiveView) setActiveView(view);
-    closeVoucherDetail();
+    try {
+      await localforage.setItem('edit_voucher_id', voucher.id);
+      if (setActiveView) setActiveView(view);
+      closeVoucherDetail();
+    } catch (err) {
+      toast.error('فشل حفظ التعديل محلياً.');
+    }
   }, [setActiveView, closeVoucherDetail]);
 
   // ─── Mark voucher as invoiced ─────────────────────────────────────────
@@ -314,17 +319,25 @@ export function useVoucherDetail({
 
     printVoucher: (voucher) => {
       if (!voucher) return;
-      // Typical pattern: set something in localStorage and open /print
-      localStorage.setItem('print_voucher_data', JSON.stringify(voucher));
-      window.open('/print', '_blank');
+      const newWin = window.open('about:blank', '_blank');
+      localforage.setItem('print_voucher_data', voucher).then(() => {
+        if (newWin) newWin.location.href = '/print';
+      }).catch(err => {
+        toast.error('فشل تحضير الفاتورة للطباعة. يرجى المحاولة مرة أخرى.');
+        if (newWin) newWin.close();
+      });
     },
 
-    duplicateVoucher: (voucher) => {
+    duplicateVoucher: async (voucher) => {
       if (!voucher) return;
       const view = voucher.kind === 'in' ? 'voucher-in' : 'voucher-outward';
-      localStorage.setItem('duplicate_voucher_data', JSON.stringify(voucher));
-      if (setActiveView) setActiveView(view);
-      setIsVoucherDetailOpen(false);
+      try {
+        await localforage.setItem('duplicate_voucher_data', voucher);
+        if (setActiveView) setActiveView(view);
+        setIsVoucherDetailOpen(false);
+      } catch (err) {
+        toast.error('فشل حفظ السند المكرر. الذاكرة قد تكون ممتلئة.');
+      }
     },
 
     handleConfirmVoucher: async () => {
