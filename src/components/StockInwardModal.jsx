@@ -192,190 +192,102 @@ export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
   };
 
   const confirmBulkSubmit = async () => {
-    if (loading) return; // Prevent double submission
-    
+    if (loading) return;
+
     if (!navigator.onLine) {
       toast.error('عذراً، لا يوجد اتصال بالإنترنت حالياً. يرجى التأكد من الشبكة والمحاولة مرة أخرى.');
       return;
     }
 
-    console.log("🚀 بدء عملية الحفظ النهائي...");
+    console.log('🚀 بدء عملية الحفظ النهائي (inventory_commit_inbound)...');
     setShowSaveConfirm(false);
     setLoading(true);
 
     const safetyTimeout = setTimeout(() => {
-      console.warn("⚠️ Safety timeout triggered - forcing loading state to false");
+      console.warn('⚠️ Safety timeout triggered - forcing loading state to false');
       setLoading(false);
-    }, 60000); // Increased to 60s
+    }, 60000);
 
     const itemIds = [...new Set(stockForm.items.map(i => i.itemId))].filter(Boolean);
-    
     if (itemIds.length === 0) {
-      toast.error("لا توجد أصناف صالحة للحفظ (تأكد من اختيار الأصناف بشكل صحيح)");
+      toast.error('لا توجد أصناف صالحة للحفظ (تأكد من اختيار الأصناف بشكل صحيح)');
       clearTimeout(safetyTimeout);
       setLoading(false);
       return;
     }
 
-    // التحقق من تكرار رقم السند في حركات الوارد فقط
-    if (stockForm.receiptNumber.trim()) {
-      const { data: dup } = await supabase
-        .from('transactions')
-        .select('id')
-        .eq('reference_number', stockForm.receiptNumber.trim())
-        .in('type', ['وارد', 'Restock', 'in'])
-        .limit(1);
-      
-      if (dup && dup.length > 0) {
-        toast.error(`رقم السند (${stockForm.receiptNumber}) مسجل مسبقاً! يرجى التأكد من الرقم.`);
-        clearTimeout(safetyTimeout);
-        setLoading(false);
-        return;
-      }
-    }
-
     try {
       const locationName = stockForm.loc;
-      const supplier = locationName; 
-      let imageUrl = stockForm.receiptImage;
-      
-      // 1. رفع الصورة مع مهلة زمنية
-      if (stockForm.receiptImageFile) {
-        console.log("📸 جاري رفع الصورة إلى Cloudinary...");
-        try {
-          const uploadPromise = uploadToCloudinary(stockForm.receiptImageFile, supplier);
-          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("استغرق رفع الصورة وقتاً طويلاً جداً")), 30000));
-          imageUrl = await Promise.race([uploadPromise, timeoutPromise]);
-          console.log("✅ تم رفع الصورة بنجاح:", imageUrl);
-        } catch (uploadErr) {
-          console.error("❌ فشل رفع الصورة:", uploadErr);
-          throw new Error(`فشل رفع الصورة: ${uploadErr.message}`);
-        }
-      }
-
       const batchId = `STOCKIN-${Date.now()}`;
-      const now = new Date();
-      const timestamp = now.toISOString();
-      const dateStr = stockForm.date || timestamp.split('T')[0];
+      const dateStr = stockForm.date || new Date().toISOString().split('T')[0];
+      let imageUrl = stockForm.receiptImage || null;
 
-      // 2. جلب بيانات المنتجات
-      console.log("🔍 جاري جلب بيانات المنتجات لتحديث المخزون...", itemIds);
-      const { data: currentProducts, error: fetchError } = await supabase
-        .from('products')
-        .select('id, stock_qty, name')
-        .in('id', itemIds);
-
-      if (fetchError) {
-        console.error("❌ فشل جلب بيانات المنتجات:", fetchError);
-        throw fetchError;
+      // 1. رفع الصورة إلى Cloudinary (يبقى في JS — لا يمكن نقله لـ SQL)
+      if (stockForm.receiptImageFile) {
+        console.log('📸 جاري رفع الصورة إلى Cloudinary...');
+        const uploadPromise = uploadToCloudinary(stockForm.receiptImageFile, locationName);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('استغرق رفع الصورة وقتاً طويلاً جداً')), 30000)
+        );
+        imageUrl = await Promise.race([uploadPromise, timeoutPromise]);
+        console.log('✅ تم رفع الصورة بنجاح:', imageUrl);
       }
-      console.log(`✅ تم جلب ${currentProducts?.length || 0} صنف بنجاح.`);
 
-      const stockMap = {};
-      currentProducts.forEach(p => {
-        stockMap[p.id] = Number(p.stock_qty || 0);
-      });
-
-      // 3. تحضير البيانات وتحديث المخزون
-      console.log("🔄 جاري تحديث المخزون وتسجيل المعاملات...");
-      const transactionsToInsert = [];
-      const runningBalances = { ...stockMap };
-
-      for (const item of stockForm.items) {
-        const prevBalance = runningBalances[item.itemId] || 0;
-        const newBalance = prevBalance + item.qty;
-        runningBalances[item.itemId] = newBalance;
-
-        transactionsToInsert.push({
-          type: 'in',
-          item_id: item.itemId,
-          item: item.item,
-          company: item.company,
-          unit: item.unit,
-          cat: item.cat,
-          qty: item.qty,
-          date: dateStr,
-          location: locationName,
-          beneficiary: supplier,
-          recipient: supplier, // إضافة حقل المستلم للتوافق
-          receipt_type: stockForm.receiptType,
-        reference_number: stockForm.receiptNumber,
-          receipt_image: imageUrl,
+      // 2. استدعاء RPC الذري — يتولى فحص التكرار + قفل الصفوف + تحديث المخزون + إدراج transactions
+      console.log('🔄 جاري استدعاء inventory_commit_inbound...');
+      const { data, error } = await supabase.rpc('inventory_commit_inbound', {
+        payload: {
+          request_id: `inbound-${Date.now()}`,
           batch_id: batchId,
-          is_summary: false,
-          timestamp: timestamp,
-          balance_after: newBalance,
-          status: 'مكتمل'
-        });
-
-        console.log(`   - جاري تحديث رصيد الصنف ${item.item} (ID: ${item.itemId}) من ${prevBalance} إلى ${newBalance}`);
-        const { error: updateError } = await supabase
-          .from('products')
-          .update({ stock_qty: newBalance })
-          .eq('id', item.itemId);
-        
-        if (updateError) {
-          console.error(`❌ فشل تحديث رصيد الصنف ${item.item}:`, updateError);
-          throw updateError;
-        }
-        console.log(`   - تم تحديث رصيد الصنف ${item.item} بنجاح.`);
-      }
-      console.log("✅ تم تحديث المخزون بنجاح.");
-
-      // 4. إضافة سطر الملخص
-      const totalQty = stockForm.items.reduce((sum, i) => sum + i.qty, 0);
-      transactionsToInsert.push({
-        type: 'in',
-        item: 'ملخص توريد',
-        qty: totalQty,
-        date: dateStr,
-        location: locationName,
-        beneficiary: supplier,
-        recipient: supplier,
-        receipt_type: stockForm.receiptType,
-        reference_number: stockForm.receiptNumber,
-        receipt_image: imageUrl,
-        batch_id: batchId,
-        is_summary: true,
-        timestamp: timestamp,
-        status: 'مكتمل'
+          header: {
+            location_name:    locationName,
+            supplier_name:    locationName,
+            date:             dateStr,
+            receipt_type:     stockForm.receiptType,
+            receipt_number:   stockForm.receiptNumber.trim(),
+            receipt_image_url: imageUrl,
+          },
+          lines: stockForm.items.map(item => ({
+            item_id:   item.itemId,
+            item_name: item.item,
+            company:   item.company,
+            cat:       item.cat,
+            unit:      item.unit,
+            qty:       item.qty,
+          })),
+          actor_user_id:   'ui-stock-inward',
+          actor_user_name: 'Stock Inward Modal',
+        },
       });
-      console.log("✅ تم إضافة سطر الملخص.");
 
-      // 5. إدراج المعاملات
-      console.log("📝 جاري تسجيل المعاملات في قاعدة البيانات...", transactionsToInsert.length, "سجل");
-      const { error: insertError } = await supabase
-        .from('transactions')
-        .insert(transactionsToInsert);
-
-      if (insertError) {
-        console.error("❌ فشل تسجيل المعاملات:", insertError);
-        // محاولة تقديم تفاصيل أكثر عن الخطأ
-        const errorMsg = insertError.message || insertError.details || "خطأ غير معروف في قاعدة البيانات";
-        throw new Error(`فشل تسجيل المعاملات: ${errorMsg}`);
+      if (error) throw error;
+      if (!data?.ok) {
+        // ترجمة رسائل الخطأ المعروفة
+        if (data?.error_code === 'P0001' && data?.error_message === 'DUPLICATE_RECEIPT_NUMBER') {
+          throw new Error(`رقم السند (${stockForm.receiptNumber}) مسجل مسبقاً! يرجى التأكد من الرقم.`);
+        }
+        throw new Error(data?.error_message || 'فشل الحفظ عبر RPC');
       }
-      console.log("✅ تم تسجيل المعاملات بنجاح.");
 
-      console.log("✨ تمت العملية بنجاح!");
+      console.log('✨ تمت العملية بنجاح! batch_id:', data.batch_id);
       toast.success('تم الحفظ والترحيل بنجاح ✅');
       playSuccess?.();
-      
-      // Small delay before success callback to allow UI to settle
+
       setTimeout(() => {
         try {
           onSaveSuccess?.();
           performModalReset();
         } catch (callbackErr) {
-          console.error("❌ خطأ في تنفيذ توابع النجاح:", callbackErr);
+          console.error('❌ خطأ في تنفيذ توابع النجاح:', callbackErr);
         }
       }, 500);
 
-    } catch (err) { 
+    } catch (err) {
       console.error('❌ خطأ في عملية الحفظ:', err);
-      toast.error(`حدث خطأ أثناء الحفظ: ${err.message || "خطأ غير معروف"}`); 
-    } finally { 
+      toast.error(`حدث خطأ أثناء الحفظ: ${err.message || 'خطأ غير معروف'}`);
+    } finally {
       clearTimeout(safetyTimeout);
-      setLoading(false); 
+      setLoading(false);
     }
   };
 

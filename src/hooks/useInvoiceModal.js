@@ -224,133 +224,55 @@ export function useInvoiceModal({
     setShowInvoiceSaveConfirm(false);
     try {
       setLoading(true);
-      const now = new Date();
-      const invoiceTimestamp = now.toLocaleString('ar-SA', {
-        year: 'numeric', month: 'long', day: 'numeric',
-        hour: '2-digit', minute: '2-digit',
-      });
-
-      let txsToInsert = [];
+      const rpcPayload = {
+        request_id: `invoice-${Date.now()}`,
+        mode: sourceVoucher ? 'from_voucher' : 'direct',
+        actor_user_id: 'ui-invoice-modal',
+        actor_user_name: 'Invoice Modal',
+        client_timestamp: new Date().toISOString(),
+        invoice_header: {
+          date: invoiceForm.date,
+          client_name: invoiceForm.client,
+          rep_name: invoiceForm.rep,
+          notes: invoiceForm.notes?.trim?.() || '',
+        },
+        lines: invoiceForm.items.map((line) => ({
+          item_id: line.selectedItem?.id || line.selectedItemId,
+          display_name: line.name || line.selectedItem?.name || '',
+          company: line.company || line.selectedItem?.company || 'بدون شركة',
+          cat: line.cat || line.selectedItem?.cat || '',
+          unit: line.unit || line.selectedItem?.unit || '',
+          qty: Number(line.qty || 0),
+        })),
+      };
 
       if (sourceVoucher) {
-        const batchId = sourceVoucher.voucherGroupId || sourceVoucher.id;
-        const voucherLines = sourceVoucher.lines || [];
-        const invoiceLines = invoiceForm.items;
+        rpcPayload.source_voucher = {
+          batch_id: sourceVoucher.voucherGroupId || sourceVoucher.id,
+          voucher_group_id: sourceVoucher.voucherGroupId || sourceVoucher.id,
+          voucher_code: sourceVoucher.voucherCode || sourceVoucher.reference_number || '',
+          voucher_type: sourceVoucher.type || (sourceVoucher.kind === 'in' ? 'سند إدخال' : 'سند إخراج'),
+          client_name: sourceVoucher.clientName || sourceVoucher.beneficiary || sourceVoucher.recipient || '',
+          rep: sourceVoucher.rep || '',
+        };
+      }
 
-        // Update status for the entire batch
-        const { error: batchUpdateErr } = await supabase
-          .from('transactions')
-          .update({ status: 'مفوتر' })
-          .eq('batch_id', batchId);
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('inventory_commit_invoice', {
+        payload: rpcPayload,
+      });
 
-        if (batchUpdateErr) {
-          for (const vLine of voucherLines) {
-            await supabase.from('transactions')
-              .update({ status: 'مفوتر', notes: vLine.notes ? `${vLine.notes} [تم إصدار الفاتورة]` : '[تم إصدار الفاتورة]' })
-              .eq('id', vLine.id);
-          }
-        }
+      if (rpcError) throw rpcError;
+      if (!rpcResult?.ok) throw new Error(rpcResult?.error_message || 'فشل تنفيذ عملية الفاتورة عبر RPC');
 
-        // Verify write
-        const { data: verifyData } = await supabase
-          .from('transactions').select('id, status').eq('batch_id', batchId).limit(5);
-        const verified = verifyData && verifyData.some(v => v.status === 'مفوتر');
+      const invoiceTimestamp = rpcResult?.ui_snapshot?.invoice_timestamp;
 
-        if (!verified) {
-          const vCode = sourceVoucher.voucherCode || sourceVoucher.reference_number;
-          if (vCode) {
-            await supabase.from('transactions').update({ status: 'مفوتر' }).eq('reference_number', vCode);
-          }
-          for (const vLine of voucherLines) {
-            await supabase.from('transactions')
-              .update({ status: 'مفوتر', notes: vLine.notes ? `${vLine.notes} [تم إصدار الفاتورة]` : '[تم إصدار الفاتورة]' })
-              .eq('id', vLine.id);
-          }
-        }
-
-        // Stock adjustments for qty changes
-        for (const vLine of voucherLines) {
-          const matchingInvItem = invoiceLines.find(
-            it => it.selectedItem?.id === vLine.item_id || it.selectedItemId === vLine.item_id
-          );
-          if (matchingInvItem) {
-            const diff = Number(matchingInvItem.qty) - Number(vLine.qty);
-            if (diff !== 0) {
-              const currentItem = items.find(i => i.id === vLine.item_id);
-              if (currentItem) {
-                await supabase.from('products').update({ stock_qty: (currentItem.stockQty || 0) - diff }).eq('id', vLine.item_id);
-              }
-              await supabase.from('transactions').update({ qty: Number(matchingInvItem.qty) }).eq('id', vLine.id);
-            }
-          } else {
-            // Item removed in review — return stock
-            const currentItem = items.find(i => i.id === vLine.item_id);
-            if (currentItem) {
-              await supabase.from('products').update({ stock_qty: (currentItem.stockQty || 0) + Number(vLine.qty) }).eq('id', vLine.item_id);
-            }
-          }
-        }
-
-        // New items added in review
-        for (const invItem of invoiceLines) {
-          const itemId = invItem.selectedItem?.id || invItem.selectedItemId;
-          if (!itemId || voucherLines.some(vl => vl.item_id === itemId)) continue;
-          const currentItem = items.find(i => i.id === itemId);
-          if (currentItem) {
-            await supabase.from('products').update({ stock_qty: (currentItem.stockQty || 0) - Number(invItem.qty) }).eq('id', itemId);
-          }
-          await supabase.from('transactions').insert({
-            item: invItem.name || invItem.selectedItem?.name,
-            item_id: itemId,
-            type: sourceVoucher.type || 'outward',
-            qty: Number(invItem.qty),
-            batch_id: batchId,
-            reference_number: sourceVoucher.voucherCode,
-            beneficiary: sourceVoucher.clientName,
-            rep: invoiceForm.rep || sourceVoucher.rep || sourceVoucher.clientName,
-            timestamp: new Date().toISOString(),
-            status: 'مفوتر',
-            notes: '[إضافة مراجعة]',
-          });
-        }
-
-        if (setInvoiceTimestamps) setInvoiceTimestamps(prev => ({ ...prev, [sourceVoucher.id]: invoiceTimestamp }));
-
-      } else {
-        // ─── Direct Sales Invoice ─────────────────────────────────────
-        const batchId = `INV-${Date.now()}`;
-        for (const line of invoiceForm.items) {
-          const itemId = line.selectedItem?.id || line.selectedItemId;
-          if (!itemId) continue;
-          const { data: latestProd } = await supabase.from('products').select('stock_qty').eq('id', itemId).single();
-          const currentStock = latestProd?.stock_qty || 0;
-          await supabase.from('products').update({ stock_qty: currentStock - Number(line.qty) }).eq('id', itemId);
-          txsToInsert.push({
-            item: line.name || line.selectedItem?.name,
-            item_id: itemId,
-            type: 'Issue',
-            qty: Number(line.qty),
-            date: invoiceForm.date,
-            timestamp: new Date().toISOString(),
-            status: 'مفوتر',
-            beneficiary: invoiceForm.client,
-            rep: invoiceForm.rep,
-            batch_id: batchId,
-            reference_number: batchId,
-            notes: `${invoiceForm.notes.trim()} [نوع: صادر]`,
-          });
-        }
-        if (txsToInsert.length > 0) {
-          const { error: insErr } = await supabase.from('transactions').insert(txsToInsert);
-          if (insErr) throw insErr;
-        }
+      if (sourceVoucher && invoiceTimestamp && setInvoiceTimestamps) {
+        setInvoiceTimestamps(prev => ({ ...prev, [sourceVoucher.id]: invoiceTimestamp }));
       }
 
       // ─── Invoice image capture + Cloudinary upload ─────────────────
       try {
-        const finalBatchId = sourceVoucher
-          ? (sourceVoucher.voucherGroupId || sourceVoucher.id)
-          : txsToInsert[0]?.batch_id;
+        const finalBatchId = rpcResult?.batch_id;
 
         const invData = {
           type: sourceVoucher ? 'voucher' : 'sale',
@@ -384,6 +306,7 @@ export function useInvoiceModal({
           const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
           const imageUrl = await uploadToCloudinary(blob, invData);
           if (imageUrl && finalBatchId) {
+            rpcPayload.invoice_header.receipt_image_url = imageUrl;
             await supabase.from('transactions').update({ receipt_image: imageUrl }).eq('batch_id', finalBatchId);
           }
         }
@@ -392,13 +315,13 @@ export function useInvoiceModal({
         if (import.meta.env.DEV) console.error('Invoice image generation failed:', genErr);
       }
 
-      toast.success('تم تأكيد الفاتورة بنجاح ✅');
+      toast.success(`تم تأكيد الفاتورة بنجاح ✅${rpcResult?.reference_number ? ` (${rpcResult.reference_number})` : ''}`);
       if (playSuccess) playSuccess();
       performInvoiceReset();
       if (fetchInitialData) fetchInitialData();
     } catch (err) {
       if (import.meta.env.DEV) console.error('performInvoiceSave error:', err);
-      toast.error('حدث خطأ تقني أثناء الحفظ. يرجى المحاولة مرة أخرى.');
+      toast.error(err?.message || 'حدث خطأ تقني أثناء الحفظ. يرجى المحاولة مرة أخرى.');
     } finally {
       setLoading(false);
     }

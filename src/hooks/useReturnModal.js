@@ -156,56 +156,34 @@ export function useReturnModal({
     setShowReturnSaveConfirm(false);
     setLoading(true);
     try {
-      const batchId = Date.now().toString();
-      const now = new Date().toISOString();
+      const rpcPayload = {
+        request_id: `return-modal-${Date.now()}`,
+        header: {
+          date: returnForm.date || new Date().toISOString().split('T')[0],
+          returnee_name: returnForm.returnee,
+          rep_name: returnForm.rep,
+        },
+        lines: returnItems.map((it) => ({
+          item_id: it.selectedItem?.id,
+          item_name: it.name,
+          company: it.selectedItem?.company || 'بدون شركة',
+          cat: it.cat,
+          unit: it.unit,
+          qty: Number(it.qty),
+          return_status: it.returnStatus,
+          transaction_status: it.returnStatus === 'سليم' ? 'مكتمل' : 'مرتجع تالف',
+        })),
+      };
 
-      // Update stock for undamaged items
-      const additions = {};
-      returnItems.forEach(it => {
-        if (it.returnStatus === 'سليم') {
-          if (!additions[it.selectedItem.id]) additions[it.selectedItem.id] = { id: it.selectedItem.id, qty: 0 };
-          additions[it.selectedItem.id].qty += Number(it.qty);
-        }
+      const { data, error } = await supabase.rpc('inventory_commit_return', {
+        payload: rpcPayload,
       });
-      for (const [id, payload] of Object.entries(additions)) {
-        const currentItem = items.find(i => i.id === id);
-        if (currentItem) {
-          await supabase.from('products').update({ stock_qty: currentItem.stockQty + payload.qty }).eq('id', id);
-        }
-      }
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error_message || 'فشل حفظ المرتجع عبر RPC');
 
-      // Insert transactions
-      const txsToInsert = returnItems.map(it => ({
-        item: it.name,
-        type: 'return',
-        qty: Number(it.qty),
-        date: returnForm.date || new Date().toISOString().split('T')[0],
-        timestamp: now,
-        status: it.returnStatus === 'سليم' ? 'مكتمل' : 'مرتجع تالف',
-        loc: returnForm.returnee,
-        rep: returnForm.rep,
-        beneficiary: returnForm.returnee,
-        user_id: null,
-        batch_id: batchId,
-        item_id: it.selectedItem?.id,
-      }));
-      await supabase.from('transactions').insert(txsToInsert);
-
-      // Log damaged items to discrepancies table
-      const damagedItems = returnItems.filter(it => it.returnStatus === 'تالف');
-      if (damagedItems.length > 0) {
-        const discrepanciesToInsert = damagedItems.map(it => ({
-          item_id: it.selectedItem?.id || null,
-          item_name: it.name || it.selectedItem?.name || '',
-          expected_qty: 0,
-          actual_qty: 0,
-          diff: Number(it.qty),
-          note: `مرتجع تالف - من: ${returnForm.returnee}${returnForm.rep ? ` / مندوب: ${returnForm.rep}` : ''}`,
-          status: 'pending',
-          created_at: now,
-        }));
-        await supabase.from('discrepancies').insert(discrepanciesToInsert);
-        toast.warning(`تم تسجيل ${damagedItems.length} صنف في قسم التوالف ❤️`);
+      const damagedCount = data?.discrepancy_ids?.length || 0;
+      if (damagedCount > 0) {
+        toast.warning(`تم تسجيل ${damagedCount} صنف في قسم التوالف ❤️`);
       }
 
       toast.success('تم تسجيل المرتجع بنجاح ✅');
@@ -214,11 +192,11 @@ export function useReturnModal({
       if (fetchInitialData) fetchInitialData();
     } catch (err) {
       if (import.meta.env.DEV) console.error('performReturnSave error:', err);
-      toast.error('حدث خطأ أثناء حفظ المرتجع.');
+      toast.error(err?.message || 'حدث خطأ أثناء حفظ المرتجع.');
     } finally {
       setLoading(false);
     }
-  }, [returnForm, returnItems, items, playSuccess, performReturnReset, fetchInitialData, setLoading]);
+  }, [returnForm, returnItems, playSuccess, performReturnReset, fetchInitialData, setLoading]);
 
   // ─── Public API ───────────────────────────────────────────────────────
   return {

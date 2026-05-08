@@ -81,21 +81,30 @@ export function useVoucherDetail({
     );
   }, [items]);
 
-  // ─── Finalize an inbound voucher (mark as invoiced, no stock change) ─
+  // ─── Finalize an inbound voucher → inventory_finalize_voucher RPC ────
   const finalizeInboundVoucher = useCallback(async (voucher) => {
     try {
-      for (const line of voucher.lines) {
-        await supabase.from('transactions').update({ invoiced: true, deducted: true }).eq('id', line.id);
-      }
+      const { data, error } = await supabase.rpc('inventory_finalize_voucher', {
+        payload: {
+          request_id: `finalize-voucher-${Date.now()}`,
+          batch_id: voucher.id,
+          action: 'mark_invoiced',
+          actor_user_id: 'ui-voucher-detail',
+          actor_user_name: 'Voucher Detail',
+        },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error_message || 'فشل اعتماد سند الإدخال عبر RPC');
       setIsVoucherModalOpen(false);
       setSelectedVoucher(null);
       toast.success('تم اعتماد سند الإدخال بنجاح ✅');
       if (playSuccess) playSuccess();
+      if (fetchInitialData) fetchInitialData();
     } catch {
       toast.error('تعذر اعتماد سند الإدخال.');
       if (playWarning) playWarning();
     }
-  }, [playSuccess, playWarning]);
+  }, [playSuccess, playWarning, fetchInitialData]);
 
   // ─── Export outbound voucher → prefill the Invoice Modal ─────────────
   const handleExportInvoiceToInvoice = useCallback((voucher) => {
@@ -145,34 +154,29 @@ export function useVoucherDetail({
     if (!window.confirm('هل أنت متأكد من حذف هذا السند نهائياً؟ سيتم استرجاع الكميات للمخزن.')) return;
     try {
       if (setLoading) setLoading(true);
-      const lines = voucher.lines || [];
-
-      for (const line of lines) {
-        if (line.deducted !== false) {
-          const currentItem = items.find(i => i.id === line.item_id);
-          if (currentItem) {
-            const type = line.type || '';
-            const isIn = type.includes('إدخال') || type === 'Restock';
-            const delta = isIn ? -Number(line.qty) : Number(line.qty);
-            const newStock = currentItem.stockQty + delta;
-            await supabase.from('products').update({ stock_qty: Math.max(0, newStock) }).eq('id', line.item_id);
-          }
-        }
-      }
-
-      const { error } = await supabase.from('transactions').delete().eq('batch_id', voucher.id);
+      const { data, error } = await supabase.rpc('inventory_cancel_voucher', {
+        payload: {
+          request_id: `cancel-voucher-${Date.now()}`,
+          batch_id: voucher.id,
+          voucher_kind: voucher.kind === 'in' ? 'in' : 'out',
+          cancel_reason: 'إلغاء من نافذة تفاصيل السند',
+          actor_user_id: 'ui-voucher-detail',
+          actor_user_name: 'Voucher Detail',
+        },
+      });
       if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error_message || 'فشل إلغاء السند عبر RPC');
 
       toast.success('تم حذف السند وإرجاع الكميات للمخزن بنجاح ✅');
       if (playSuccess) playSuccess();
       closeVoucherDetail();
       if (fetchInitialData) fetchInitialData();
-    } catch {
-      toast.error('حدث خطأ أثناء حذف السند.');
+    } catch (err) {
+      toast.error(err?.message || 'حدث خطأ أثناء حذف السند.');
     } finally {
       if (setLoading) setLoading(false);
     }
-  }, [items, setLoading, playSuccess, closeVoucherDetail, fetchInitialData]);
+  }, [setLoading, playSuccess, closeVoucherDetail, fetchInitialData]);
 
   // ─── Navigate to voucher edit page ───────────────────────────────────
   const handleEditVoucher = useCallback((voucher) => {
@@ -190,21 +194,21 @@ export function useVoucherDetail({
     if (v.kind === 'in') {
       try {
         if (setLoading) setLoading(true);
-        const now = new Date();
-        const invoiceTimestamp = now.toLocaleDateString('ar-SA', {
+        const { data, error } = await supabase.rpc('inventory_finalize_voucher', {
+          payload: {
+            request_id: `mark-invoiced-${Date.now()}`,
+            batch_id: v.id,
+            action: 'mark_invoiced',
+            actor_user_id: 'ui-voucher-detail',
+            actor_user_name: 'Voucher Detail',
+          },
+        });
+        if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error_message || 'فشل اعتماد السند عبر RPC');
+
+        const invoiceTimestamp = new Date().toLocaleDateString('ar-SA', {
           year: 'numeric', month: 'long', day: 'numeric',
         });
-
-        const lines = v.lines || [];
-        for (const line of lines) {
-          await supabase.from('transactions').update({
-            status: 'مفوتر',
-            notes: line.notes
-              ? `${line.notes} [تم إصدار الفاتورة] ${invoiceTimestamp}`
-              : `[تم إصدار الفاتورة] ${invoiceTimestamp}`,
-          }).eq('id', line.id);
-        }
-
         setInvoiceTimestamps(prev => ({ ...prev, [v.id]: invoiceTimestamp }));
         setVoucherTransactions(prev =>
           prev.map(item =>
@@ -263,12 +267,18 @@ export function useVoucherDetail({
     updateVoucherNote: async (voucher, newNote) => {
       try {
         if (!voucher?.id) return;
-        const { error } = await supabase
-          .from('transactions')
-          .update({ notes: newNote })
-          .eq('batch_id', voucher.id);
-        
+        const { data, error } = await supabase.rpc('inventory_finalize_voucher', {
+          payload: {
+            request_id: `update-note-${Date.now()}`,
+            batch_id: voucher.id,
+            action: 'update_note',
+            note: newNote,
+            actor_user_id: 'ui-voucher-detail',
+            actor_user_name: 'Voucher Detail',
+          },
+        });
         if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error_message || 'فشل تحديث الملاحظات عبر RPC');
         toast.success('تم تحديث الملاحظات ✅');
         if (fetchInitialData) fetchInitialData();
       } catch {
@@ -280,13 +290,23 @@ export function useVoucherDetail({
       if (!window.confirm('هل أنت متأكد من حذف هذا الصنف من السند؟')) return;
       try {
         if (setLoading) setLoading(true);
-        const { error } = await supabase.from('transactions').delete().eq('id', txId);
+        const targetVoucher = detailVoucher || selectedVoucher;
+        const { data, error } = await supabase.rpc('inventory_delete_voucher_line', {
+          payload: {
+            request_id: `delete-voucher-line-${Date.now()}`,
+            transaction_id: txId,
+            voucher_kind: targetVoucher?.kind === 'in' ? 'in' : 'out',
+            actor_user_id: 'ui-voucher-detail',
+            actor_user_name: 'Voucher Detail',
+          },
+        });
         if (error) throw error;
+        if (!data?.ok) throw new Error(data?.error_message || 'فشل حذف سطر السند عبر RPC');
         
         toast.success('تم حذف الصنف بنجاح ✅');
         if (fetchInitialData) fetchInitialData();
-      } catch {
-        toast.error('حدث خطأ أثناء حذف الصنف.');
+      } catch (err) {
+        toast.error(err?.message || 'حدث خطأ أثناء حذف الصنف.');
       } finally {
         if (setLoading) setLoading(false);
       }

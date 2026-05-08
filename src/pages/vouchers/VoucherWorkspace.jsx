@@ -993,14 +993,8 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
     if (!modalDrafts.length) return;
     if (!validateSession()) return;
 
-    let voucherSupplyNotes = String(session.line_note || '').trim();
-    
-    // Add specific tag for internal transfers
-    if (kind === 'outward' && session.outwardType === 'transfer') {
-      if (!voucherSupplyNotes.includes('[نوع: تحويل مخزني]')) {
-        voucherSupplyNotes = voucherSupplyNotes ? `${voucherSupplyNotes} [نوع: تحويل مخزني]` : '[نوع: تحويل مخزني]';
-      }
-    }
+    const voucherSupplyNotes = String(session.line_note || '').trim();
+    const isTransferVoucher = kind === 'outward' && session.outwardType === 'transfer';
 
     setLoading(true);
 
@@ -1011,16 +1005,6 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
         imageUrl = await uploadToCloudinary(session.attachment);
       }
       // ───────────────────────────────
-      let oldLines = [];
-      if (editingGroupId) {
-          // IMPORTANT: Fetch existing transactions BEFORE deleting them
-          const { data: existing } = await supabase
-            .from('transactions')
-            .select('item_id, qty')
-            .eq('batch_id', editingGroupId)
-            .eq('is_summary', false);
-          if (existing) oldLines = existing;
-      }
 
       // ═══ OUTWARD: Final stock validation before saving ═══
       // This is the critical gate — re-fetch live stock from DB to prevent negatives
@@ -1061,152 +1045,56 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
       }
       // ═══════════════════════════════════════════════════════
 
-      let voucherGroupId = editingGroupId || crypto.randomUUID();
       const inputVoucherCode = String(session.voucher_no || '').trim();
-      let voucherCode = inputVoucherCode.replace(/^[A-Z]+-\d+-/g, '').replace(/^[A-Z]+-/g, '');
-
-      if (!voucherCode) {
-        voucherCode = await allocateVoucherCode(kind);
-      } else {
-        // Check for duplicates if the number changed OR if it's a new voucher
-        const hasNumberChanged = voucherCode !== preservedVoucherCode;
-        if (!editingGroupId || hasNumberChanged) {
-          const checkTypes = ['سند إخراج', 'outward'];
-          const { data: dup } = await supabase
-            .from('transactions')
-            .select('id')
-            .eq('reference_number', voucherCode)
-            .in('type', checkTypes)
-            .limit(1);
-          
-          if (dup && dup.length > 0) {
-            setLoading(false);
-            return toast.error(`عفواً، رقم السند (${voucherCode}) مسجل مسبقاً في ${kind === 'in' ? 'سندات الإدخال' : 'سندات الإخراج'}!`);
-          }
-        }
-      }
-
-      // 1. Delete old lines if editing
-      if (editingGroupId) {
-        const { error: delError } = await supabase.from('transactions').delete().eq('batch_id', editingGroupId);
-        if (delError) throw delError;
-      }
-
-      // ─── 2. Prepare Rows for Database ───
-      const now = new Date();
-      const timestamp = now.toISOString();
-      
-      // Save previous version snapshot when editing
-      let historyTag = '';
-      if (editingGroupId && voucherGroups.length > 0) {
-        const originalGroup = voucherGroups.find(g => g.groupId === editingGroupId);
-        if (originalGroup) {
-          const snapshot = {
-            at: timestamp,
-            beneficiary: originalGroup.clientName || originalGroup.supplier || originalGroup.rep || '',
-            date: originalGroup.date || '',
-            notes: (originalGroup.line_note || '').split(/\[تعديل حديث\]|\[تم تعديله\]|\[تم إصدار الفاتورة|\[إضافة مراجعة\]|\[مستند رقم|\[نوع:|<!--/)[0].trim(),
-            lines: originalGroup.lines
-              .filter(l => !l.is_summary)
-              .map(l => ({ item: l.item, qty: l.qty, unit: l.unit, cat: l.cat || '' }))
-          };
-          historyTag = ` <!--HIST:${JSON.stringify(snapshot)}-->`;
-        }
-      }
-
-      const beneficiary = String(session.rep || '').trim();
-
-      const common = {
-        type: 'سند إخراج',
-        date: session.date,
-        batch_id: voucherGroupId,
-        reference_number: voucherCode,
-        beneficiary: beneficiary,
-        notes: `${voucherSupplyNotes}${historyTag}`,
-        receipt_image: imageUrl || null,
-        timestamp: timestamp, // Jump to top
+      const voucherCode = inputVoucherCode.replace(/^[A-Z]+-\d+-/g, '').replace(/^[A-Z]+-/g, '');
+      const rpcPayload = {
+        request_id: `voucher-${Date.now()}`,
+        mode: editingGroupId ? 'edit' : 'create',
+        voucher_kind: kind === 'in' ? 'in' : 'out',
+        existing_batch_id: editingGroupId || null,
+        actor_user_id: currentUser?.id || 'ui-voucher-workspace',
+        actor_user_name: currentUser?.name || currentUser?.email || 'Voucher Workspace',
+        client_timestamp: new Date().toISOString(),
+        is_transfer: isTransferVoucher,
+        header: {
+          date: session.date,
+          beneficiary_name: String(session.rep || '').trim(),
+          rep_name: String(session.rep || '').trim(),
+          location_name: '',
+          notes: voucherSupplyNotes,
+          receipt_image_url: imageUrl || null,
+          voucher_code: voucherCode || null,
+          voucher_code_prefix: cfg.codePrefix || '',
+          voucher_counter_key: cfg.counterKey || 'out',
+        },
+        lines: modalDrafts.map((entry) => ({
+          item_id: entry.itemId,
+          item_name: entry.item,
+          company: entry.company || 'بدون شركة',
+          cat: entry.cat || '',
+          unit: entry.unit || '',
+          qty: Number(entry.qty || 0),
+        })),
       };
 
-      common.rep = beneficiary;
-
-      const rows = modalDrafts.map((entry) => ({
-        ...common,
-        item: entry.item,
-        item_id: entry.itemId,
-        company: entry.company,
-        qty: entry.qty,
-        unit: entry.unit,
-        cat: entry.cat,
-        is_summary: false
-      }));
-
-      // Add Summary Row
-      const totalQty = modalDrafts.reduce((sum, d) => sum + d.qty, 0);
-      rows.push({
-        ...common,
-        item: 'ملخص عهده مندوب',
-        qty: totalQty,
-        total_qty: totalQty,
-        is_summary: true,
-        notes: common.notes ? `${common.notes} [مستند رقم ${voucherCode}]` : `مستند رقم ${voucherCode}`
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('inventory_upsert_voucher', {
+        payload: rpcPayload,
       });
 
-      console.log('🚀 Final Transaction Payload:', rows);
-
-      const { error: insError } = await supabase.from('transactions').insert(rows);
-      if (insError) {
-        console.error('❌ Supabase Insert Error:', insError);
-        throw insError;
-      }
-
-      // --- Real-time Stock Update Logic (Sync Everything) ---
-      const itemIds = [...new Set(modalDrafts.map(d => d.itemId))].filter(Boolean);
-      
-      const allAffectedItemIds = [...new Set([...itemIds, ...oldLines.map(l => l.item_id)])].filter(Boolean);
-
-      if (allAffectedItemIds.length > 0) {
-        const { data: currentProducts, error: fetchError } = await supabase
-          .from('products')
-          .select('id, stock_qty')
-          .in('id', allAffectedItemIds);
-
-        if (!fetchError && currentProducts) {
-          // Calculate Net Change per Product
-          for (const pid of allAffectedItemIds) {
-            const p = currentProducts.find(x => x.id === pid);
-            if (!p) continue;
-
-            let netChange = 0;
-            // 1. Undo Old Impact
-            const oldSum = oldLines.filter(ol => ol.item_id === pid).reduce((sum, ol) => sum + Number(ol.qty || 0), 0);
-            netChange += oldSum; // Old Outbound subtracted stock, so undoing adds
-
-            // 2. Apply New Impact
-            const newSum = modalDrafts.filter(nd => nd.itemId === pid).reduce((sum, nd) => sum + Number(nd.qty || 0), 0);
-            netChange -= newSum; // New Outbound subtracts stock
-
-            if (netChange !== 0) {
-                const currentStock = Number(p.stock_qty || 0);
-                await supabase
-                  .from('products')
-                  .update({ stock_qty: Math.max(0, currentStock + netChange) })
-                  .eq('id', pid);
-            }
-          }
-        }
-      }
-      // ------------------------------------
+      if (rpcError) throw rpcError;
+      if (!rpcResult?.ok) throw new Error(rpcResult?.error_message || 'فشل حفظ السند عبر RPC');
 
       toast.success(
         editingGroupId
-          ? `✅ تم تحديث السند ${voucherCode}`
-          : `✅ تم حفظ السند ${voucherCode} (${modalDrafts.length} سطر)`
+          ? `✅ تم تحديث السند ${rpcResult?.voucher_code || voucherCode || ''}`
+          : `✅ تم حفظ السند ${rpcResult?.voucher_code || voucherCode || ''} (${modalDrafts.length} سطر)`
       );
       playSuccess();
+      await fetchInitialData();
       closeAddModal();
     } catch (err) {
       console.error(err);
-      toast.error('حدث خطأ أثناء الحفظ. حاول مرة أخرى.');
+      toast.error(err?.message || 'حدث خطأ أثناء الحفظ. حاول مرة أخرى.');
       playWarning();
     } finally {
       setLoading(false);
@@ -1286,18 +1174,27 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
     if (!selectedTx || Number(editForm.qty) <= 0) return;
     setLoading(true);
     try {
-      const { error } = await supabase.from('transactions').update({ 
-        qty: Number(editForm.qty), 
-        date: editForm.date, 
-        notes: String(editForm.lineNote || '').trim() 
-      }).eq('id', selectedTx.id);
+      const { data, error } = await supabase.rpc('inventory_update_voucher_line', {
+        payload: {
+          request_id: `update-voucher-line-${Date.now()}`,
+          transaction_id: selectedTx.id,
+          voucher_kind: kind === 'in' ? 'in' : 'out',
+          qty: Number(editForm.qty),
+          date: editForm.date,
+          line_note: String(editForm.lineNote || '').trim(),
+          actor_user_id: currentUser?.id || 'ui-voucher-workspace',
+          actor_user_name: currentUser?.name || currentUser?.email || 'Voucher Workspace',
+        },
+      });
       if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error_message || 'فشل تعديل سطر السند عبر RPC');
       toast.success('تم تعديل السطر بنجاح');
       playSuccess();
+      await fetchInitialData();
       setIsEditOpen(false);
     } catch (err) {
       console.error(err);
-      toast.error('خطأ في التعديل');
+      toast.error(err?.message || 'خطأ في التعديل');
       playWarning();
     } finally {
       setLoading(false);
@@ -1314,14 +1211,24 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
     if (!selectedTx) return;
     setLoading(true);
     try {
-      const { error } = await supabase.from('transactions').delete().eq('id', selectedTx.id);
+      const { data, error } = await supabase.rpc('inventory_delete_voucher_line', {
+        payload: {
+          request_id: `delete-voucher-line-${Date.now()}`,
+          transaction_id: selectedTx.id,
+          voucher_kind: kind === 'in' ? 'in' : 'out',
+          actor_user_id: currentUser?.id || 'ui-voucher-workspace',
+          actor_user_name: currentUser?.name || currentUser?.email || 'Voucher Workspace',
+        },
+      });
       if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error_message || 'فشل حذف سطر السند عبر RPC');
       toast.success('تم حذف السطر');
       playSuccess();
+      await fetchInitialData();
       setIsDeleteOpen(false);
     } catch (err) {
       console.error(err);
-      toast.error('خطأ أثناء الحذف');
+      toast.error(err?.message || 'خطأ أثناء الحذف');
       playWarning();
     } finally {
       setLoading(false);
@@ -1338,34 +1245,18 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
     if (!groupToDelete?.lines?.length) return;
     setLoading(true);
     try {
-      // 1. Return stock BEFORE deleting
-      const lines = groupToDelete.lines.filter(l => l.is_summary !== true);
-      const itemIds = [...new Set(lines.map(l => l.item_id))].filter(Boolean);
-      
-      if (itemIds.length > 0) {
-          const { data: products } = await supabase.from('products').select('id, stock_qty').in('id', itemIds);
-          if (products) {
-              for (const l of lines) {
-                  const p = products.find(x => x.id === l.item_id);
-                  if (p) {
-                      const current = Number(p.stock_qty || 0);
-                      const qty = Number(l.qty || 0);
-                      // If it was Inbound (added stock), deleting it subtracts stock.
-                      // If it was Outbound (subtracted stock), deleting it adds stock.
-                      const adjustment = kind === 'in' ? -qty : qty;
-                      await supabase.from('products').update({ stock_qty: Math.max(0, current + adjustment) }).eq('id', p.id);
-                  }
-              }
-          }
-      }
-
-      // 2. Mark as cancelled instead of hard deleting for audit trail
-      const ids = groupToDelete.lines.map((l) => l.id);
-      const { error } = await supabase
-        .from('transactions')
-        .update({ status: 'cancelled', notes: `[تم الإلغاء] - ${new Date().toLocaleString('ar-EG')}` })
-        .in('id', ids);
+      const { data, error } = await supabase.rpc('inventory_cancel_voucher', {
+        payload: {
+          request_id: `cancel-voucher-${Date.now()}`,
+          batch_id: groupToDelete.groupId || groupToDelete.voucherGroupId,
+          voucher_kind: kind === 'in' ? 'in' : 'out',
+          cancel_reason: 'إلغاء من شاشة السندات',
+          actor_user_id: currentUser?.id || 'ui-voucher-workspace',
+          actor_user_name: currentUser?.name || currentUser?.email || 'Voucher Workspace',
+        },
+      });
       if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error_message || 'فشل إلغاء السند عبر RPC');
 
       toast.success('تم إلغاء السند وإرجاع الكميات للمخزن بنجاح');
       playSuccess();
@@ -1375,7 +1266,7 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
       setExpandedGroupId(null);
     } catch (err) {
       console.error(err);
-      toast.error('تعذر حذف السند');
+      toast.error(err?.message || 'تعذر حذف السند');
       playWarning();
     } finally {
       setLoading(false);
@@ -1392,27 +1283,16 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
     if (!groupToReset || !groupToReset.lines) return;
     setLoading(true);
     try {
-      let hasError = false;
-      for (const line of groupToReset.lines) {
-        let cleanNote = (line.notes || '')
-          .split(/<!--|\[تعديل حديث\]|\[تم تعديله\]|\[تم إصدار الفاتورة|\[إضافة مراجعة\]|\[مستند رقم/)[0]
-          .trim();
-          
-        const { error } = await supabase
-          .from('transactions')
-          .update({ 
-            status: null, 
-            notes: cleanNote || null 
-          }) 
-          .eq('id', line.id);
-          
-        if (error) {
-           console.error('Error updating line:', line.id, error);
-           hasError = true;
-        }
-      }
-
-      if (hasError) throw new Error("Failed to reset some lines");
+      const { data, error } = await supabase.rpc('inventory_reset_voucher_status', {
+        payload: {
+          request_id: `reset-voucher-status-${Date.now()}`,
+          batch_id: groupToReset.groupId || groupToReset.voucherGroupId,
+          actor_user_id: currentUser?.id || 'ui-voucher-workspace',
+          actor_user_name: currentUser?.name || currentUser?.email || 'Voucher Workspace',
+        },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error_message || 'فشل إلغاء فوترة السند عبر RPC');
 
       toast.success('تم إلغاء الفوترة بنجاح. السند متاح الآن للتعديل أو الحذف.');
       playSuccess();

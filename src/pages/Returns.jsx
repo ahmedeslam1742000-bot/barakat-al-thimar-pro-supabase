@@ -345,58 +345,28 @@ export default function Returns({ setActiveView }) {
     }
     setLoading(true);
     try {
-      // 1. Process Stock Adjustments
-      for (const draft of modalDrafts) {
-        const { data: item } = await supabase.from('products').select('stock_qty, damaged_qty').eq('id', draft.itemId).single();
-        if (item) {
-          if (draft.status === 'سليم') {
-            await supabase.from('products').update({ stock_qty: (item.stock_qty || 0) + draft.qty }).eq('id', draft.itemId);
-          } else {
-            await supabase.from('products').update({ damaged_qty: (item.damaged_qty || 0) + draft.qty }).eq('id', draft.itemId);
-          }
-        }
-      }
-
-      // 2. Create Transactions
-      const batchId = `RETURN-${Date.now()}`;
-      const totalQty = modalDrafts.reduce((sum, d) => sum + d.qty, 0);
-      const beneficiary = bulkRep.trim();
-      const now = new Date();
-
-      const txRows = modalDrafts.map((d) => ({
-        type: 'return',
-        item: d.item,
-        item_id: d.itemId,
-        company: d.company,
-        qty: d.qty,
-        unit: d.unit,
-        cat: d.cat,
-        status: d.status,
-        rep: beneficiary,
-        beneficiary: beneficiary,
-        date: bulkDate || now.toISOString().split('T')[0],
-        timestamp: now.toISOString(),
-        batch_id: batchId,
-        is_summary: false
-      }));
-
-      // Add Summary Row
-      txRows.push({
-        type: 'return',
-        item: 'ملخص مرتجع بضاعة',
-        qty: totalQty,
-        total_qty: totalQty,
-        date: bulkDate || now.toISOString().split('T')[0],
-        timestamp: now.toISOString(),
-        status: 'مكتمل',
-        rep: beneficiary,
-        beneficiary: beneficiary,
-        batch_id: batchId,
-        is_summary: true
+      const { data, error } = await supabase.rpc('inventory_commit_return', {
+        payload: {
+          request_id: `returns-page-${Date.now()}`,
+          header: {
+            date: bulkDate || new Date().toISOString().split('T')[0],
+            returnee_name: bulkRep.trim(),
+            rep_name: bulkRep.trim(),
+          },
+          lines: modalDrafts.map((d) => ({
+            item_id: d.itemId,
+            item_name: d.item,
+            company: d.company || 'بدون شركة',
+            qty: Number(d.qty),
+            unit: d.unit,
+            cat: d.cat,
+            status: d.status,
+            transaction_status: d.status,
+          })),
+        },
       });
-
-      const { error: insError } = await supabase.from('transactions').insert(txRows);
-      if (insError) throw insError;
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error_message || 'فشل تأكيد المرتجع عبر RPC');
 
       toast.success(`✅ تم تأكيد استلام المرتجع وتسجيل ${modalDrafts.length} أصناف وتحديث المخزن`);
       playSuccess();
@@ -407,7 +377,7 @@ export default function Returns({ setActiveView }) {
       clearRow();
     } catch (err) {
       console.error(err);
-      toast.error('خطأ أثناء المزامنة. يرجى المحاولة مرة أخرى.');
+      toast.error(err?.message || 'خطأ أثناء المزامنة. يرجى المحاولة مرة أخرى.');
       playWarning();
     } finally {
       setLoading(false);
@@ -429,46 +399,34 @@ export default function Returns({ setActiveView }) {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data: item } = await supabase.from('products').select('stock_qty, damaged_qty').eq('id', selectedTx.itemId).single();
-      if (item) {
-        const oldQ = Number(selectedTx.qty);
-        const newQ = Number(editForm.qty);
-        const oldS = selectedTx.status;
-        const newS = editForm.status;
-        
-        let stockDelta = 0;
-        let damagedDelta = 0;
-        
-        if (oldS === 'سليم') stockDelta -= oldQ;
-        else damagedDelta -= oldQ;
-        
-        if (newS === 'سليم') stockDelta += newQ;
-        else damagedDelta += newQ;
-        
-        const updates = {};
-        if (stockDelta !== 0) updates.stock_qty = (item.stock_qty || 0) + stockDelta;
-        if (damagedDelta !== 0) updates.damaged_qty = (item.damaged_qty || 0) + damagedDelta;
-        
-        if (Object.keys(updates).length > 0) {
-          await supabase.from('products').update(updates).eq('id', selectedTx.itemId);
-        }
-      }
-      
-      const { error } = await supabase.from('transactions').update({
-        qty: Number(editForm.qty),
-        date: editForm.date,
-        rep: editForm.rep,
-        status: editForm.status,
-      }).eq('id', selectedTx.id);
-      
+      const { data, error } = await supabase.rpc('inventory_update_return', {
+        payload: {
+          request_id: `returns-edit-${Date.now()}`,
+          transaction_id: selectedTx.id,
+          old_state: {
+            item_id: selectedTx.itemId,
+            qty: Number(selectedTx.qty),
+            status: selectedTx.status,
+          },
+          new_state: {
+            item_id: selectedTx.itemId,
+            qty: Number(editForm.qty),
+            status: editForm.status,
+            date: editForm.date,
+            rep_name: editForm.rep,
+            returnee_name: editForm.rep,
+          },
+        },
+      });
       if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error_message || 'فشل تعديل المرتجع عبر RPC');
       
       toast.success('تم تعديل سند المرتجع ✅');
       playSuccess();
       setIsEditModalOpen(false);
     } catch (err) {
       console.error(err);
-      toast.error('خطأ في التعديل');
+      toast.error(err?.message || 'خطأ في التعديل');
       playWarning();
     } finally {
       setLoading(false);
@@ -484,23 +442,21 @@ export default function Returns({ setActiveView }) {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data: item } = await supabase.from('products').select('stock_qty, damaged_qty').eq('id', selectedTx.itemId).single();
-      if (item) {
-        if (selectedTx.status === 'سليم') {
-          await supabase.from('products').update({ stock_qty: Math.max(0, (item.stock_qty || 0) - Number(selectedTx.qty)) }).eq('id', selectedTx.itemId);
-        } else {
-          await supabase.from('products').update({ damaged_qty: Math.max(0, (item.damaged_qty || 0) - Number(selectedTx.qty)) }).eq('id', selectedTx.itemId);
-        }
-      }
-      const { error } = await supabase.from('transactions').delete().eq('id', selectedTx.id);
+      const { data, error } = await supabase.rpc('inventory_delete_return', {
+        payload: {
+          request_id: `returns-delete-${Date.now()}`,
+          transaction_id: selectedTx.id,
+        },
+      });
       if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error_message || 'فشل حذف المرتجع عبر RPC');
       
       toast.success('تم حذف سند المرتجع وعكس الأثر على المخزن 🗑️');
       playSuccess();
       setIsDeleteModalOpen(false);
     } catch (err) {
       console.error(err);
-      toast.error('خطأ أثناء الحذف');
+      toast.error(err?.message || 'خطأ أثناء الحذف');
       playWarning();
     } finally {
       setLoading(false);
