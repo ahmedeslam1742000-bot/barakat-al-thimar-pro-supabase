@@ -99,25 +99,17 @@ export function VoucherDetailModal({
                           </div>
                        </div>
                        <div className="p-5 rounded-[20px] bg-slate-50/50 border border-slate-100">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5 font-readex">الحالة</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5 font-readex">ملاحظات السند</p>
                           <div className="flex items-center gap-3">
-                             <div className={`w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center ${isCompleted ? 'text-emerald-500' : 'text-amber-500'}`}><CheckCircle2 size={18} /></div>
-                             <p className={`text-sm font-black font-tajawal ${isCompleted ? 'text-emerald-600' : 'text-amber-600'}`}>{isCompleted ? 'تمت الفوترة' : 'قيد الانتظار'}</p>
+                             <div className="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center text-slate-400"><FileText size={18} /></div>
+                             <p className="text-xs font-bold text-slate-600 font-tajawal line-clamp-2" title={voucher.line_note?.split(/\[تعديل حديث\]|<!--/)[0].trim() || 'لا توجد ملاحظات'}>
+                                {voucher.line_note?.split(/\[تعديل حديث\]|<!--/)[0].trim() || '—'}
+                             </p>
                           </div>
                        </div>
                     </div>
 
-                    {/* Note Display (Read-Only) */}
-                    <div className="mb-6 p-5 rounded-[24px] bg-slate-50/50 border border-slate-100 border-dashed">
-                       <div className="flex items-center justify-between mb-3">
-                          <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest font-readex flex items-center gap-2">
-                             <FileText size={14} /> ملاحظات السند
-                          </h4>
-                       </div>
-                       <div className="bg-white border border-slate-100 rounded-2xl p-4 text-sm font-bold text-slate-600 font-tajawal min-h-[50px]">
-                          {voucher.line_note?.split(/\[تعديل حديث\]|<!--/)[0].trim() || 'لا توجد ملاحظات'}
-                       </div>
-                    </div>
+
 
                     {/* Items Table */}
                     <div className="mb-6">
