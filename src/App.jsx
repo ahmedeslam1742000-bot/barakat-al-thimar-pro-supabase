@@ -92,6 +92,7 @@ function AuthenticatedApp() {
 }
 
 import { AudioProvider } from './contexts/AudioContext';
+import { RealtimeManagerProvider } from './contexts/RealtimeManagerContext';
 
 function App() {
   return (
@@ -99,8 +100,10 @@ function App() {
       <SettingsProvider>
         <AudioProvider>
           <AuthProvider>
-            <AuthenticatedApp />
-            <Toaster position="top-center" richColors theme="light" />
+            <RealtimeManagerProvider>
+              <AuthenticatedApp />
+              <Toaster position="top-center" richColors theme="light" />
+            </RealtimeManagerProvider>
           </AuthProvider>
         </AudioProvider>
       </SettingsProvider>

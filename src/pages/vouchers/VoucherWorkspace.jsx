@@ -15,6 +15,8 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { normalizeArabic } from '../../lib/arabicTextUtils';
 import { useDebounce } from '../../hooks/useDebounce';
 import localforage from 'localforage';
+import { useRealtimeManager } from '../../contexts/RealtimeManagerContext';
+import { useAnimationConfig } from '../../hooks/useAnimationConfig';
 
 const formatDate = (date) => {
   if (!date) return '';
@@ -514,6 +516,7 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
   const { playSuccess, playWarning } = useAudio();
   const { currentUser, isViewer } = useAuth();
   const { settings } = useSettings();
+  const { subscribe } = useRealtimeManager();
 
   const [items, setItems] = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -651,29 +654,29 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
     }
   }, [kind]);
 
+  // ─── Global Realtime (single connection via RealtimeManagerProvider) ───
   useEffect(() => {
     fetchInitialData();
+    const unsubProducts = subscribe('products', '*', fetchInitialData);
+    const unsubTx = subscribe('transactions', '*', (payload) => {
+      if (payload.eventType === 'INSERT') {
+        if (payload.new.type !== KIND_CONFIG[kind].txType) return;
+        const d = payload.new;
+        const newTx = { ...d, itemId: d.item_id, voucherGroupId: d.batch_id, voucherCode: d.reference_number, lineNote: d.notes, supplier: d.beneficiary, rep: d.beneficiary, status: d.status || 'قيد المراجعة', line_note: d.notes || '', attachment: d.receipt_image || null };
+        setTransactions((prev) => [newTx, ...prev].slice(0, 300));
+      } else if (payload.eventType === 'UPDATE') {
+        const d = payload.new;
+        const updatedTx = { ...d, itemId: d.item_id, voucherGroupId: d.batch_id, voucherCode: d.reference_number, lineNote: d.notes, supplier: d.beneficiary, rep: d.beneficiary, status: d.status || 'قيد المراجعة', line_note: d.notes || '', attachment: d.receipt_image || null };
+        setTransactions((prev) => prev.map(t => t.id === d.id ? updatedTx : t));
+      } else if (payload.eventType === 'DELETE') {
+        setTransactions((prev) => prev.filter(t => t.id !== payload.old.id));
+      }
+    });
+    return () => { unsubProducts(); unsubTx(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kind]); /* الجلب يتم مرة واحدة بجانب kind */
 
-    const channels = [
-      supabase.channel(`public:products:vouchers:${kind}`).on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchInitialData).subscribe(),
-      supabase.channel(`public:transactions:vouchers:${kind}`).on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          if (payload.new.type !== KIND_CONFIG[kind].txType) return;
-          const d = payload.new;
-          const newTx = { ...d, itemId: d.item_id, voucherGroupId: d.batch_id, voucherCode: d.reference_number, lineNote: d.notes, supplier: d.beneficiary, rep: d.beneficiary, status: d.status || 'قيد المراجعة', line_note: d.notes || '', attachment: d.receipt_image || null };
-          setTransactions((prev) => [newTx, ...prev].slice(0, 300));
-        } else if (payload.eventType === 'UPDATE') {
-          const d = payload.new;
-          const updatedTx = { ...d, itemId: d.item_id, voucherGroupId: d.batch_id, voucherCode: d.reference_number, lineNote: d.notes, supplier: d.beneficiary, rep: d.beneficiary, status: d.status || 'قيد المراجعة', line_note: d.notes || '', attachment: d.receipt_image || null };
-          setTransactions((prev) => prev.map(t => t.id === d.id ? updatedTx : t));
-        } else if (payload.eventType === 'DELETE') {
-          setTransactions((prev) => prev.filter(t => t.id !== payload.old.id));
-        }
-      }).subscribe()
-    ];
-
-    return () => { channels.forEach(c => supabase.removeChannel(c)); };
-  }, [kind]);
+  // [REMOVED OLD CHANNELS BLOCK - was: const channels = [
 
   // ─── External Edit Trigger from Dashboard ───
   useEffect(() => {

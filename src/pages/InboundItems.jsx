@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   History, Search, Filter, Calendar, Package, 
@@ -9,6 +9,8 @@ import {
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { normalizeArabic } from '../lib/arabicTextUtils';
+import { useRealtimeManager } from '../contexts/RealtimeManagerContext';
+import { useAnimationConfig } from '../hooks/useAnimationConfig';
 
 const categoryIcons = {
   'مجمدات': <Snowflake size={16} className="text-blue-500" />,
@@ -24,12 +26,9 @@ export default function InboundItems({ setActiveView }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('الكل');
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const { subscribe } = useRealtimeManager();
 
-  useEffect(() => {
-    fetchInboundItems();
-  }, []);
-
-  const fetchInboundItems = async () => {
+  const fetchInboundItems = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -66,7 +65,15 @@ export default function InboundItems({ setActiveView }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // ─── Subscribe via global Realtime Manager (one connection for entire app) ───
+  useEffect(() => {
+    void fetchInboundItems();
+    const unsubProducts     = subscribe('products',     '*', () => void fetchInboundItems());
+    const unsubTransactions = subscribe('transactions', '*', () => void fetchInboundItems());
+    return () => { unsubProducts(); unsubTransactions(); };
+  }, [fetchInboundItems, subscribe]);
 
   const filteredItems = useMemo(() => {
     const allItems = transactions.filter(t => !t.is_summary);

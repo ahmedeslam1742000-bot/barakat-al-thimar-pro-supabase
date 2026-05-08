@@ -10,6 +10,7 @@ import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { formatDate } from '../lib/dateUtils';
+import { useRealtimeManager } from '../contexts/RealtimeManagerContext';
 
 const CATS = ['الكل', 'مجمدات', 'بلاستيك', 'تبريد'];
 
@@ -30,6 +31,7 @@ export default function InboundRecords({ setActiveView }) {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isImageZoomed, setIsImageZoomed] = useState(false);
+  const { subscribe } = useRealtimeManager();
 
   // Use a separate effect to handle ESC with correct state access
   useEffect(() => {
@@ -112,20 +114,13 @@ export default function InboundRecords({ setActiveView }) {
     }
   }, []);
 
-  // ── التحميل الأولي ─────────────────────────────────────────────────────
+  // ── التحميل الأولي + الاشتراك عبر المدير المركزي ─────────────────────────────────
   useEffect(() => {
     void fetchRecords();
-  }, [fetchRecords]);
-
-  // ── Realtime: تحديث تلقائي عند تغيير transactions أو products ─────────
-  useEffect(() => {
-    const channel = supabase
-      .channel('inbound-records-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => { void fetchRecords(); })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products' }, () => { void fetchRecords(); })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [fetchRecords]);
+    const unsubTx       = subscribe('transactions', '*', () => void fetchRecords());
+    const unsubProducts = subscribe('products',     '*', () => void fetchRecords());
+    return () => { unsubTx(); unsubProducts(); };
+  }, [fetchRecords, subscribe]);
 
   const filteredRecords = useMemo(() => {
     return records.filter(r => {
