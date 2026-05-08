@@ -23,6 +23,7 @@ import StockInwardModal from './StockInwardModal';
 import { useInvoiceModal } from '../hooks/useInvoiceModal';
 import { useReturnModal } from '../hooks/useReturnModal';
 import { useVoucherDetail } from '../hooks/useVoucherDetail';
+import { useItemModal } from '../hooks/useItemModal';
 
 
 
@@ -262,12 +263,6 @@ const LabelClass = "block text-xs font-black text-slate-500 mb-2.5 mr-1 uppercas
 export default function Dashboard() {
   // ⚠️ ALL STATE DECLARATIONS MUST BE AT THE TOP (React Rules of Hooks)
   // Centered confirmation prompt state (MUST BE FIRST)
-  const [showNewItemPrompt, setShowNewItemPrompt] = useState(false);
-  const [promptItemName, setPromptItemName] = useState('');
-  const [promptSource, setPromptSource] = useState('stockIn');
-  const newItemRegistrationRef = useRef(null);
-
-  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [isStockInModalOpen, setIsStockInModalOpen] = useState(false);
 
   // ---  RENAMED STATE VARIABLES TO FORCIBLY BYPASS VITE HMR --- //
@@ -282,151 +277,19 @@ export default function Dashboard() {
   const [stockSearchActiveIndex, setStockSearchActiveIndex] = useState(-1);
 
   // Modals Data State
-  const [itemForm, setItemForm] = useState({ name: '', company: '', cat: 'مجمدات', unit: 'كرتونة' });
-  const [itemErrors, setItemErrors] = useState({});
-  
-  // Batch Entry State
-  const [sessionItems, setSessionItems] = useState([]);
-  const [editingSessionId, setEditingSessionId] = useState(null);
-  const [isCustomUnit, setIsCustomUnit] = useState(false);
-  const [nameSuggestions, setNameSuggestions] = useState([]);
-  const [companySuggestions, setCompanySuggestions] = useState([]);
-  const [activeNameIdx, setActiveNameIdx] = useState(-1);
-  const [activeCompIdx, setActiveCompIdx] = useState(-1);
-  const itemNameInputRef = useRef(null);
-  const companyInputRef = useRef(null);
-  const catSelectRef = useRef(null);
-  const unitInputRef = useRef(null);
-
-  // Dynamic Categories & Units State
-  const [categories, setCategories] = useState(['مجمدات', 'تبريد', 'بلاستيك']);
-  const [units, setUnits] = useState(['كرتونة', 'حبة', 'سطل', 'شوال', 'شدة']);
-  const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newSupplierName, setNewSupplierName] = useState('');
-  const newCategoryInputRef = useRef(null);
-
-  // Exit Guard State
-  const [showExitConfirm, setShowExitConfirm] = useState(false);
-
   const [loading, setLoading] = useState(false);
-  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
 
 
 
 
-  // Auto-focus item name input when modal opens
-  useEffect(() => {
-    if (isItemModalOpen) {
-      setTimeout(() => {
-        itemNameInputRef.current?.focus();
-      }, 100);
-    }
-  }, [isItemModalOpen]);
   
-  // Escape key handler to close modal with exit guard
-  useEffect(() => {
-    const handleEsc = (event) => {
-      if (event.key === 'Escape' && isItemModalOpen) {
-        event.preventDefault();
-        handleCloseItemModal();
-      }
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => {
-      window.removeEventListener('keydown', handleEsc);
-    };
-  }, [isItemModalOpen, itemForm.name, itemForm.company, sessionItems.length]);
   
-  // Check if there's unsaved data
-  const hasUnsavedData = () => {
-    return itemForm.name.trim() !== '' || 
-           itemForm.company.trim() !== '' || 
-           sessionItems.length > 0;
-  };
   
   // Handle modal close with exit guard
-  const handleCloseItemModal = () => {
-    if (hasUnsavedData()) {
-      setShowExitConfirm(true);
-    } else {
-      performModalReset();
-    }
-  };
   
-  // Reset all modal state
-  const performModalReset = () => {
-    setIsItemModalOpen(false);
-    setItemForm({ name: '', company: '', cat: categories[0] || 'مجمدات', unit: 'كرتونة' });
-    setItemErrors({});
-    setIsCustomUnit(false);
-    setSessionItems([]);
-    setShowExitConfirm(false);
-    setIsAddingCategory(false);
-    setNewCategoryName('');
-  };
   
   // Handle add category
-  const handleAddCategory = () => {
-    if (newCategoryName.trim()) {
-      const trimmed = newCategoryName.trim();
-      if (!categories.includes(trimmed)) {
-        setCategories(prev => [...prev, trimmed]);
-        setItemForm(prev => ({...prev, cat: trimmed}));
-        setIsAddingCategory(false);
-        setNewCategoryName('');
-        toast.success(`تم إضافة القسم "${trimmed}" ✅`);
-        playSuccess();
-        setTimeout(() => catSelectRef.current?.focus(), 50);
-      } else {
-        toast.warning('هذا القسم موجود بالفعل');
-      }
-    }
-  };
 
-
-  
-  // Trigger new item registration with centered confirmation prompt
-  const triggerNewItemRegistration = (itemName, source) => {
-    setPromptItemName(itemName);
-    setPromptSource(source);
-    setShowNewItemPrompt(true);
-  };
-  
-  const handlePromptYes = () => {
-    setShowNewItemPrompt(false);
-    setItemForm({ name: promptItemName, company: '', cat: categories[0], unit: units[0] });
-    setIsItemModalOpen(true);
-    setTimeout(() => companyInputRef.current?.focus(), 150);
-  };
-  
-  const handlePromptNo = () => {
-    setShowNewItemPrompt(false);
-    // Clear search and return focus
-    if (promptSource === 'invoice') {
-      setCurrentInvoiceItem({name:'', selectedItem: null, cat:'', unit:'', qty:''});
-      setTimeout(() => invoiceSearchInputRef.current?.focus(), 50);
-    } else if (promptSource === 'return') {
-      setReturnForm({...returnForm, query: '', selectedItem: null, cat: '', unit: ''});
-      setTimeout(() => returnSearchInputRef.current?.focus(), 50);
-    }
-  };
-
-  // Keyboard shortcuts for confirmation prompt
-  useEffect(() => {
-    const handlePromptKeys = (event) => {
-      if (!showNewItemPrompt) return;
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        handlePromptYes();
-      } else if (event.key === 'Escape') {
-        event.preventDefault();
-        handlePromptNo();
-      }
-    };
-    window.addEventListener('keydown', handlePromptKeys);
-    return () => window.removeEventListener('keydown', handlePromptKeys);
-  }, [showNewItemPrompt, promptItemName, promptSource]);
   
 
   const [isTransactionDetailOpen, setIsTransactionDetailOpen] = useState(false);
@@ -527,6 +390,55 @@ export default function Dashboard() {
     setCurrentInvoiceItem,
     setIsVoucherInvoice,
     setIsSalesModalOpen,
+  });
+
+  // ─── Item Registration Modal (extracted to useItemModal hook) ────────
+  const {
+    showNewItemPrompt, setShowNewItemPrompt,
+    promptItemName, setPromptItemName,
+    promptSource, setPromptSource,
+    newItemRegistrationRef,
+    isItemModalOpen, setIsItemModalOpen,
+    itemForm, setItemForm,
+    itemErrors, setItemErrors,
+    sessionItems, setSessionItems,
+    editingSessionId, setEditingSessionId,
+    isCustomUnit, setIsCustomUnit,
+    nameSuggestions, setNameSuggestions,
+    companySuggestions, setCompanySuggestions,
+    activeNameIdx, setActiveNameIdx,
+    activeCompIdx, setActiveCompIdx,
+    itemNameInputRef, companyInputRef, catSelectRef, unitInputRef, newCategoryInputRef,
+    categories, setCategories,
+    units, setUnits,
+    isAddingCategory, setIsAddingCategory,
+    newCategoryName, setNewCategoryName,
+    newSupplierName, setNewSupplierName,
+    showExitConfirm, setShowExitConfirm,
+    showSaveConfirm, setShowSaveConfirm,
+    handleCloseItemModal,
+    performModalReset,
+    handleAddCategory,
+    triggerNewItemRegistration,
+    handlePromptYes,
+    handlePromptNo,
+    handleNameInput,
+    handleCompanyInput,
+    handleModalKeyDown,
+    addToSession,
+    handleRegisterBatchSave,
+    confirmRegisterBatchSave,
+    removeSessionItem,
+  } = useItemModal({
+    items,
+    setLoading,
+    playSuccess,
+    fetchInitialData,
+    setCurrentInvoiceItem,
+    invoiceSearchInputRef,
+    returnForm,
+    setReturnForm,
+    returnSearchInputRef,
   });
 
   const [chartMode, setChartMode] = useState('category'); // 'category' | 'item'
@@ -882,174 +794,6 @@ export default function Dashboard() {
 
 
 
-  // --- 1. HYBRID BATCH REGISTRATION HANDLERS ---
-  const handleNameInput = (val) => {
-    setItemForm(prev => ({ ...prev, name: val }));
-    if (!val.trim()) { setNameSuggestions([]); return; }
-    const filtered = [...new Set(items.map(i => i.name))]
-      .filter(n => (normalizeArabic(n) || '').includes(normalizeArabic(val)))
-      .slice(0, 5);
-    setNameSuggestions(filtered);
-    setActiveNameIdx(-1);
-  };
-
-  const handleCompanyInput = (val) => {
-    setItemForm(prev => ({ ...prev, company: val }));
-    if (!val.trim()) { setCompanySuggestions([]); return; }
-    const filtered = [...new Set(items.map(i => i.company || 'بدون شركة'))]
-      .filter(c => (normalizeArabic(c) || '').includes(normalizeArabic(val)))
-      .slice(0, 5);
-    setCompanySuggestions(filtered);
-    setActiveCompIdx(-1);
-  };
-
-  const handleModalKeyDown = (e, type) => {
-    if (showSaveConfirm || showExitConfirm) return; // Prevent input shortcuts when overlays are active
-    const isName = type === 'name';
-    const isCompany = type === 'company';
-    const suggestions = isName ? nameSuggestions : (isCompany ? companySuggestions : []);
-    const activeIdx = isName ? activeNameIdx : (isCompany ? activeCompIdx : -1);
-    const setIdx = isName ? setActiveNameIdx : (isCompany ? setActiveCompIdx : () => {});
-    const setInput = isName ? handleNameInput : (isCompany ? handleCompanyInput : () => {});
-    const setSuggestions = isName ? setNameSuggestions : (isCompany ? setCompanySuggestions : () => {});
-
-    if (e.key === 'ArrowDown') {
-      if (suggestions.length > 0) {
-        e.preventDefault();
-        setIdx(prev => (prev < suggestions.length - 1 ? prev + 1 : prev));
-      }
-    } else if (e.key === 'ArrowUp') {
-      if (suggestions.length > 0) {
-        e.preventDefault();
-        setIdx(prev => (prev > 0 ? prev - 1 : -1));
-      }
-    } else if (e.key === 'Enter') {
-      if (activeIdx >= 0 && suggestions[activeIdx]) {
-        e.preventDefault();
-        const selectedValue = suggestions[activeIdx];
-        setInput(selectedValue);
-        setSuggestions([]);
-        // Auto-focus next field after selecting from suggestions with Enter
-        if (isName) {
-          setTimeout(() => companyInputRef.current?.focus(), 50);
-        }
-      } else if (isName && itemForm.name.trim()) {
-        e.preventDefault();
-        companyInputRef.current?.focus();
-      } else if (itemForm.name.trim() && itemForm.company.trim()) {
-        e.preventDefault();
-        addToSession();
-      }
-    } else if (e.key === 'Tab') {
-      setSuggestions([]);
-    }
-  };
-
-  const addToSession = () => {
-    if (!itemForm.name.trim() || !itemForm.company.trim()) {
-      return toast.error('يرجى إكمال البيانات المطلوبة');
-    }
-    const normName = normalizeArabic(itemForm.name);
-    const normComp = normalizeArabic(itemForm.company);
-    
-    // If not editing, check for duplicates
-    if (!editingSessionId) {
-      if (items.some(i => normalizeArabic(i.name) === normName && normalizeArabic(i.company || 'بدون شركة') === normComp)) {
-        return toast.error('هذا الصنف مسجل مسبقاً');
-      }
-      if (sessionItems.some(i => normalizeArabic(i.name) === normName && normalizeArabic(i.company) === normComp)) {
-        return toast.error('تم إضافة الصنف للقائمة بالفعل');
-      }
-      setSessionItems(prev => [...prev, { ...itemForm, id: Date.now() }]);
-      toast.success('تم الإضافة للقائمة ✅');
-    } else {
-      // Update existing item in session
-      setSessionItems(prev => prev.map(item => item.id === editingSessionId ? { ...itemForm, id: editingSessionId } : item));
-      setEditingSessionId(null);
-      toast.success('تم تحديث الصنف في القائمة ✅');
-    }
-
-    setItemForm(prev => ({ ...prev, name: '', company: '' }));
-    setNameSuggestions([]);
-    setCompanySuggestions([]);
-    setTimeout(() => itemNameInputRef.current?.focus(), 50);
-  };
-
-  const handleRegisterBatchSave = async () => {
-    if (sessionItems.length === 0) return toast.error('القائمة فارغة');
-    setShowSaveConfirm(true);
-  };
-
-  const confirmRegisterBatchSave = async () => {
-    setShowSaveConfirm(false);
-    setLoading(true);
-    try {
-      for (const item of sessionItems) {
-        const { data: insertedDoc } = await supabase.from('products').insert({
-          name: item.name,
-          company: item.company,
-          cat: item.cat,
-          unit: item.unit,
-          stock_qty: 0,
-          search_key: `${item.name} ${item.company}`.toLowerCase()
-        }).select().single();
-
-      }
-      toast.success('تم التسجيل واعتماد القائمة بنجاح! ✅');
-      setSessionItems([]);
-      setIsItemModalOpen(false);
-      fetchInitialData();
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // --- KEYBOARD SHORTCUTS FOR MODAL OVERLAYS ---
-  useEffect(() => {
-    const handleGlobalKeyDown = (e) => {
-      if (!isItemModalOpen) return;
-
-      // Handle Submit Confirmation Overlay
-      if (showSaveConfirm) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          confirmRegisterBatchSave();
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          setShowSaveConfirm(false);
-        }
-        return;
-      }
-
-      // Handle Exit Confirmation Overlay
-      if (showExitConfirm) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          performModalReset();
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          setShowExitConfirm(false);
-        }
-        return;
-      }
-
-      // Handle Main Modal ESC to Close
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        handleCloseItemModal();
-      }
-    };
-
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [isItemModalOpen, showSaveConfirm, showExitConfirm, sessionItems, handleCloseItemModal, performModalReset, confirmRegisterBatchSave]);
-
-  const removeSessionItem = (id) => {
-    setSessionItems(prev => prev.filter(item => item.id !== id));
-    toast.info("تم حذف الصنف من القائمة");
-  };
 
   
   // --- Global Modals ESC Support ---
