@@ -25,7 +25,7 @@ import { Package, Truck, ArrowUpRight, RotateCcw, Download, Upload, User, FileSt
 const viewConfig = {
   'dashboard': { component: Dashboard },
   'items': { component: Items },
-  'stock-in': { component: InboundItems, title: 'الوارد', icon: TrendingUp },
+  'stock-in': { component: InboundItems, title: 'المخزون', icon: TrendingUp },
   'stock-out': { component: StockOut, title: 'الفواتير', icon: FileStack },
   'returns': { component: Returns, title: 'مرتجع', icon: RotateCcw },
   'voucher-outward': { component: VoucherOutward, title: 'سند إخراج', icon: Upload },

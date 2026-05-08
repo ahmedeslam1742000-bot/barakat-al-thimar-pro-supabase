@@ -162,7 +162,7 @@ export default function InboundItems({ setActiveView }) {
         <div className="bg-white border border-slate-200 rounded-[1.5rem] p-3 flex flex-col lg:flex-row items-center justify-between shadow-sm gap-4 lg:gap-0">
           
           <div className="flex items-center gap-3 w-full lg:w-auto justify-between lg:justify-start lg:pl-4 lg:border-l border-slate-200 shrink-0">
-            <h2 className="text-xl font-black text-[#0f2747] tracking-tight">سجل الوارد</h2>
+            <h2 className="text-xl font-black text-[#0f2747] tracking-tight">المخزون</h2>
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-[10px] text-slate-600 shadow-sm">
               <Package size={14} />
               <span className="text-[11px] font-black">{filteredItems.length}</span>
@@ -191,44 +191,39 @@ export default function InboundItems({ setActiveView }) {
           
         </div>
 
-        {/* Category Pills Row */}
-        <div className="flex items-center gap-2 mt-4 justify-start overflow-x-auto pb-2 custom-scrollbar">
-           <button onClick={() => setCategoryFilter('الكل')} className={`flex items-center gap-2 px-5 py-2.5 rounded-[12px] text-[12px] font-bold transition-all shadow-sm shrink-0 ${categoryFilter === 'الكل' ? 'bg-[#0f2747] text-white border-transparent' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
-              <Layers size={14} /> كل الأقسام
-           </button>
-           <button onClick={() => setCategoryFilter('مجمدات')} className={`flex items-center gap-2 px-5 py-2.5 rounded-[12px] text-[12px] font-bold transition-all shadow-sm shrink-0 ${categoryFilter === 'مجمدات' ? 'bg-[#0f2747] text-white border-transparent' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
-              <Snowflake size={14} /> مجمدات
-           </button>
-           <button onClick={() => setCategoryFilter('بلاستيك')} className={`flex items-center gap-2 px-5 py-2.5 rounded-[12px] text-[12px] font-bold transition-all shadow-sm shrink-0 ${categoryFilter === 'بلاستيك' ? 'bg-[#0f2747] text-white border-transparent' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
-              <Archive size={14} /> بلاستيك
-           </button>
-           <button onClick={() => setCategoryFilter('تبريد')} className={`flex items-center gap-2 px-5 py-2.5 rounded-[12px] text-[12px] font-bold transition-all shadow-sm shrink-0 ${categoryFilter === 'تبريد' ? 'bg-[#0f2747] text-white border-transparent' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
-              <Box size={14} /> تبريد
-           </button>
+        {/* Category Pills Row + Damaged Stat */}
+        <div className="flex items-center gap-4 mt-4">
+          <div className="flex-1 flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar custom-scrollbar">
+             <button onClick={() => setCategoryFilter('الكل')} className={`flex items-center gap-2 px-5 py-2.5 rounded-[12px] text-[12px] font-bold transition-all shadow-sm shrink-0 ${categoryFilter === 'الكل' ? 'bg-[#0f2747] text-white border-transparent' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
+                <Layers size={14} /> كل الأقسام
+             </button>
+             <button onClick={() => setCategoryFilter('مجمدات')} className={`flex items-center gap-2 px-5 py-2.5 rounded-[12px] text-[12px] font-bold transition-all shadow-sm shrink-0 ${categoryFilter === 'مجمدات' ? 'bg-[#0f2747] text-white border-transparent' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
+                <Snowflake size={14} /> مجمدات
+             </button>
+             <button onClick={() => setCategoryFilter('بلاستيك')} className={`flex items-center gap-2 px-5 py-2.5 rounded-[12px] text-[12px] font-bold transition-all shadow-sm shrink-0 ${categoryFilter === 'بلاستيك' ? 'bg-[#0f2747] text-white border-transparent' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
+                <Archive size={14} /> بلاستيك
+             </button>
+             <button onClick={() => setCategoryFilter('تبريد')} className={`flex items-center gap-2 px-5 py-2.5 rounded-[12px] text-[12px] font-bold transition-all shadow-sm shrink-0 ${categoryFilter === 'تبريد' ? 'bg-[#0f2747] text-white border-transparent' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
+                <Box size={14} /> تبريد
+             </button>
+          </div>
+
+          <div className="shrink-0 flex items-center gap-3 px-4 py-2 bg-rose-50 border border-rose-100 rounded-[14px] mb-2 shadow-sm">
+             <div className="flex flex-col items-end">
+               <span className="text-[9px] font-black text-rose-400 leading-none mb-0.5">التالف الحالي</span>
+               <span className="text-base font-black text-rose-600 leading-none tabular-nums">{stats.totalDamagedQty}</span>
+             </div>
+             <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600">
+                <Box size={16} />
+             </div>
+          </div>
         </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden p-6">
+      <div className="flex-1 overflow-hidden p-6 pt-2">
         <div className="h-full flex flex-col gap-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 shrink-0">
-            <div className="bg-white rounded-[1.5rem] border border-slate-100 shadow-sm p-4">
-              <div className="text-[11px] font-black text-slate-400 mb-2">الأصناف الظاهرة</div>
-              <div className="text-2xl font-black text-slate-800 tabular-nums">{stats.count}</div>
-            </div>
-            <div className="bg-white rounded-[1.5rem] border border-emerald-100 shadow-sm p-4">
-              <div className="text-[11px] font-black text-emerald-600 mb-2">إجمالي الوارد</div>
-              <div className="text-2xl font-black text-emerald-600 tabular-nums">{stats.totalQty}</div>
-            </div>
-            <div className="bg-white rounded-[1.5rem] border border-teal-100 shadow-sm p-4">
-              <div className="text-[11px] font-black text-teal-600 mb-2">السليم الحالي</div>
-              <div className="text-2xl font-black text-teal-600 tabular-nums">{stats.totalGoodQty}</div>
-            </div>
-            <div className="bg-white rounded-[1.5rem] border border-rose-100 shadow-sm p-4">
-              <div className="text-[11px] font-black text-rose-600 mb-2">التالف الحالي</div>
-              <div className="text-2xl font-black text-rose-600 tabular-nums">{stats.totalDamagedQty}</div>
-            </div>
-          </div>
+
 
           <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex-1 flex flex-col">
           <div className="flex-1 overflow-auto custom-scrollbar">
@@ -325,7 +320,7 @@ export default function InboundItems({ setActiveView }) {
                     <h2 className="text-2xl font-black font-tajawal mb-0.5 text-slate-900">بركة الثمار</h2>
                     <p className="text-lg text-slate-500 font-tajawal">مستودع الأحساء</p>
                   </div>
-                  <div className="absolute left-1/2 -translate-x-1/2"><h1 className="text-5xl font-black font-tajawal text-slate-900">تقرير الوارد</h1></div>
+                  <div className="absolute left-1/2 -translate-x-1/2"><h1 className="text-5xl font-black font-tajawal text-slate-900">تقرير المخزون</h1></div>
                   <div className="text-left font-bold">{new Date().toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</div>
                 </div>
                 {Object.keys(groupedItems).sort((a, b) => {

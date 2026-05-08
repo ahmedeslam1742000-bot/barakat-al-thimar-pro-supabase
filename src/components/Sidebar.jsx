@@ -37,7 +37,7 @@ const menuGroups = [
     icon: Warehouse,
     subItems: [
       { id: 'items', label: 'الأصناف', view: 'items' },
-      { id: 'stock-in', label: 'وارد', view: 'stock-in' },
+      { id: 'stock-in', label: 'المخزون', view: 'stock-in' },
       { id: 'stock-out', label: 'الفواتير', view: 'stock-out' },
       { id: 'returns', label: 'مرتجع', view: 'returns' },
     ]
