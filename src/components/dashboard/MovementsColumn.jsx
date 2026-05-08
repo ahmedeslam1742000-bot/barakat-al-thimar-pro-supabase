@@ -5,7 +5,7 @@ import { History, FileText, FileCheck, AlertTriangle, Box, FileOutput, FileInput
 /**
  * MovementsColumn - Displays the history of recent transactions.
  */
-export function MovementsColumn({ 
+export const MovementsColumn = React.memo(function MovementsColumn({ 
   dbTransactionsList, 
   movementTypeFilter, 
   setMovementTypeFilter,
@@ -183,4 +183,4 @@ export function MovementsColumn({
       </div>
     </motion.div>
   );
-}
+});

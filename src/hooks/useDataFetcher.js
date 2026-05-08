@@ -12,22 +12,27 @@ const FUNCTIONAL_VOUCHER_TYPES = [FUNCTIONAL_INBOUND_TYPE, FUNCTIONAL_OUTBOUND_T
  * the real-time subscription handler.
  */
 function processTx(d) {
+  if (!d) return null;
   return {
     ...d,
     itemId: d.item_id,
-    referenceNumber: d.reference_number,
+    referenceNumber: d.reference_number || '',
     voucherCode: d.reference_number || '',
-    voucherGroupId: d.batch_id,
-    batchId: d.batch_id,
-    isInvoice: d.status === 'مفوتر' || (d.notes && d.notes.includes('[تم إصدار الفاتورة]')),
-    isTransfer: (d.notes && d.notes.includes('[نوع: تحويل مخزني]')),
-    isFunctional: d.type === 'سند إدخال' || d.type === 'سند إخراج' || d.type === 'outward' || d.type === 'in' || (d.item && (d.item.includes('ملخص') || d.item.includes('عهده'))),
-    isEdited: (d.notes && d.notes.includes('[تعديل حديث]')),
+    voucherGroupId: d.batch_id || '',
+    batchId: d.batch_id || '',
+    isInvoice: d.status === 'مفوتر' || (typeof d.notes === 'string' && d.notes.includes('[تم إصدار الفاتورة]')),
+    isTransfer: (typeof d.notes === 'string' && d.notes.includes('[نوع: تحويل مخزني]')),
+    isFunctional: d.type === 'سند إدخال' || d.type === 'سند إخراج' || d.type === 'outward' || d.type === 'in' || (typeof d.item === 'string' && (d.item.includes('ملخص') || d.item.includes('عهده'))),
+    isEdited: (typeof d.notes === 'string' && d.notes.includes('[تعديل حديث]')),
     historyLog: (() => {
-      if (!d.notes) return null;
-      const match = d.notes.match(/<!--(\{.*\})-->/);
-      if (match) {
-        try { return JSON.parse(match[1]); } catch { return null; }
+      if (typeof d.notes !== 'string') return null;
+      try {
+        const match = d.notes.match(/<!--(\{.*\})-->/);
+        if (match && match[1]) {
+          return JSON.parse(match[1]);
+        }
+      } catch (err) {
+        return null;
       }
       return null;
     })(),
@@ -72,9 +77,9 @@ export function useDataFetcher({ currentUser }) {
       if (itemsData) {
         setItems(itemsData.map(d => ({
           ...d,
-          stockQty: d.stock_qty,
-          damagedQty: d.damaged_qty,
-          searchKey: d.search_key,
+          stockQty: Number(d.stock_qty) || 0,
+          damagedQty: Number(d.damaged_qty) || 0,
+          searchKey: d.search_key || (d.name ? `${d.name} ${d.company || ''} ${d.cat || ''}` : ''),
           createdAt: d.created_at,
         })));
       }
@@ -114,7 +119,31 @@ export function useDataFetcher({ currentUser }) {
     // ✅ دائماً لف الـ async function في arrow function مشفوهة
     const itemsChannel = supabase
       .channel('public:products:dashboard')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => { void fetchInitialData(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+        try {
+          if (payload.eventType === 'INSERT') {
+            setItems(prev => [{
+              ...payload.new,
+              stockQty: Number(payload.new.stock_qty) || 0,
+              damagedQty: Number(payload.new.damaged_qty) || 0,
+              searchKey: payload.new.search_key || (payload.new.name ? `${payload.new.name} ${payload.new.company || ''} ${payload.new.cat || ''}` : ''),
+              createdAt: payload.new.created_at,
+            }, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            setItems(prev => prev.map(p => p.id === payload.new.id ? {
+              ...payload.new,
+              stockQty: Number(payload.new.stock_qty) || 0,
+              damagedQty: Number(payload.new.damaged_qty) || 0,
+              searchKey: payload.new.search_key || (payload.new.name ? `${payload.new.name} ${payload.new.company || ''} ${payload.new.cat || ''}` : ''),
+              createdAt: payload.new.created_at,
+            } : p));
+          } else if (payload.eventType === 'DELETE') {
+            setItems(prev => prev.filter(p => p.id !== payload.old.id));
+          }
+        } catch (err) {
+          if (import.meta.env.DEV) console.error('[Realtime] products handler error:', err);
+        }
+      })
       .subscribe((status) => {
         if (import.meta.env.DEV && status === 'SUBSCRIBED') console.log('[Realtime] products channel ready');
       });
@@ -278,7 +307,10 @@ export function useDataFetcher({ currentUser }) {
 
   const fallbackDashboardStats = useMemo(() => {
     let stockIn = 0, sales = 0, returns = 0, damage = 0;
-    for (const t of dbTransactionsList) {
+    // Optimization: limit loop to maximum 100 recent items to prevent blocking the main thread
+    const recentTx = dbTransactionsList.slice(0, 100);
+    
+    for (const t of recentTx) {
       if (t.is_summary === true) continue;
       const txTime = t.timestamp ? new Date(t.timestamp) : new Date();
       const inShift = txTime >= shiftStartTime;
@@ -291,7 +323,7 @@ export function useDataFetcher({ currentUser }) {
         if (t.type === 'Return' || t.type === 'مرتجع' || t.type === 'return')
           returns += Number(t.qty || 0);
       }
-      if (t.is_summary !== true && t.status === 'مرتجع تالف')
+      if (t.is_summary !== true && t.status === 'مرتجع تالف' && inShift)
         damage += Number(t.qty || 0);
     }
     return { stockInCount: stockIn, salesCount: sales, returnsCount: returns, damageCount: damage };

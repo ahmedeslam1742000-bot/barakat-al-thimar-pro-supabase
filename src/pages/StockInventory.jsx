@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   ClipboardList, Search, Snowflake, Thermometer, Package, PackageX,
   Printer, LogOut, LayoutGrid, Box, FileDown
@@ -8,6 +8,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { useDebounce } from '../hooks/useDebounce';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 const InventoryItemRow = React.memo(({ item, idx, lowStockThreshold }) => {
   const safeThreshold = Number(lowStockThreshold || 0);
@@ -54,13 +55,13 @@ export default function StockInventory({ setActiveView }) {
 
   // ── SUPABASE FETCH ─────────────────────────────────────────────────────
   const fetchItems = useCallback(async () => {
-    const { data: itemsData } = await supabase.from('products').select('id, name, company, cat, unit, stock_qty, damaged_qty');
+    const { data: itemsData } = await supabase.from('products').select('id, name, company, cat, unit, stock_qty, damaged_qty, search_key');
     if (itemsData) {
       setItems(itemsData.map(d => ({
         ...d,
-        stockQty: d.stock_qty,
-        damagedQty: d.damaged_qty,
-        searchKey: d.search_key,
+        stockQty: Number(d.stock_qty) || 0,
+        damagedQty: Number(d.damaged_qty) || 0,
+        searchKey: d.search_key || normalizeArabic(`${d.name || ''} ${d.company || ''} ${d.cat || ''}`),
         createdAt: d.created_at
       })));
     }
@@ -71,7 +72,31 @@ export default function StockInventory({ setActiveView }) {
     void fetchItems();
 
     const itemsChannel = supabase.channel('public:products:inventory')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => { void fetchItems(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+        try {
+          if (payload.eventType === 'INSERT') {
+            setItems(prev => [{
+              ...payload.new,
+              stockQty: Number(payload.new.stock_qty) || 0,
+              damagedQty: Number(payload.new.damaged_qty) || 0,
+              searchKey: payload.new.search_key || normalizeArabic(`${payload.new.name || ''} ${payload.new.company || ''} ${payload.new.cat || ''}`),
+              createdAt: payload.new.created_at,
+            }, ...prev]);
+          } else if (payload.eventType === 'UPDATE') {
+            setItems(prev => prev.map(p => p.id === payload.new.id ? {
+              ...payload.new,
+              stockQty: Number(payload.new.stock_qty) || 0,
+              damagedQty: Number(payload.new.damaged_qty) || 0,
+              searchKey: payload.new.search_key || normalizeArabic(`${payload.new.name || ''} ${payload.new.company || ''} ${payload.new.cat || ''}`),
+              createdAt: payload.new.created_at,
+            } : p));
+          } else if (payload.eventType === 'DELETE') {
+            setItems(prev => prev.filter(p => p.id !== payload.old.id));
+          }
+        } catch (err) {
+          console.error('[Realtime] inventory products handler error:', err);
+        }
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(itemsChannel); };
@@ -93,11 +118,9 @@ export default function StockInventory({ setActiveView }) {
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const filteredItems = useMemo(() => {
+    const q = normalizeArabic(debouncedSearchTerm);
     let result = sortedItems.filter(i => {
-      const q = normalizeArabic(debouncedSearchTerm);
-      const matchesSearch = normalizeArabic(i.name || '').includes(q) || 
-             normalizeArabic(i.company || '').includes(q) || 
-             normalizeArabic(i.cat || '').includes(q);
+      const matchesSearch = q === '' || (i.searchKey && i.searchKey.includes(q));
       const matchesCat = catFilter === 'الكل' || i.cat === catFilter;
       return matchesSearch && matchesCat;
     });
@@ -133,6 +156,15 @@ export default function StockInventory({ setActiveView }) {
     () => filteredItems.filter((item) => Number(item.stockQty || 0) <= lowStockThreshold).length,
     [filteredItems, lowStockThreshold]
   );
+
+  const parentRef = useRef(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: filteredItems.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 64, // Approximate row height
+    overscan: 5,
+  });
 
   const handlePrintPDF = () => {
     const date = new Date().toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -384,7 +416,7 @@ export default function StockInventory({ setActiveView }) {
 
         {/* ═══ TABLE ═══ */}
         <div className="flex-1 overflow-hidden flex flex-col bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-700 shadow-sm">
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-2 relative">
+          <div ref={parentRef} className="flex-1 overflow-y-auto custom-scrollbar p-2 relative">
             <table className="w-full text-right border-separate border-spacing-y-2">
               <thead className="sticky top-0 z-10">
                 <tr>
@@ -397,14 +429,23 @@ export default function StockInventory({ setActiveView }) {
                 </tr>
               </thead>
               <tbody>
-                {filteredItems.map((item, idx) => (
-                  <InventoryItemRow 
-                    key={item.id} 
-                    item={item} 
-                    idx={idx} 
-                    lowStockThreshold={settings?.lowStockThreshold} 
-                  />
-                ))}
+                {rowVirtualizer.getVirtualItems().length > 0 && rowVirtualizer.getVirtualItems()[0].start > 0 && (
+                  <tr><td style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} colSpan={6} /></tr>
+                )}
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                  const item = filteredItems[virtualRow.index];
+                  return (
+                    <InventoryItemRow 
+                      key={item.id} 
+                      item={item} 
+                      idx={virtualRow.index} 
+                      lowStockThreshold={settings?.lowStockThreshold} 
+                    />
+                  );
+                })}
+                {rowVirtualizer.getVirtualItems().length > 0 && (
+                  <tr><td style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} colSpan={6} /></tr>
+                )}
                 {filteredItems.length === 0 && (
                   <tr>
                     <td colSpan="6" className="px-4 py-12 text-center bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl">

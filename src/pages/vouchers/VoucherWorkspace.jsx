@@ -588,10 +588,10 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
         attachment: representative?.attachment || null,
         voucherCode: (representative?.reference_number || '').replace(/^[A-Z]+-\d+-/g, '').replace(/^[A-Z]+-/g, ''),
         lineCount: g.lines.length,
-        isEdited: (representative?.notes && representative?.notes.includes('[تعديل حديث]')),
-        isTransfer: (representative?.notes && representative?.notes.includes('[نوع: تحويل مخزني]')),
+        isEdited: (typeof representative?.notes === 'string' && representative.notes.includes('[تعديل حديث]')),
+        isTransfer: (typeof representative?.notes === 'string' && representative.notes.includes('[نوع: تحويل مخزني]')),
         historyLog: (() => {
-          if (!representative?.notes) return null;
+          if (typeof representative?.notes !== 'string') return null;
           const match = representative.notes.match(/<!--(\{.*\})-->/);
           if (match) {
             try { return JSON.parse(match[1]); } catch(e) { return null; }

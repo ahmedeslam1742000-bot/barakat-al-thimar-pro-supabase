@@ -5,7 +5,7 @@ import { AlertTriangle, CheckCircle2, AlertOctagon, Layers } from 'lucide-react'
 /**
  * AlertsColumn - Displays inventory alerts and low stock items.
  */
-export function AlertsColumn({ 
+export const AlertsColumn = React.memo(function AlertsColumn({ 
   items, 
   alertCatFilter, 
   setAlertCatFilter, 
@@ -13,14 +13,16 @@ export function AlertsColumn({
   alertUrgencyFilter,
   cardVariants 
 }) {
-  const finalAlerts = items.filter(i => {
-    if (alertCatFilter !== 'الكل' && i.cat !== alertCatFilter) return false;
-    if (alertSearch && !i.name.includes(alertSearch) && !i.company.includes(alertSearch)) return false;
-    if (alertUrgencyFilter === 'حرج' && i.stockQty >= 50) return false;
-    if (alertUrgencyFilter === 'تحذير' && (i.stockQty < 50 || i.stockQty >= 100)) return false;
-    if (alertUrgencyFilter === 'آمن' && i.stockQty < 100) return false;
-    return true;
-  }).sort((a,b) => a.stockQty - b.stockQty);
+  const finalAlerts = React.useMemo(() => {
+    return items.filter(i => {
+      if (alertCatFilter !== 'الكل' && i.cat !== alertCatFilter) return false;
+      if (alertSearch && !i.name.includes(alertSearch) && !i.company.includes(alertSearch)) return false;
+      if (alertUrgencyFilter === 'حرج' && i.stockQty >= 50) return false;
+      if (alertUrgencyFilter === 'تحذير' && (i.stockQty < 50 || i.stockQty >= 100)) return false;
+      if (alertUrgencyFilter === 'آمن' && i.stockQty < 100) return false;
+      return true;
+    }).sort((a,b) => a.stockQty - b.stockQty);
+  }, [items, alertCatFilter, alertSearch, alertUrgencyFilter]);
 
   return (
     <motion.div
@@ -131,4 +133,4 @@ export function AlertsColumn({
       </div>
     </motion.div>
   );
-}
+});

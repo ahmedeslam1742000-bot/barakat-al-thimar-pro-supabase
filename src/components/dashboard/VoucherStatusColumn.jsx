@@ -5,7 +5,7 @@ import { LayoutDashboard, FileText, AlertTriangle, CheckCircle2 } from 'lucide-r
 /**
  * VoucherStatusColumn - Displays the status of pending, completed, and cancelled vouchers.
  */
-export function VoucherStatusColumn({ 
+export const VoucherStatusColumn = React.memo(function VoucherStatusColumn({ 
   pendingVouchers, 
   completedVouchers, 
   cancelledVouchers,
@@ -180,4 +180,4 @@ export function VoucherStatusColumn({
       </div>
     </motion.div>
   );
-}
+});
