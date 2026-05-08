@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Package, TrendingUp, Truck, AlertTriangle, ArrowUpRight, ArrowDownRight, ArrowDownLeft,
@@ -20,6 +20,7 @@ import { useDebounce } from '../hooks/useDebounce';
 import InvoiceTemplate from './InvoiceTemplate';
 import StatsCards from './StatsCards';
 import StockInwardModal from './StockInwardModal';
+import { useInvoiceModal } from '../hooks/useInvoiceModal';
 
 
 
@@ -266,9 +267,7 @@ export default function Dashboard() {
 
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [isStockInModalOpen, setIsStockInModalOpen] = useState(false);
-  const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
   const [isReturnsModalOpen, setIsReturnsModalOpen] = useState(false);
-  const [sourceVoucher, setSourceVoucher] = useState(null); // Track voucher being invoiced
 
   // ---  RENAMED STATE VARIABLES TO FORCIBLY BYPASS VITE HMR --- //
   const [items, setItems] = useState([]);
@@ -278,30 +277,6 @@ export default function Dashboard() {
 
   // --- Invoice Capture State & Utils ---
   const [invoiceDataForCapture, setInvoiceDataForCapture] = useState(null);
-  const uploadToCloudinary = async (blob, data) => {
-    console.log("📤 بدء رفع الفاتورة الاحترافية إلى Cloudinary...");
-    const year = new Date().getFullYear();
-    const month = new Date().getMonth() + 1;
-    const client = (data.clientName || data.client || 'عام').trim();
-    const subFolder = data.type === 'sale' ? 'فاتورة_مبيعات' : 'سند_إخراج';
-    const folderPath = `vouchers/outward/${subFolder}/${client}/${year}/${month}`;
-    const formData = new FormData();
-    formData.append('file', blob);
-    formData.append('upload_preset', 'invoices');
-    formData.append('folder', folderPath);
-    try {
-      const res = await fetch('https://api.cloudinary.com/v1_1/dvxryz62u/image/upload', { method: 'POST', body: formData });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(`Cloudinary Error: ${errorData.error?.message || res.statusText}`);
-      }
-      const uploadResult = await res.json();
-      return uploadResult.secure_url;
-    } catch (error) {
-      console.error("❌ Cloudinary error:", error);
-      throw error;
-    }
-  };
 
   const [locations, setLocations] = useState(['مستودع الرياض', 'مستودع جدة', 'المركز الرئيسي', 'مورد خارجي']);
   const [stockSearchActiveIndex, setStockSearchActiveIndex] = useState(-1);
@@ -338,30 +313,14 @@ export default function Dashboard() {
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
 
 
-  const [invoiceForm, setInvoiceForm] = useState({ client: 'سحب مندوب', rep: '', notes: '', date: new Date().toISOString().split('T')[0], items: [] });
-  const [currentInvoiceItem, setCurrentInvoiceItem] = useState({ name: '', selectedItem: null, cat: '', unit: '', qty: '' });
-  const [invoiceErrors, setInvoiceErrors] = useState({});
-  const [isVoucherInvoice, setIsVoucherInvoice] = useState(false); 
-  const [showInvoiceExitConfirm, setShowInvoiceExitConfirm] = useState(false);
-  const invoiceSearchInputRef = useRef(null);
-
   const [returnForm, setReturnForm] = useState({ rep: '', date: new Date().toISOString().split('T')[0], query: '', selectedItem: null, qty: '', reason: 'سليم (يعود للمخزون)', cat: '', returnee: '' });
   const [returnErrors, setReturnErrors] = useState({});
   const [returnItems, setReturnItems] = useState([]);
   const [showReturnExitConfirm, setShowReturnExitConfirm] = useState(false);
-  const [showInvoiceSaveConfirm, setShowInvoiceSaveConfirm] = useState(false);
   const [showReturnSaveConfirm, setShowReturnSaveConfirm] = useState(false);
   const returnSearchInputRef = useRef(null);
 
-  // Safety reset on open to prevent data persistence
-  useEffect(() => {
-    if (isSalesModalOpen && !isVoucherInvoice) {
-      setInvoiceForm({ client: 'سحب مندوب', rep: '', notes: '', date: new Date().toISOString().split('T')[0], items: [] });
-      setCurrentInvoiceItem({ name: '', selectedItem: null, cat: '', unit: '', qty: '' });
-      setInvoiceErrors({});
-    }
-  }, [isSalesModalOpen, isVoucherInvoice]);
-
+  // Reset return form when modal opens
   useEffect(() => {
     if (isReturnsModalOpen) {
       setReturnForm({ rep: '', date: new Date().toISOString().split('T')[0], query: '', selectedItem: null, qty: '', returnStatus: 'سليم', cat: '', returnee: '', unit: '' });
@@ -370,16 +329,7 @@ export default function Dashboard() {
     }
   }, [isReturnsModalOpen]);
 
-  useEffect(() => {
-    console.log("MODAL_STATE_CHANGE:", { 
-      showInvoiceExitConfirm, 
-      showReturnExitConfirm, 
-      showInvoiceSaveConfirm, 
-      showReturnSaveConfirm,
-      isSalesModalOpen,
-      isReturnsModalOpen
-    });
-  }, [showInvoiceExitConfirm, showReturnExitConfirm, showInvoiceSaveConfirm, showReturnSaveConfirm, isSalesModalOpen, isReturnsModalOpen]);
+
 
   // Auto-focus item name input when modal opens
   useEffect(() => {
@@ -495,7 +445,6 @@ export default function Dashboard() {
   }, [showNewItemPrompt, promptItemName, promptSource]);
   
 
-  const [invoiceSearchActiveIndex, setInvoiceSearchActiveIndex] = useState(-1);
   const [returnSearchActiveIndex, setReturnSearchActiveIndex] = useState(-1);
   const [isTransactionDetailOpen, setIsTransactionDetailOpen] = useState(false);
   const [selectedBatchTransactions, setSelectedBatchTransactions] = useState([]);
@@ -506,6 +455,37 @@ export default function Dashboard() {
   const { currentUser } = useAuth();
   const { isDarkMode } = useTheme();
   const { playSuccess, playWarning } = useAudio();
+
+  // ─── Invoice Modal (extracted to useInvoiceModal hook) ───────────────
+  const {
+    isSalesModalOpen, setIsSalesModalOpen,
+    isVoucherInvoice, setIsVoucherInvoice,
+    sourceVoucher, setSourceVoucher,
+    invoiceForm, setInvoiceForm,
+    currentInvoiceItem, setCurrentInvoiceItem,
+    invoiceErrors, setInvoiceErrors,
+    invoiceSearchActiveIndex, setInvoiceSearchActiveIndex,
+    showInvoiceExitConfirm, setShowInvoiceExitConfirm,
+    showInvoiceSaveConfirm, setShowInvoiceSaveConfirm,
+    invoiceSearchInputRef,
+    openInvoiceModal,
+    handleCloseInvoiceModal,
+    performInvoiceReset,
+    handleAddInvoiceItemToTable,
+    handleEditInvoiceItem,
+    handleAddInvoice,
+    performInvoiceSave,
+  } = useInvoiceModal({
+    items,
+    setLoading,
+    playWarning,
+    playSuccess,
+    fetchInitialData,
+    setInvoiceDataForCapture,
+    setInvoiceTimestamps,
+    setStockSearchActiveIndex,
+  });
+
   const [chartMode, setChartMode] = useState('category'); // 'category' | 'item'
   const [chartItemFilter, setChartItemFilter] = useState('الكل');
   const [chartItemSearchQuery, setChartItemSearchQuery] = useState('');
@@ -1048,383 +1028,6 @@ export default function Dashboard() {
     toast.info("تم حذف الصنف من القائمة");
   };
 
-
-
-
-  
-  // --- Invoice Modal Handlers ---
-  // Auto-focus on modal open
-  useEffect(() => {
-    if (isSalesModalOpen) {
-      setTimeout(() => {
-        if (!invoiceForm.rep) {
-          // Find the rep input by placeholder or just use a ref if we had one. 
-          // For now let's just use the search input as before but the user might want rep focus.
-          // Let's add an ID to the rep input and focus it.
-          document.getElementById('invoiceRepInput')?.focus();
-        } else {
-          invoiceSearchInputRef.current?.focus();
-        }
-      }, 100);
-    }
-  }, [isSalesModalOpen]);
-  
-  // Exit guard
-  const hasInvoiceUnsavedData = () => {
-    return (
-      invoiceForm.rep.trim() !== '' || 
-      currentInvoiceItem.name.trim() !== '' || 
-      invoiceForm.items.length > 0
-    );
-  };
-  
-  const handleCloseInvoiceModal = () => {
-    if (hasInvoiceUnsavedData()) {
-      setShowInvoiceExitConfirm(true);
-    } else {
-      performInvoiceReset();
-    }
-  };
-  
-  const performInvoiceReset = () => {
-    setIsSalesModalOpen(false);
-    setInvoiceForm({ client: 'سحب مندوب', rep: '', notes: '', date: new Date().toISOString().split('T')[0], items: [] });
-    setCurrentInvoiceItem({ name: '', selectedItem: null, cat: '', unit: '', qty: '' });
-    setInvoiceErrors({});
-    setShowInvoiceExitConfirm(false);
-     setShowInvoiceSaveConfirm(false);
-    setShowInvoiceSaveConfirm(false);
-    setIsVoucherInvoice(false); 
-    setStockSearchActiveIndex(-1);
-  };
-
-  const openInvoiceModal = () => {
-    setInvoiceForm({ client: 'سحب مندوب', rep: '', notes: '', date: new Date().toISOString().split('T')[0], items: [] });
-    setCurrentInvoiceItem({ name: '', selectedItem: null, cat: '', unit: '', qty: '' });
-    setInvoiceErrors({});
-    setIsVoucherInvoice(false);
-    setIsSalesModalOpen(true);
-  };
-  
-  // Add invoice item to table
-  const handleAddInvoiceItemToTable = () => {
-    if (!currentInvoiceItem.selectedItem) return toast.error("حدد الصنف أولاً!");
-    if (!currentInvoiceItem.qty || currentInvoiceItem.qty <= 0) return toast.error("أدخل كمية صحيحة!");
-    
-    // Account for voucher quantity if editing a voucher-to-invoice
-    let alreadyReserved = 0;
-    if (sourceVoucher) {
-      const vLine = (sourceVoucher.lines || []).find(vl => vl.item_id === currentInvoiceItem.selectedItem.id);
-      if (vLine) alreadyReserved = Number(vLine.qty || 0);
-    }
-
-    const requestedDelta = Number(currentInvoiceItem.qty) - alreadyReserved;
-
-    if (requestedDelta > 0 && requestedDelta > currentInvoiceItem.selectedItem.stockQty) {
-      const availableTotal = (currentInvoiceItem.selectedItem.stockQty || 0) + alreadyReserved;
-      return toast.error(`الكمية غير كافية! الرصيد الإجمالي المتاح هو ${availableTotal} (شاملاً رصيد السند)`);
-    }
-    
-    setInvoiceForm({...invoiceForm, items: [
-      {...currentInvoiceItem, qty: Number(currentInvoiceItem.qty)},
-      ...invoiceForm.items
-    ]});
-    setCurrentInvoiceItem({name:'', selectedItem: null, cat:'', unit:'', qty:''});
-    setTimeout(() => invoiceSearchInputRef.current?.focus(), 50);
-  };
-
-  const handleEditInvoiceItem = (idx) => {
-    const item = invoiceForm.items[idx];
-    setCurrentInvoiceItem({
-      name: item.name,
-      selectedItem: item.selectedItem,
-      cat: item.cat,
-      unit: item.unit,
-      qty: item.qty
-    });
-    setInvoiceForm({
-      ...invoiceForm,
-      items: invoiceForm.items.filter((_, i) => i !== idx)
-    });
-    setTimeout(() => invoiceSearchInputRef.current?.focus(), 50);
-  };
-
-  // --- 3. ADD INVOICE --- //
-  const handleAddInvoice = (e) => {
-    if (e) e.preventDefault();
-    if (!invoiceForm.client.trim()) { setInvoiceErrors({ client: true }); return toast.error("أدخل اسم العميل أولاً!"); }
-    if (!isVoucherInvoice && !invoiceForm.rep.trim()) { setInvoiceErrors({ rep: true }); return toast.error("أدخل اسم المندوب!"); }
-    if (invoiceForm.items.length === 0) return toast.error("لا توجد أصناف في الفاتورة!");
-    
-    for (let i = 0; i < invoiceForm.items.length; i++) {
-        const line = invoiceForm.items[i];
-        const invItem = items.find(inv => inv.id === (line.selectedItem?.id || line.selectedItemId));
-        
-        // If this is a voucher-to-invoice conversion, the 'line.qty' is already 
-        // partially or fully deducted from stockQty. 
-        // We only care about the DELTA (the difference).
-        let alreadyDeducted = 0;
-        if (sourceVoucher) {
-            const vLine = (sourceVoucher.lines || []).find(vl => vl.item_id === (line.selectedItem?.id || line.selectedItemId));
-            if (vLine) alreadyDeducted = Number(vLine.qty || 0);
-        }
-
-        const requestedDelta = Number(line.qty) - alreadyDeducted;
-
-        if (!invItem || (requestedDelta > 0 && requestedDelta > invItem.stockQty)) {
-            setInvoiceErrors({ [`qty-${i}`]: true });
-            playWarning();
-            const availableTotal = (invItem?.stockQty || 0) + alreadyDeducted;
-            return toast.error(`الكمية غير كافية لـ "${line.selectedItem?.name || line.name}"! الرصيد الإجمالي المتاح هو ${availableTotal} فقط (شاملاً رصيد السند) ⛔️`);
-        }
-    }
-    setInvoiceErrors({});
-    setShowInvoiceSaveConfirm(true);
-  };
-
-  const performInvoiceSave = async () => {
-    setShowInvoiceSaveConfirm(false);
-    try {
-      setLoading(true);
-      const now = new Date();
-      const invoiceTimestamp = now.toLocaleString('ar-SA', {
-        year: 'numeric', month: 'long', day: 'numeric',
-        hour: '2-digit', minute: '2-digit'
-      });
-
-      // 1. Skip optional invoices table (doesn't exist)
-      // Removed to avoid 400 errors
-
-      // 2. Sync Transactions & Stock
-      if (sourceVoucher) {
-        const batchId = sourceVoucher.voucherGroupId || sourceVoucher.id;
-        const voucherLines = sourceVoucher.lines || [];
-        const invoiceLines = invoiceForm.items;
-
-        console.log('🔄 Invoice Save Starting...', {
-          batchId,
-          voucherLinesCount: voucherLines.length,
-          invoiceLinesCount: invoiceLines.length,
-          sourceVoucherKeys: Object.keys(sourceVoucher),
-          firstLineId: voucherLines[0]?.id,
-          firstLineItemId: voucherLines[0]?.item_id,
-        });
-
-        // STRATEGY: Update ALL transactions in this batch at once using batch_id
-        // We only update status to 'مفوتر'. We DON'T touch notes to preserve user's comments.
-        const { error: batchUpdateErr, count: batchCount } = await supabase
-          .from('transactions')
-          .update({ 
-            status: 'مفوتر'
-          })
-          .eq('batch_id', batchId);
-
-        console.log('📦 Batch update result:', { batchUpdateErr, batchCount, batchId });
-
-        if (batchUpdateErr) {
-          console.warn('⚠️ Batch update by batch_id failed, trying individual updates...');
-          
-          for (const vLine of voucherLines) {
-            await supabase
-              .from('transactions')
-              .update({ 
-                status: 'مفوتر',
-                // Append if we have notes
-                notes: vLine.notes ? `${vLine.notes} [تم إصدار الفاتورة]` : '[تم إصدار الفاتورة]'
-              })
-              .eq('id', vLine.id);
-          }
-        }
-
-        // VERIFY: Read back to confirm the write actually persisted
-        const { data: verifyData } = await supabase
-          .from('transactions')
-          .select('id, status, notes')
-          .eq('batch_id', batchId)
-          .limit(5);
-        
-        console.log('✅ Verification read-back:', verifyData);
-        
-        const verified = verifyData && verifyData.some(v => v.status === 'مفوتر');
-
-        if (!verified) {
-          console.error('❌ VERIFICATION FAILED! Data did not persist.');
-          const vCode = sourceVoucher.voucherCode || sourceVoucher.reference_number;
-          console.log('Trying alternative: update by reference_number...', vCode);
-          
-          if (vCode) {
-            await supabase
-              .from('transactions')
-              .update({ status: 'مفوتر' })
-              .eq('reference_number', vCode);
-          }
-          
-          // Also try updating each line by ID one more time
-          for (const vLine of voucherLines) {
-            await supabase
-              .from('transactions')
-              .update({ 
-                status: 'مفوتر',
-                notes: vLine.notes ? `${vLine.notes} [تم إصدار الفاتورة]` : '[تم إصدار الفاتورة]'
-              })
-              .eq('id', vLine.id);
-          }
-        }
-
-        // Handle stock adjustments for qty changes
-        for (const vLine of voucherLines) {
-          const matchingInvItem = invoiceLines.find(it => 
-            (it.selectedItem?.id === vLine.item_id) || 
-            (it.selectedItemId === vLine.item_id)
-          );
-
-          if (matchingInvItem) {
-            const diff = Number(matchingInvItem.qty) - Number(vLine.qty);
-            if (diff !== 0) {
-              const currentItem = items.find(i => i.id === vLine.item_id);
-              if (currentItem) {
-                const newStock = (currentItem.stockQty || 0) - diff;
-                await supabase.from('products').update({ stock_qty: newStock }).eq('id', vLine.item_id);
-              }
-              await supabase.from('transactions').update({ qty: Number(matchingInvItem.qty) }).eq('id', vLine.id);
-            }
-          } else {
-            // Item deleted in review - return stock
-            const currentItem = items.find(i => i.id === vLine.item_id);
-            if (currentItem) {
-              const newStock = (currentItem.stockQty || 0) + Number(vLine.qty);
-              await supabase.from('products').update({ stock_qty: newStock }).eq('id', vLine.item_id);
-            }
-          }
-        }
-
-        // Handle new items added in review
-        for (const invItem of invoiceLines) {
-          const itemId = invItem.selectedItem?.id || invItem.selectedItemId;
-          if (!itemId) continue;
-          if (!voucherLines.some(vl => vl.item_id === itemId)) {
-            const currentItem = items.find(i => i.id === itemId);
-            if (currentItem) {
-              const newStock = (currentItem.stockQty || 0) - Number(invItem.qty);
-              await supabase.from('products').update({ stock_qty: newStock }).eq('id', itemId);
-            }
-            await supabase.from('transactions').insert({
-              item: invItem.name || invItem.selectedItem?.name,
-              item_id: itemId,
-              type: sourceVoucher.type || 'outward',
-              qty: Number(invItem.qty),
-              batch_id: batchId,
-              reference_number: sourceVoucher.voucherCode,
-              beneficiary: sourceVoucher.clientName,
-              rep: invoiceForm.rep || sourceVoucher.rep || sourceVoucher.clientName,
-              timestamp: new Date().toISOString(),
-              status: 'مفوتر',
-              notes: `[إضافة مراجعة] ${statusNotes}`
-            });
-          }
-        }
-        
-        setInvoiceTimestamps(prev => ({...prev, [sourceVoucher.id]: invoiceTimestamp}));
-        setSourceVoucher(null);
-      } else {
-        // --- 3. REGULAR SALES INVOICE (No Voucher) ---
-        console.log('📝 Direct Invoice Save Starting...', {
-          client: invoiceForm.client,
-          itemsCount: invoiceForm.items.length
-        });
-
-        const batchId = `INV-${Date.now()}`;
-        const txsToInsert = [];
-
-        for (const line of invoiceForm.items) {
-          const itemId = line.selectedItem?.id || line.selectedItemId;
-          if (!itemId) continue;
-
-          // Fetch fresh stock to avoid race conditions
-          const { data: latestProd } = await supabase.from('products').select('stock_qty').eq('id', itemId).single();
-          const currentStock = latestProd?.stock_qty || 0;
-          const newStock = currentStock - Number(line.qty);
-          
-          await supabase.from('products').update({ stock_qty: newStock }).eq('id', itemId);
-
-          txsToInsert.push({
-            item: line.name || line.selectedItem?.name,
-            item_id: itemId,
-            type: 'Issue',
-            qty: Number(line.qty),
-            date: invoiceForm.date,
-            timestamp: new Date().toISOString(),
-            status: 'مفوتر',
-            beneficiary: invoiceForm.client,
-            rep: invoiceForm.rep,
-            batch_id: batchId,
-            reference_number: batchId,
-            notes: `${invoiceForm.notes.trim()} [نوع: صادر]`
-          });
-        }
-
-        if (txsToInsert.length > 0) {
-          const { error: insErr } = await supabase.from('transactions').insert(txsToInsert);
-          if (insErr) throw insErr;
-        }
-      }
-
-      // --- 4. GENERATE AND UPLOAD PROFESSIONAL INVOICE IMAGE ---
-      try {
-        const targetBatchId = sourceVoucher ? (sourceVoucher.voucherGroupId || sourceVoucher.id) : `INV-${Date.now()}`; 
-        // Note: For direct sales, batchId is already used above, but we can re-derive it or pass it.
-        // Actually, let's use the actual batchId from the logic.
-        
-        const finalBatchId = sourceVoucher ? (sourceVoucher.voucherGroupId || sourceVoucher.id) : txsToInsert[0]?.batch_id;
-
-        const invData = {
-          type: sourceVoucher ? 'voucher' : 'sale',
-          clientName: sourceVoucher ? sourceVoucher.clientName : (invoiceForm.rep || invoiceForm.client),
-          rep: invoiceForm.rep,
-          date: invoiceForm.date,
-          batchId: finalBatchId,
-          voucherCode: sourceVoucher ? sourceVoucher.voucherCode : null,
-          items: invoiceForm.items.map(it => ({
-            name: it.name || it.selectedItem?.name,
-            company: it.company || it.selectedItem?.company,
-            cat: it.cat || it.selectedItem?.cat,
-            qty: it.qty,
-            unit: it.unit || it.selectedItem?.unit
-          })),
-          notes: sourceVoucher ? `تحويل السند ${sourceVoucher.voucherCode} إلى فاتورة` : (invoiceForm.notes.trim() || 'فاتورة مبيعات')
-        };
-        
-        setInvoiceDataForCapture(invData);
-        await new Promise(r => setTimeout(r, 800)); // Wait for render
-        
-        const element = document.getElementById('invoice-capture-area');
-        if (element) {
-          const html2canvasModule = await import('html2canvas');
-          const html2canvas = html2canvasModule.default || html2canvasModule;
-          const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-          const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-          const imageUrl = await uploadToCloudinary(blob, invData);
-          
-          if (imageUrl && finalBatchId) {
-            await supabase.from('transactions').update({ receipt_image: imageUrl }).eq('batch_id', finalBatchId);
-          }
-        }
-        setInvoiceDataForCapture(null);
-      } catch (genErr) {
-        console.error("⚠️ Invoice image generation failed:", genErr);
-      }
-
-      toast.success("تم تأكيد الفاتورة (إجراء روتيني) - المخزون تم التعامل معه مسبقاً في السند ✅");
-      playSuccess();
-      performInvoiceReset();
-      fetchInitialData();
-    } catch (err) {
-      console.error("❌ performInvoiceSave crash:", err);
-      toast.error("حدث خطأ تقني أثناء الحفظ. يرجى مراجعة الكونسول.");
-    } finally {
-      setLoading(false);
-    }
-  };
   
   // --- Global Modals ESC Support ---
   useEffect(() => {
