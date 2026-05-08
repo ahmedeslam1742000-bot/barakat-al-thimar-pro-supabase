@@ -252,5 +252,60 @@ export function useVoucherDetail({
     handleDeleteVoucher,
     handleEditVoucher,
     handleMarkAsInvoiced,
+
+    // ─── New Helper Actions ──────────────────────────────────────────
+    updateVoucherNote: async (voucher, newNote) => {
+      try {
+        if (!voucher?.id) return;
+        const { error } = await supabase
+          .from('transactions')
+          .update({ notes: newNote })
+          .eq('batch_id', voucher.id);
+        
+        if (error) throw error;
+        toast.success('تم تحديث الملاحظات ✅');
+        if (fetchInitialData) fetchInitialData();
+      } catch {
+        toast.error('حدث خطأ أثناء تحديث الملاحظات.');
+      }
+    },
+
+    handleDeleteTransaction: async (txId) => {
+      if (!window.confirm('هل أنت متأكد من حذف هذا الصنف من السند؟')) return;
+      try {
+        if (setLoading) setLoading(true);
+        const { error } = await supabase.from('transactions').delete().eq('id', txId);
+        if (error) throw error;
+        
+        toast.success('تم حذف الصنف بنجاح ✅');
+        if (fetchInitialData) fetchInitialData();
+      } catch {
+        toast.error('حدث خطأ أثناء حذف الصنف.');
+      } finally {
+        if (setLoading) setLoading(false);
+      }
+    },
+
+    printVoucher: (voucher) => {
+      if (!voucher) return;
+      // Typical pattern: set something in localStorage and open /print
+      localStorage.setItem('print_voucher_data', JSON.stringify(voucher));
+      window.open('/print', '_blank');
+    },
+
+    duplicateVoucher: (voucher) => {
+      if (!voucher) return;
+      const view = voucher.kind === 'in' ? 'voucher-in' : 'voucher-outward';
+      localStorage.setItem('duplicate_voucher_data', JSON.stringify(voucher));
+      if (setActiveView) setActiveView(view);
+      setIsVoucherDetailOpen(false);
+    },
+
+    handleConfirmVoucher: async () => {
+      if (!selectedVoucher) return;
+      await handleMarkAsInvoiced(selectedVoucher);
+      setIsVoucherModalOpen(false);
+      setSelectedVoucher(null);
+    },
   };
 }
