@@ -144,7 +144,7 @@ export default function Reps({ setActiveView }) {
       return searchString.includes(q);
     });
 
-    console.log('Reps Sync Check:', { total: reps.length, filtered: result.length, query: q });
+
     return result;
   }, [reps, searchQuery]);
 
@@ -162,7 +162,7 @@ export default function Reps({ setActiveView }) {
       if (form.zone?.trim()) payload.zone = form.zone.trim();
       
       const { data, error } = await supabase.from('reps').insert([payload]).select();
-      console.log('✅ Insert result:', { data, error });
+
       if (error) throw error;
       
       toast.success('✅ تم إضافة المندوب بنجاح');

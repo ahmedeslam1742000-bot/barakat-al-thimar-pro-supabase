@@ -145,7 +145,7 @@ export function useDataFetcher({ currentUser }) {
         }
       })
       .subscribe((status) => {
-        if (import.meta.env.DEV && status === 'SUBSCRIBED') console.log('[Realtime] products channel ready');
+
       });
 
     const transChannel = supabase
@@ -164,7 +164,7 @@ export function useDataFetcher({ currentUser }) {
         }
       })
       .subscribe((status) => {
-        if (import.meta.env.DEV && status === 'SUBSCRIBED') console.log('[Realtime] transactions channel ready');
+
       });
 
     return () => {

@@ -81,14 +81,14 @@ export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        console.log("🔍 StockInwardModal: fetching products...");
+
         const { data, error } = await supabase.from('products').select('id, name, company, cat, unit, stock_qty');
         if (error) {
           console.error("❌ StockInwardModal: Error fetching products:", error);
           return;
         }
         if (data) {
-          console.log(`✅ StockInwardModal: fetched ${data.length} products`);
+
           setItems(data);
         }
       } catch (err) {
@@ -199,7 +199,7 @@ export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
       return;
     }
 
-    console.log('🚀 بدء عملية الحفظ النهائي (inventory_commit_inbound)...');
+
     setShowSaveConfirm(false);
     setLoading(true);
 
@@ -224,17 +224,17 @@ export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
 
       // 1. رفع الصورة إلى Cloudinary (يبقى في JS — لا يمكن نقله لـ SQL)
       if (stockForm.receiptImageFile) {
-        console.log('📸 جاري رفع الصورة إلى Cloudinary...');
+
         const uploadPromise = uploadToCloudinary(stockForm.receiptImageFile, locationName);
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('استغرق رفع الصورة وقتاً طويلاً جداً')), 30000)
         );
         imageUrl = await Promise.race([uploadPromise, timeoutPromise]);
-        console.log('✅ تم رفع الصورة بنجاح:', imageUrl);
+
       }
 
       // 2. استدعاء RPC الذري — يتولى فحص التكرار + قفل الصفوف + تحديث المخزون + إدراج transactions
-      console.log('🔄 جاري استدعاء inventory_commit_inbound...');
+
       const { data, error } = await supabase.rpc('inventory_commit_inbound', {
         payload: {
           request_id: `inbound-${Date.now()}`,
@@ -269,7 +269,7 @@ export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
         throw new Error(data?.error_message || 'فشل الحفظ عبر RPC');
       }
 
-      console.log('✨ تمت العملية بنجاح! batch_id:', data.batch_id);
+
       toast.success('تم الحفظ والترحيل بنجاح ✅');
       playSuccess?.();
 
@@ -292,7 +292,7 @@ export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
   };
 
   const uploadToCloudinary = async (file, supplier) => {
-    console.log("📤 بدء رفع الملف إلى Cloudinary...");
+
     
     const year = new Date(stockForm.date).getFullYear();
     const month = new Date(stockForm.date).getMonth() + 1;
@@ -317,7 +317,7 @@ export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
       }
 
       const data = await res.json();
-      console.log("✅ تم الرفع إلى Cloudinary بنجاح. URL:", data.secure_url);
+
       return data.secure_url;
     } catch (error) {
       console.error("❌ خطأ أثناء الاتصال بـ Cloudinary:", error);
