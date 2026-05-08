@@ -12,6 +12,8 @@ import { supabase } from '../lib/supabaseClient';
  *   playSuccess        — audio feedback fn
  *   fetchInitialData   — Dashboard data-refetch callback
  *   setActiveView      — navigation callback (for handleEditVoucher)
+ *   invoiceTimestamps  — optional externally-owned voucher invoice dates map
+ *   setInvoiceTimestamps — optional setter for the shared invoice dates map
  *   // Invoice bridge (from useInvoiceModal):
  *   setSourceVoucher   — set the voucher being invoiced
  *   setInvoiceForm     — pre-fill invoice form
@@ -26,6 +28,8 @@ export function useVoucherDetail({
   playSuccess,
   fetchInitialData,
   setActiveView,
+  invoiceTimestamps: controlledInvoiceTimestamps,
+  setInvoiceTimestamps: controlledSetInvoiceTimestamps,
   // Invoice bridge
   setSourceVoucher,
   setInvoiceForm,
@@ -42,7 +46,9 @@ export function useVoucherDetail({
   const voucherOpenLockRef = useRef({ id: null, at: 0 });
   const [isVoucherDetailOpen, setIsVoucherDetailOpen] = useState(false);
   const [detailVoucher, setDetailVoucher] = useState(null);
-  const [invoiceTimestamps, setInvoiceTimestamps] = useState({}); // { voucherId: timestamp }
+  const [localInvoiceTimestamps, setLocalInvoiceTimestamps] = useState({});
+  const invoiceTimestamps = controlledInvoiceTimestamps ?? localInvoiceTimestamps;
+  const setInvoiceTimestamps = controlledSetInvoiceTimestamps ?? setLocalInvoiceTimestamps;
 
   // ─── Open voucher detail (debounce-locked to prevent double-opens) ───
   const openVoucherModal = useCallback((voucher) => {

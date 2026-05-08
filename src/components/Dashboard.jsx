@@ -279,6 +279,7 @@ export default function Dashboard({ setActiveView, activeView }) {
 
   // --- Invoice Capture State & Utils ---
   const [invoiceDataForCapture, setInvoiceDataForCapture] = useState(null);
+  const [invoiceTimestamps, setInvoiceTimestamps] = useState({});
 
   const [locations, setLocations] = useState(['مستودع الرياض', 'مستودع جدة', 'المركز الرئيسي', 'مورد خارجي']);
   const [stockSearchActiveIndex, setStockSearchActiveIndex] = useState(-1);
@@ -396,7 +397,6 @@ export default function Dashboard({ setActiveView, activeView }) {
     activeVoucherId, setActiveVoucherId,
     isVoucherDetailOpen, setIsVoucherDetailOpen,
     detailVoucher, setDetailVoucher,
-    invoiceTimestamps, setInvoiceTimestamps,
     openVoucherModal,
     closeVoucherDetail,
     findItemFromVoucherLine,
@@ -417,6 +417,8 @@ export default function Dashboard({ setActiveView, activeView }) {
     playSuccess,
     fetchInitialData,
     setActiveView,
+    invoiceTimestamps,
+    setInvoiceTimestamps,
     // Invoice bridge from useInvoiceModal
     setSourceVoucher,
     setInvoiceForm,
