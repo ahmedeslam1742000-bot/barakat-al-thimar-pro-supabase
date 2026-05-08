@@ -247,46 +247,46 @@ export default function PriceList({ setActiveView }) {
             <table className="w-full text-right border-separate border-spacing-0">
               <thead className="sticky top-0 z-20 bg-slate-50/80 backdrop-blur-md">
                 <tr className="text-slate-400 font-black text-[11px] uppercase tracking-widest border-b border-slate-100">
-                  <th className="px-6 py-4 text-center w-16">م</th>
-                  <th className="px-6 py-4">اسم الصنف</th>
-                  <th className="px-6 py-4 text-center w-32">القسم</th>
-                  <th className="px-6 py-4 text-center w-32">الوحدة</th>
-                  <th className="px-6 py-4 text-center w-40">السعر السابق</th>
-                  <th className="px-6 py-4 text-center w-40">السعر الحالي</th>
-                  <th className="px-6 py-4 text-center w-28">إجراء</th>
+                  <th className="px-6 py-2 text-center w-16">م</th>
+                  <th className="px-6 py-2">اسم الصنف</th>
+                  <th className="px-6 py-2 text-center w-32">القسم</th>
+                  <th className="px-6 py-2 text-center w-32">الوحدة</th>
+                  <th className="px-6 py-2 text-center w-40">السعر السابق</th>
+                  <th className="px-6 py-2 text-center w-40">السعر الحالي</th>
+                  <th className="px-6 py-2 text-center w-28">إجراء</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filteredItems.map((item, idx) => (
                   <tr key={item.id} className="group hover:bg-indigo-50/10 transition-colors">
-                    <td className="px-6 py-4 text-center align-middle">
+                    <td className="px-6 py-2 text-center align-middle">
                       <span className="text-[13px] font-bold text-slate-300 tabular-nums">{idx + 1}</span>
                     </td>
-                    <td className="px-6 py-4 align-middle">
+                    <td className="px-6 py-2 align-middle">
                       <span className="text-[15px] font-black text-slate-800 tracking-tight whitespace-nowrap">{item.name} - {item.company || 'بدون شركة'}</span>
                     </td>
-                    <td className="px-6 py-4 text-center align-middle">
+                    <td className="px-6 py-2 text-center align-middle">
                       <span className="text-[10px] font-black px-2.5 py-1 rounded-lg border bg-slate-50 text-slate-500 border-slate-100">{item.cat || 'أخرى'}</span>
                     </td>
-                    <td className="px-6 py-4 text-center align-middle">
+                    <td className="px-6 py-2 text-center align-middle">
                       <span className="text-[11px] font-bold text-slate-400">{item.unit || 'وحدة'}</span>
                     </td>
-                    <td className="px-6 py-4 text-center align-middle">
+                    <td className="px-6 py-2 text-center align-middle">
                       <div className="flex items-center justify-center text-slate-400 font-bold tabular-nums">
                         <span className="text-lg">{item.old_price || 0}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center align-middle">
-                      <div className="flex items-center justify-center gap-2 text-emerald-600 font-black tabular-nums bg-emerald-50 px-4 py-2 rounded-2xl border border-emerald-100 inline-flex mx-auto">
+                    <td className="px-6 py-2 text-center align-middle">
+                      <div className="flex items-center justify-center gap-2 text-emerald-600 font-black tabular-nums bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 inline-flex mx-auto">
                         <span className="text-xl">{item.price || 0}</span>
                         {item.price > (item.old_price || 0) ? <TrendingUp size={14} /> : item.price < (item.old_price || 0) ? <TrendingDown size={14} /> : null}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center align-middle">
+                    <td className="px-6 py-2 text-center align-middle">
                       {!isViewer && (
                         <button 
                           onClick={() => openEditModal(item)}
-                          className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center shadow-sm group/btn"
+                          className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center shadow-sm group/btn mx-auto"
                         >
                           <Pencil size={18} className="group-hover/btn:scale-110 transition-transform" />
                         </button>

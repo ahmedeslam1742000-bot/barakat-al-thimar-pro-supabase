@@ -238,50 +238,50 @@ export default function InboundItems({ setActiveView }) {
               <table className="w-full text-right border-separate border-spacing-0">
                 <thead className="sticky top-0 z-10 bg-white">
                   <tr className="bg-slate-50 text-[#8ba3b5] font-black text-[10px] uppercase tracking-widest border-b border-slate-200">
-                    <th className="px-4 py-3 text-center w-14 border-x border-slate-100">م</th>
-                    <th className="px-4 py-3 text-center border-x border-slate-100">اسم الصنف الوارد</th>
-                    <th className="px-4 py-3 text-center w-64 border-x border-slate-100">الشركة</th>
-                    <th className="px-4 py-3 text-center w-32 border-x border-slate-100">إجمالي الوارد</th>
-                    <th className="px-4 py-3 text-center w-32 border-x border-slate-100 text-teal-600">السليم الحالي</th>
-                    <th className="px-4 py-3 text-center w-32 border-x border-slate-100 text-rose-600">التالف الحالي</th>
-                    <th className="px-4 py-3 text-center w-48 border-x border-slate-100">القسم</th>
-                    <th className="px-4 py-3 text-center w-48 border-x border-slate-100">وحدة القياس</th>
+                    <th className="px-4 py-2 text-center w-14 border-x border-slate-100">م</th>
+                    <th className="px-4 py-2 text-center border-x border-slate-100">اسم الصنف الوارد</th>
+                    <th className="px-4 py-2 text-center w-64 border-x border-slate-100">الشركة</th>
+                    <th className="px-4 py-2 text-center w-32 border-x border-slate-100">إجمالي الوارد</th>
+                    <th className="px-4 py-2 text-center w-32 border-x border-slate-100 text-teal-600">السليم الحالي</th>
+                    <th className="px-4 py-2 text-center w-32 border-x border-slate-100 text-rose-600">التالف الحالي</th>
+                    <th className="px-4 py-2 text-center w-48 border-x border-slate-100">القسم</th>
+                    <th className="px-4 py-2 text-center w-48 border-x border-slate-100">وحدة القياس</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {filteredItems.map((it, idx) => (
                     <tr key={it.uniqueId} className="group hover:bg-slate-50 transition-colors border-b border-slate-100">
-                      <td className="px-4 py-2.5 text-center align-middle">
+                      <td className="px-4 py-1.5 text-center align-middle">
                          <span className="text-[11px] font-black text-slate-400">{idx + 1}</span>
                       </td>
-                      <td className="px-4 py-2.5 text-center align-middle">
+                      <td className="px-4 py-1.5 text-center align-middle">
                          <div className="font-bold text-sm text-slate-800 leading-none">{it.item}</div>
                       </td>
-                      <td className="px-4 py-2.5 text-center align-middle">
+                      <td className="px-4 py-1.5 text-center align-middle">
                          <div className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200 inline-block">{it.company}</div>
                       </td>
-                      <td className="px-4 py-2.5 text-center align-middle">
+                      <td className="px-4 py-1.5 text-center align-middle">
                          <span className="inline-flex items-center px-3 py-1 bg-[#10b981]/5 text-[#10b981] rounded-lg text-[12px] font-black border border-[#10b981]/10 shadow-sm">
                             {it.qty}
                          </span>
                       </td>
-                      <td className="px-4 py-2.5 text-center align-middle">
+                      <td className="px-4 py-1.5 text-center align-middle">
                          <span className="inline-flex items-center px-3 py-1 bg-teal-50 text-teal-700 rounded-lg text-[12px] font-black border border-teal-100 shadow-sm">
                             {it.stockQty}
                          </span>
                       </td>
-                      <td className="px-4 py-2.5 text-center align-middle">
+                      <td className="px-4 py-1.5 text-center align-middle">
                          <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[12px] font-black border shadow-sm ${Number(it.damagedQty) > 0 ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
                             {it.damagedQty}
                          </span>
                       </td>
-                      <td className="px-4 py-2.5 text-center align-middle">
+                      <td className="px-4 py-1.5 text-center align-middle">
                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border bg-slate-50 text-slate-600 border-slate-100 text-[10px] font-black transition-all">
                             {getCatIcon(it.cat)}
                             {it.cat}
                          </span>
                       </td>
-                      <td className="px-4 py-2.5 text-center align-middle">
+                      <td className="px-4 py-1.5 text-center align-middle">
                          <div className="text-[11px] font-bold text-slate-600">{it.unit || '—'}</div>
                       </td>
                     </tr>
