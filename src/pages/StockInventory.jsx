@@ -236,7 +236,10 @@ export default function StockInventory({ setActiveView }) {
 </html>`;
 
     const win = window.open('', '_blank', 'width=794,height=1123');
-    if (!win) return;
+    if (!win) {
+      toast.error('لم نتمكن من فتح نافذة الطباعة. يرجى السماح بالنوافذ المنبثقة (Pop-ups) في متصفحك.');
+      return;
+    }
     win.document.write(html);
     win.document.close();
     win.onload = () => { win.focus(); win.print(); };

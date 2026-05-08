@@ -236,6 +236,10 @@ export default function ReceiptVouchers({ setActiveView }) {
 
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('لم نتمكن من فتح نافذة الطباعة. يرجى السماح بالنوافذ المنبثقة (Pop-ups) في متصفحك.');
+      return;
+    }
     
     // Group vouchers by type
     const groupedVouchers = filteredVouchers.reduce((acc, v) => {

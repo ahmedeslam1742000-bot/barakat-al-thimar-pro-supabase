@@ -119,6 +119,10 @@ export default function InboundItems({ setActiveView }) {
     const printContents = document.getElementById('inbound-print-content');
     if (!printContents) return;
     const printWindow = window.open('', 'PRINT', 'height=842,width=595');
+    if (!printWindow) {
+      toast.error('لم نتمكن من فتح نافذة الطباعة. يرجى السماح بالنوافذ المنبثقة (Pop-ups) في متصفحك.');
+      return;
+    }
     if (printWindow) {
       printWindow.document.write(`
         <html dir="rtl">
