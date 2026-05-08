@@ -187,7 +187,7 @@ export default function StockInventory({ setActiveView }) {
         </tr>`;
       });
       tablesHtml += `
-        <div style="margin-bottom:32px;break-inside:avoid;">
+        <div style="margin-bottom:32px;">
           <div style="font-size:18px;font-weight:900;margin-bottom:10px;padding-right:12px;border-right:5px solid #279489;color:#1e293b;">${cat}</div>
           <table style="width:100%;border-collapse:collapse;border:1px solid #cbd5e1;border-radius:4px;overflow:hidden;">
             <thead>
@@ -215,7 +215,12 @@ export default function StockInventory({ setActiveView }) {
     body { font-family: 'Tajawal', Arial, sans-serif; background:#fff; color:#1e293b; padding:0; }
     .page { padding: 20mm 15mm; }
     @page { size: A4 portrait; margin: 0; }
-    @media print { body { padding:0; } }
+    @media print { 
+      body { padding:0; } 
+      table { page-break-inside: auto; }
+      tr { page-break-inside: avoid; page-break-after: auto; }
+      thead { display: table-header-group; }
+    }
   </style>
 </head>
 <body>
