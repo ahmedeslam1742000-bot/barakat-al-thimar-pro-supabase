@@ -28,40 +28,32 @@ export default function InboundItems({ setActiveView }) {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const { subscribe } = useRealtimeManager();
 
+  // ─── Phase 2: استخدام RPC بدلاً من جلب كل السجلات وحسابها في المتصفح ───
   const fetchInboundItems = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('id, item, item_id, qty, company, cat, unit, date, beneficiary, timestamp, reference_number, is_summary')
-        .eq('type', 'in')
-        .order('timestamp', { ascending: false });
+      const { data, error } = await supabase.rpc('get_inventory_summary');
 
       if (error) throw error;
 
-      const itemIds = [...new Set((data || []).filter(t => t.item_id && !t.is_summary).map(t => t.item_id))];
-
-      const { data: productsData, error: productsError } = await supabase
-        .from('products')
-        .select('id, stock_qty, damaged_qty');
-
-      if (productsError) throw productsError;
-
-      let productsMap = (productsData || []).reduce((acc, product) => {
-        acc[product.id] = {
-          stockQty: Number(product.stock_qty || 0),
-          damagedQty: Number(product.damaged_qty || 0),
-        };
-        return acc;
-      }, {});
-
+      // الـ RPC ترجع البيانات المجمعة جاهزة — لا حسابات في المتصفح
       setTransactions((data || []).map((row) => ({
-        ...row,
-        productSnapshot: row.item_id ? (productsMap[row.item_id] || { stockQty: 0, damagedQty: 0 }) : { stockQty: 0, damagedQty: 0 },
+        id:        row.item_id,
+        item_id:   row.item_id,
+        item:      row.item_name,
+        company:   row.company || 'بدون شركة',
+        cat:       row.cat,
+        unit:      row.unit,
+        qty:       Number(row.total_in || 0),
+        productSnapshot: {
+          stockQty:   Number(row.stock_qty   || 0),
+          damagedQty: Number(row.damaged_qty || 0),
+        },
+        is_summary: false,
       })));
     } catch (err) {
-      console.error('Error fetching inbound items:', err);
-      toast.error('حدث خطأ أثناء تحميل سجلات الوارد');
+      console.error('Error fetching inbound items (RPC):', err);
+      toast.error('حدث خطأ أثناء تحميل بيانات المخزون');
     } finally {
       setLoading(false);
     }
