@@ -69,7 +69,7 @@ export default function StockCard({ setActiveView }) {
     return () => { supabase.removeChannel(channel); };
   }, [fetchItems]);
 
-  const fetchItemHistory = async (item) => {
+  const fetchItemHistory = useCallback(async (item) => {
     setHistoryLoading(true);
     try {
       // Fetch all transactions for this item
@@ -139,7 +139,22 @@ export default function StockCard({ setActiveView }) {
     } finally {
       setHistoryLoading(false);
     }
-  };
+  }, []);
+
+  // ── Realtime: تحديث سجل الحركة أثناء فتح النافذة ──────────────────────
+  useEffect(() => {
+    if (!isModalOpen || !selectedItem) return;
+
+    const channel = supabase.channel('stock-card-history-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
+        void fetchItemHistory(selectedItem);
+        // تحديث معلومات الصنف في الواجهة (الرصيد الحالي)
+        void fetchItems();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [isModalOpen, selectedItem, fetchItemHistory, fetchItems]);
 
   const handleItemClick = (item) => {
     setSelectedItem(item);
