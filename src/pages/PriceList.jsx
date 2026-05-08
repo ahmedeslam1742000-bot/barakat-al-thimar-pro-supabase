@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Pencil, X, CheckCircle, Tags,
@@ -35,14 +35,13 @@ export default function PriceList({ setActiveView }) {
   }, [items]);
 
   // --- FETCH DATA ---
-  const fetchPrices = async () => {
+  const fetchPrices = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('products')
         .select('id, name, company, price, old_price, cat, unit')
         .order('name');
-      
       if (error) throw error;
       setItems(data || []);
     } catch (err) {
@@ -51,15 +50,15 @@ export default function PriceList({ setActiveView }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchPrices();
+    void fetchPrices();
     const channel = supabase.channel('price-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchPrices)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => { void fetchPrices(); })
       .subscribe();
     return () => supabase.removeChannel(channel);
-  }, []);
+  }, [fetchPrices]);
 
   // --- FILTERING ---
   const filteredItems = useMemo(() => {
@@ -114,7 +113,7 @@ export default function PriceList({ setActiveView }) {
       toast.success(`تم تحديث سعر "${selectedItem.name}" بنجاح`);
       setIsSaveConfirmOpen(false);
       setIsEditModalOpen(false);
-      fetchPrices();
+      void fetchPrices();
     } catch (err) {
       console.error('Update error:', err);
       toast.error(err.message || 'حدث خطأ غير متوقع أثناء تحديث السعر');

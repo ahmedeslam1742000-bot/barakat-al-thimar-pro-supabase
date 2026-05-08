@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, Search, Filter, Calendar, History, 
@@ -39,11 +39,7 @@ export default function StockCard({ setActiveView }) {
     return () => window.removeEventListener('keydown', handleEsc);
   }, []);
 
-  useEffect(() => {
-    fetchItems();
-  }, []);
-
-  const fetchItems = async () => {
+  const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -59,7 +55,19 @@ export default function StockCard({ setActiveView }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchItems();
+  }, [fetchItems]);
+
+  // ── Realtime: تحديث تلقائي عند تغيير بيانات المنتجات ──────────────────
+  useEffect(() => {
+    const channel = supabase.channel('stock-card-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => { void fetchItems(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchItems]);
 
   const fetchItemHistory = async (item) => {
     setHistoryLoading(true);

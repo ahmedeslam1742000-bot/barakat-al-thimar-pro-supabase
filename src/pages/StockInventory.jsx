@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   ClipboardList, Search, Snowflake, Thermometer, Package, PackageX,
   Printer, LogOut, LayoutGrid, Box, FileDown
@@ -30,26 +30,24 @@ export default function StockInventory({ setActiveView }) {
   const [catFilter, setCatFilter] = useState('الكل');
   const { isViewer } = useAuth();
 
-  // --- SUPABASE SYNC ---
+  // ── SUPABASE FETCH ─────────────────────────────────────────────────────
+  const fetchItems = useCallback(async () => {
+    const { data: itemsData } = await supabase.from('products').select('id, name, company, cat, unit, stock_qty');
+    if (itemsData) {
+      setItems(itemsData.map(d => ({ ...d, stockQty: d.stock_qty, searchKey: d.search_key, createdAt: d.created_at })));
+    }
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
-    const fetchInitialData = async () => {
-      const { data: itemsData } = await supabase.from('products').select('id, name, company, cat, unit, stock_qty');
-      if (itemsData) {
-        setItems(itemsData.map(d => ({ ...d, stockQty: d.stock_qty, searchKey: d.search_key, createdAt: d.created_at })));
-      }
-      setLoading(false);
-    };
-    
-    fetchInitialData();
+    void fetchItems();
 
     const itemsChannel = supabase.channel('public:products:inventory')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchInitialData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => { void fetchItems(); })
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(itemsChannel);
-    };
-  }, []);
+    return () => { supabase.removeChannel(itemsChannel); };
+  }, [fetchItems]);
 
   // Client-side sort (avoids compound index)
   const sortedItems = useMemo(() => {
