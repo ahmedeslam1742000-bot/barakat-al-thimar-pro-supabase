@@ -145,8 +145,14 @@ export function VoucherDetailModal({
                                       <td className="px-6 py-4">
                                          <p className="text-sm font-bold text-[#0F2747] font-tajawal">{line.item}</p>
                                       </td>
+                                      <td className="px-6 py-4">
+                                         <p className="text-xs font-bold text-slate-500 font-tajawal">{line.company || '-'}</p>
+                                      </td>
                                       <td className="px-6 py-4 text-center">
                                          <span className="text-sm font-black text-[#0F2747] font-readex tabular-nums">{line.qty}</span>
+                                      </td>
+                                      <td className="px-6 py-4 text-center">
+                                         <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100 font-readex">{line.cat || '-'}</span>
                                       </td>
                                       <td className="px-6 py-4 text-center">
                                          <span className="text-[10px] font-bold text-slate-400 bg-white px-2 py-1 rounded-lg border border-slate-100 font-readex">{line.unit}</span>
@@ -169,12 +175,10 @@ export function VoucherDetailModal({
                        </div>
                     </div>
 
-
-
                     {/* Action Bar */}
                     <div className="flex items-center justify-between gap-4 mt-auto pt-6 border-t border-slate-100">
                        <div className="flex items-center gap-3">
-                          {/* Print and Duplicate removed by user request */}
+                          {/* Actions removed by user request */}
                        </div>
                        
                        <div className="flex items-center gap-3">
