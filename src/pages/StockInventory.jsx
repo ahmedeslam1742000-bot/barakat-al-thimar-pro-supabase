@@ -3,7 +3,6 @@ import {
   ClipboardList, Search, Snowflake, Thermometer, Package, PackageX,
   Printer, LogOut, LayoutGrid, Box, FileDown
 } from 'lucide-react';
-import { RefreshCw, Search, Download, Printer, Filter, ChevronDown, PackageOpen, FileSpreadsheet, Box, Archive, X, CheckCircle, Flame, Snowflake, LogOut } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';

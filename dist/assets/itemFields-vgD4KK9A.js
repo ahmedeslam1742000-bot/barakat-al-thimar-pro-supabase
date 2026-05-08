@@ -1,0 +1,1 @@
+var e=e=>(e?.itemName??e?.name??``).toString(),t=e=>e?.company||`بدون شركة`,n=e=>e?.category??e?.cat??`أخرى`,r=e=>e?.unit||`كرتونة`;export{r as i,t as n,e as r,n as t};
