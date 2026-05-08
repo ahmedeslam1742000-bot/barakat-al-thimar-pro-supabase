@@ -212,11 +212,11 @@ export default function StockInventory({ setActiveView }) {
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap');
     * { box-sizing: border-box; margin:0; padding:0; }
-    body { font-family: 'Tajawal', Arial, sans-serif; background:#fff; color:#1e293b; padding:0; }
-    .page { padding: 20mm 15mm; }
-    @page { size: A4 portrait; margin: 0; }
+    body { font-family: 'Tajawal', Arial, sans-serif; background:#fff; color:#1e293b; padding:0; margin:0; }
+    .page { padding: 0; }
+    @page { size: A4 portrait; margin: 1.5cm; }
     @media print { 
-      body { padding:0; } 
+      body { padding:0; margin:0; } 
       table { page-break-inside: auto; }
       tr { page-break-inside: avoid; page-break-after: auto; }
       thead { display: table-header-group; }
@@ -225,17 +225,31 @@ export default function StockInventory({ setActiveView }) {
 </head>
 <body>
   <div class="page">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;padding-bottom:16px;border-bottom:3px solid #1e293b;position:relative;">
-      <div style="text-align:right;">
-        <div style="font-size:26px;font-weight:900;">بركة الثمار</div>
-        <div style="font-size:16px;color:#64748b;margin-top:4px;">مستودع الأحساء</div>
-      </div>
-      <div style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;">
-        <div style="font-size:40px;font-weight:900;">جرد المستودع</div>
-      </div>
-      <div style="font-size:15px;font-weight:700;text-align:left;">${date}</div>
-    </div>
-    ${tablesHtml}
+    <table style="width: 100%; border: none;">
+      <thead style="display: table-header-group;">
+        <tr>
+          <td style="border: none; padding-bottom: 20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:16px;border-bottom:3px solid #1e293b;position:relative;">
+              <div style="text-align:right;">
+                <div style="font-size:26px;font-weight:900;">بركة الثمار</div>
+                <div style="font-size:16px;color:#64748b;margin-top:4px;">مستودع الأحساء</div>
+              </div>
+              <div style="position:absolute;left:50%;transform:translateX(-50%);text-align:center;">
+                <div style="font-size:40px;font-weight:900;">جرد المستودع</div>
+              </div>
+              <div style="font-size:15px;font-weight:700;text-align:left;">${date}</div>
+            </div>
+          </td>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="border: none;">
+            ${tablesHtml}
+          </td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </body>
 </html>`;
