@@ -87,23 +87,33 @@ export function useDataFetcher({ currentUser }) {
 
   // ─── Real-time subscriptions ──────────────────────────────────────────
   useEffect(() => {
+    // ⚠️ لا تمرر async function مباشرة كـ listener — يسبب Unhandled Promise Rejection
+    // ✅ دائماً لف الـ async function في arrow function مشفوهة
     const itemsChannel = supabase
       .channel('public:products:dashboard')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchInitialData)
-      .subscribe();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => { void fetchInitialData(); })
+      .subscribe((status) => {
+        if (import.meta.env.DEV && status === 'SUBSCRIBED') console.log('[Realtime] products channel ready');
+      });
 
     const transChannel = supabase
       .channel('public:transactions:dashboard')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          setDbTransactionsList(prev => [processTx(payload.new), ...prev].slice(0, 200));
-        } else if (payload.eventType === 'UPDATE') {
-          setDbTransactionsList(prev => prev.map(t => t.id === payload.new.id ? processTx(payload.new) : t));
-        } else if (payload.eventType === 'DELETE') {
-          setDbTransactionsList(prev => prev.filter(t => t.id !== payload.old.id));
+        try {
+          if (payload.eventType === 'INSERT') {
+            setDbTransactionsList(prev => [processTx(payload.new), ...prev].slice(0, 200));
+          } else if (payload.eventType === 'UPDATE') {
+            setDbTransactionsList(prev => prev.map(t => t.id === payload.new.id ? processTx(payload.new) : t));
+          } else if (payload.eventType === 'DELETE') {
+            setDbTransactionsList(prev => prev.filter(t => t.id !== payload.old.id));
+          }
+        } catch (err) {
+          if (import.meta.env.DEV) console.error('[Realtime] transaction handler error:', err);
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (import.meta.env.DEV && status === 'SUBSCRIBED') console.log('[Realtime] transactions channel ready');
+      });
 
     return () => {
       supabase.removeChannel(itemsChannel);

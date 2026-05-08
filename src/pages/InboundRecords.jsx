@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Printer, Eye, Calendar, FileText, Package, 
@@ -47,55 +47,81 @@ export default function InboundRecords({ setActiveView }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isDetailsOpen, isImageZoomed]);
 
-  useEffect(() => {
-    fetchRecords();
-  }, []);
-
-  const fetchRecords = async () => {
+  // ── fetchRecords: useCallback لتثبيت المرجع للـ Realtime subscription ─
+  const fetchRecords = useCallback(async () => {
     setLoading(true);
     try {
+      // 1. جلب معاملات الوارد
       const { data, error } = await supabase
         .from('transactions')
-        .select('id, batch_id, beneficiary, date, timestamp, receipt_type, reference_number, receipt_image, is_summary, item, qty, unit, cat, balance_after, company')
+        .select('id, batch_id, beneficiary, date, timestamp, receipt_type, reference_number, receipt_image, is_summary, item, item_id, qty, unit, cat, balance_after, company')
         .eq('type', 'in')
         .order('timestamp', { ascending: false });
 
       if (error) throw error;
 
-      // Group by batch_id
-      const grouped = data.reduce((acc, current) => {
+      // 2. جمع item_ids لجلب الرصيد الحالي
+      const itemIds = [...new Set(
+        (data || []).filter(d => d.item_id && !d.is_summary).map(d => d.item_id)
+      )];
+
+      let stockMap = {};
+      if (itemIds.length > 0) {
+        const { data: productData } = await supabase
+          .from('products')
+          .select('id, stock_qty')
+          .in('id', itemIds);
+        (productData || []).forEach(p => { stockMap[p.id] = Number(p.stock_qty ?? 0); });
+      }
+
+      // 3. التجميع حسب batch_id
+      const grouped = (data || []).reduce((acc, current) => {
         const id = current.batch_id || `SINGLE-${current.id}`;
         if (!acc[id]) {
           acc[id] = {
-            id: id,
+            id,
             supplier: current.beneficiary || 'غير محدد',
             date: current.date,
             timestamp: current.timestamp,
             receiptType: current.receipt_type || 'بدون',
             receiptNumber: current.reference_number || 'N/A',
-            receiptImage: current.receipt_image || current.receipt_url,
+            receiptImage: current.receipt_image,
             items: [],
-            categories: new Set()
+            categories: new Set(),
           };
         }
         if (current.is_summary === true) {
           acc[id].summaryRow = current;
           return acc;
         }
-        
-        acc[id].items.push(current);
+        acc[id].items.push({ ...current, currentStock: stockMap[current.item_id] ?? null });
         if (current.cat) acc[id].categories.add(current.cat);
         return acc;
       }, {});
 
       setRecords(Object.values(grouped).filter(r => r.items.length > 0));
-    } catch (error) {
-      console.error('Error fetching records:', error);
+    } catch (err) {
+      console.error('Error fetching records:', err);
       toast.error('فشل في تحميل السجلات');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // ── التحميل الأولي ─────────────────────────────────────────────────────
+  useEffect(() => {
+    void fetchRecords();
+  }, [fetchRecords]);
+
+  // ── Realtime: تحديث تلقائي عند تغيير transactions أو products ─────────
+  useEffect(() => {
+    const channel = supabase
+      .channel('inbound-records-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => { void fetchRecords(); })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'products' }, () => { void fetchRecords(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchRecords]);
 
   const filteredRecords = useMemo(() => {
     return records.filter(r => {
@@ -401,7 +427,8 @@ export default function InboundRecords({ setActiveView }) {
                                     <th className="px-3 py-3 border-x border-slate-100 text-center w-8">م</th>
                                     <th className="px-3 py-3 border-x border-slate-100">اسم الصنف</th>
                                     <th className="px-3 py-3 border-x border-slate-100">الشركة</th>
-                                    <th className="px-3 py-3 text-center border-x border-slate-100 w-16">الكمية</th>
+                                    <th className="px-3 py-3 text-center border-x border-slate-100 w-16">الوارد</th>
+                                    <th className="px-3 py-3 text-center border-x border-slate-100 w-20">الرصيد الحالي</th>
                                     <th className="px-3 py-3 text-center border-x border-slate-100">القسم</th>
                                     <th className="px-3 py-3 text-center border-x border-slate-100">الوحدة</th>
                                  </tr>
@@ -413,6 +440,16 @@ export default function InboundRecords({ setActiveView }) {
                                        <td className="px-3 py-2 font-bold text-slate-700 dark:text-slate-300 border-x border-slate-100">{it.item}</td>
                                        <td className="px-3 py-2 text-slate-500 border-x border-slate-100">{it.company || '-'}</td>
                                        <td className="px-3 py-2 text-center font-black text-teal-600 tabular-nums border-x border-slate-100">{it.qty}</td>
+                                       <td className="px-3 py-2 text-center tabular-nums border-x border-slate-100">
+                                          {it.currentStock !== null
+                                            ? <span className={`font-black text-xs px-2 py-0.5 rounded-lg ${
+                                                it.currentStock > 0
+                                                  ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10'
+                                                  : 'text-rose-500 bg-rose-50 dark:bg-rose-500/10'
+                                              }`}>{it.currentStock}</span>
+                                            : <span className="text-slate-300 text-xs">—</span>
+                                          }
+                                       </td>
                                        <td className="px-3 py-2 text-center border-x border-slate-100">
                                           <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-md text-[9px] font-black">{it.cat}</span>
                                        </td>
