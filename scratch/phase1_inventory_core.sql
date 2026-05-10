@@ -554,6 +554,10 @@ declare
   v_balances jsonb;
   v_ui_snapshot jsonb;
   v_history_tag text := '';
+  -- Preserve invoice state when editing an already-invoiced voucher
+  v_was_invoiced boolean := false;
+  v_old_invoice_tag text := '';
+  v_old_invoiced_status text := 'قيد المراجعة';
 begin
   if jsonb_typeof(v_lines) <> 'array' or jsonb_array_length(v_lines) = 0 then
     raise exception using
@@ -877,6 +881,21 @@ begin
         detail = format('Voucher code already exists: %s', v_voucher_code);
     end if;
 
+    -- ── Capture old invoice state BEFORE deleting rows ───────────────────
+    select
+      coalesce(bool_or(coalesce(invoiced, false) or status = 'مفوتر'), false),
+      coalesce(
+        max(case when notes ~ '\[تم إصدار الفاتورة[^\]]*\]'
+          then (regexp_match(notes, '\[تم إصدار الفاتورة[^\]]*\]'))[1]
+          else null end
+        ), ''
+      ),
+      coalesce(max(case when status = 'مفوتر' then status else null end), 'قيد المراجعة')
+    into v_was_invoiced, v_old_invoice_tag, v_old_invoiced_status
+    from public.transactions
+    where batch_id = v_existing_batch_id;
+    -- ─────────────────────────────────────────────────────────────────────
+
     create temporary table if not exists _voucher_delta (
       item_id_text text primary key,
       new_qty numeric not null default 0,
@@ -978,14 +997,18 @@ begin
         v_qty,
         nullif(v_unit, ''),
         nullif(v_cat, ''),
+        -- Preserve invoice tag if voucher was already invoiced
         trim(both from concat_ws(' ',
           nullif(v_notes, ''),
-          case when v_is_transfer then '[نوع: تحويل مخزني]' else null end
+          case when v_is_transfer then '[نوع: تحويل مخزني]' else null end,
+          case when v_was_invoiced and v_old_invoice_tag <> '' then v_old_invoice_tag else null end,
+          '[تعديل بعد الفوترة]'
         )) || v_history_tag,
         v_receipt_image,
         now(),
         false,
-        'قيد المراجعة',
+        -- Preserve invoiced status if was already invoiced
+        case when v_was_invoiced then v_old_invoiced_status else 'قيد المراجعة' end,
         v_current_stock
       from public.products p
       where p.id::text = v_item_id_text
@@ -1009,7 +1032,9 @@ begin
       receipt_image,
       timestamp,
       is_summary,
-      status
+      status,
+      invoiced,
+      deducted
     )
     values (
       v_tx_type,
@@ -1025,12 +1050,15 @@ begin
       trim(both from concat_ws(' ',
         nullif(v_notes, ''),
         case when v_is_transfer then '[نوع: تحويل مخزني]' else null end,
+        case when v_was_invoiced and v_old_invoice_tag <> '' then v_old_invoice_tag else null end,
         '[مستند رقم ' || v_voucher_code || ']'
       )) || v_history_tag,
       v_receipt_image,
       now(),
       true,
-      'قيد المراجعة'
+      case when v_was_invoiced then v_old_invoiced_status else 'قيد المراجعة' end,
+      v_was_invoiced,
+      v_was_invoiced
     )
     returning id::text into v_tx_id;
 

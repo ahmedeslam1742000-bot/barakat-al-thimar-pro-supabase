@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { useAudio } from '../contexts/AudioContext';
 import { useAuth } from '../contexts/AuthContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
-import { getItemName, getCompany, getCategory, getUnit } from '../lib/itemFields';
+import { getItemName, getCompany, getCategory, getUnit, formatItemDisplay } from '../lib/itemFields';
 
 const formatDate = (date) => {
   if (!date) return '';
@@ -299,7 +299,7 @@ export default function Returns({ setActiveView }) {
 
   const handleSelect = (item) => {
     setSelectedItem(item);
-    setSearchNameText(`${getItemName(item)} — ${getCompany(item)}`);
+    setSearchNameText(formatItemDisplay(getItemName(item), getCompany(item)));
     setSearchIdx(-1);
     setTimeout(() => document.getElementById('returns-qty-input')?.focus(), 50);
   };
@@ -807,7 +807,7 @@ export default function Returns({ setActiveView }) {
               {selectedItem ? (
                 <div className="flex items-center justify-between w-full bg-white border border-orange-200 text-orange-700 text-sm font-black rounded-xl px-4 h-11 shadow-sm">
                   <span className="truncate">
-                    {getItemName(selectedItem)} — {getCompany(selectedItem)}
+                    {formatItemDisplay(getItemName(selectedItem), getCompany(selectedItem))}
                   </span>
                   <button type="button" onClick={clearRow} className="text-orange-400 hover:text-orange-600 transition-colors">
                     <X size={18} className="stroke-[3]" />
