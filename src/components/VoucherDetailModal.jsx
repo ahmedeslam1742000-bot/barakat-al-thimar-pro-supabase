@@ -102,8 +102,8 @@ export function VoucherDetailModal({
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5 font-readex">ملاحظات السند</p>
                           <div className="flex items-center gap-3">
                              <div className="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center text-slate-400"><FileText size={18} /></div>
-                             <p className="text-xs font-bold text-slate-600 font-tajawal line-clamp-2" title={voucher.line_note?.split(/\[تعديل حديث\]|<!--/)[0].trim() || 'لا توجد ملاحظات'}>
-                                {voucher.line_note?.split(/\[تعديل حديث\]|<!--/)[0].trim() || '—'}
+                             <p className="text-xs font-bold text-slate-600 font-tajawal line-clamp-2" title={voucher.line_note?.split(/\[تعديل حديث\]|\[تم تعديله\]|\[تم إصدار الفاتورة|\[تمت الفوترة\]|\[إضافة مراجعة\]|\[مستند رقم|\[نوع:|<!--/)[0].trim() || 'لا توجد ملاحظات'}>
+                                {voucher.line_note?.split(/\[تعديل حديث\]|\[تم تعديله\]|\[تم إصدار الفاتورة|\[تمت الفوترة\]|\[إضافة مراجعة\]|\[مستند رقم|\[نوع:|<!--/)[0].trim() || '—'}
                              </p>
                           </div>
                        </div>
