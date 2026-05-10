@@ -49,6 +49,11 @@ export function VoucherDetailModal({
         >
           {(() => {
             const lines = voucher.lines || [];
+            let invoiceDate = null;
+            if (voucher.line_note && voucher.line_note.includes('[تم إصدار الفاتورة: ')) {
+                const match = voucher.line_note.match(/\[تم إصدار الفاتورة: (.*?)\]/);
+                if (match) invoiceDate = match[1];
+            }
             return (
               <>
                 {/* Modal Header */}
@@ -66,8 +71,8 @@ export function VoucherDetailModal({
                           <Timer size={14} /> {voucher.timestamp.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                         </span>
                         <span className="w-1 h-1 rounded-full bg-slate-200"></span>
-                        <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider font-tajawal ${isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                          {isCompleted ? 'تمت الفوترة' : 'قيد الانتظار'}
+                        <span className={`text-xs font-black px-3 py-1.5 rounded-lg uppercase tracking-wider font-tajawal ${isCompleted ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'}`}>
+                          {isCompleted ? (invoiceDate ? `تم إصدار الفاتورة بتاريخ: ${invoiceDate}` : 'تمت الفوترة') : 'قيد الانتظار'}
                         </span>
                       </div>
                     </div>
@@ -135,10 +140,10 @@ export function VoucherDetailModal({
                                    <tr key={line.id || idx} className="group hover:bg-slate-50/50 transition-colors">
                                       <td className="px-6 py-4 text-center text-slate-400 font-readex text-sm">{idx + 1}</td>
                                       <td className="px-6 py-4">
-                                         <p className="text-sm font-bold text-[#0F2747] font-tajawal">{line.item}</p>
+                                         <p className="text-sm font-bold text-[#0F2747] font-tajawal">{(line.item || '').replace(/\s*-\s*-$/, '').replace(/\s*-\s*بدون شركة$/, '').trim()}</p>
                                       </td>
                                       <td className="px-6 py-4">
-                                         <p className="text-xs font-bold text-slate-500 font-tajawal">{line.company || '-'}</p>
+                                         <p className="text-xs font-bold text-slate-500 font-tajawal">{line.company === '-' || !line.company ? '—' : line.company}</p>
                                       </td>
                                       <td className="px-6 py-4 text-center">
                                          <span className="text-sm font-black text-[#0F2747] font-readex tabular-nums">{line.qty}</span>

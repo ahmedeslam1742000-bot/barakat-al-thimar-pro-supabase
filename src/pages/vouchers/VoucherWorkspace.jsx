@@ -7,7 +7,7 @@ import {
   UploadCloud, Settings, Info, RefreshCw, History
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
-import { getItemName, getCompany, getCategory, getUnit } from '../../lib/itemFields';
+import { getItemName, getCompany, getCategory, getUnit, formatItemDisplay } from '../../lib/itemFields';
 import { toast } from 'sonner';
 import { useAudio } from '../../contexts/AudioContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -768,7 +768,7 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
 
   const handleSelect = (item) => {
     setSelectedItem(item);
-    setSearchNameText(`${getItemName(item)} — ${getCompany(item)}`);
+    setSearchNameText(formatItemDisplay(getItemName(item), getCompany(item)));
     setDraftUnit(getUnit(item) || 'كرتونة');
     setSearchIdx(-1);
     setTimeout(() => document.getElementById(`voucher-qty-${kind}`)?.focus(), 50);

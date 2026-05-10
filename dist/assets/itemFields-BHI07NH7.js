@@ -1,0 +1,1 @@
+var e=e=>(e?.itemName??e?.name??``).toString().replace(/\s*-\s*-$/,``).replace(/\s*-\s*بدون شركة$/,``).trim(),t=e=>e?.company||`بدون شركة`,n=e=>e?.category??e?.cat??`أخرى`,r=e=>e?.unit||`كرتونة`,i=(e,t,n=`—`)=>!t||t===`-`||t===`بدون شركة`?e:`${e} ${n} ${t}`;export{r as a,e as i,n,t as r,i as t};
