@@ -413,25 +413,23 @@ export function VoucherDetailModal({
       items: true,
     });
   }, [isOpen, voucher?.id]);
-
-  if (!isOpen || !voucher) return null;
-
-  const isIn = voucher.kind === 'in';
-  const isCompleted = voucher.invoiced === true;
-  const lines = voucher.lines || [];
-  const voucherDate = voucher.timestamp ? new Date(voucher.timestamp) : null;
+  const safeVoucher = voucher || {};
+  const isIn = safeVoucher.kind === 'in';
+  const isCompleted = safeVoucher.invoiced === true;
+  const lines = safeVoucher.lines || [];
+  const voucherDate = safeVoucher.timestamp ? new Date(safeVoucher.timestamp) : null;
   const totalQuantity = lines.reduce((sum, line) => sum + (Number(line.qty) || 0), 0);
-  const recipientLabel = voucher.isTransfer
+  const recipientLabel = safeVoucher.isTransfer
     ? 'الجهة المحول إليها'
     : (isIn ? 'المورد / الجهة' : 'المستفيد / الجهة');
 
   let invoiceDate = null;
-  if (voucher.line_note && voucher.line_note.includes('[تم إصدار الفاتورة: ')) {
-    const match = voucher.line_note.match(/\[تم إصدار الفاتورة: (.*?)\]/);
+  if (safeVoucher.line_note && safeVoucher.line_note.includes('[تم إصدار الفاتورة: ')) {
+    const match = safeVoucher.line_note.match(/\[تم إصدار الفاتورة: (.*?)\]/);
     if (match) invoiceDate = match[1];
   }
 
-  const historyEntries = React.useMemo(() => parseHistory(voucher.line_note), [voucher.line_note]);
+  const historyEntries = React.useMemo(() => parseHistory(safeVoucher.line_note), [safeVoucher.line_note]);
   const isEdited = historyEntries.length > 0;
   const selectedHistoryEntry = historyEntries[selectedHistoryIndex] || historyEntries[0] || null;
 
@@ -455,7 +453,7 @@ export function VoucherDetailModal({
 
     const previousTotalQuantity = previousLines.reduce((sum, line) => sum + (Number(line.qty) || 0), 0);
     const previousNote = cleanNote(selectedHistoryEntry.notes || selectedHistoryEntry.note);
-    const currentNote = cleanNote(voucher.line_note);
+    const currentNote = cleanNote(safeVoucher.line_note);
     const fieldComparisons = [
       {
         key: 'notes',
@@ -491,7 +489,7 @@ export function VoucherDetailModal({
       changedCount: lineDiffRows.filter((item) => item.status === 'changed').length,
       previousTotalQuantity,
     };
-  }, [selectedHistoryEntry, lines, totalQuantity, voucher.line_note]);
+  }, [selectedHistoryEntry, lines, totalQuantity, safeVoucher.line_note]);
 
   const summaryCards = [
     {
@@ -522,6 +520,8 @@ export function VoucherDetailModal({
   };
 
   const primaryActionLabel = isIn ? 'اعتماد الوارد' : 'إصدار الفاتورة';
+
+  if (!isOpen || !voucher) return null;
 
   return (
     <AnimatePresence>
