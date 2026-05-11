@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Printer, Trash2, History, RotateCcw,
   FileText, CheckCircle2, Timer, User,
-  Hash, MessageSquare, Package, ChevronRight
+  Hash, MessageSquare, Package, ChevronRight,
+  ArrowLeft
 } from 'lucide-react';
 
 export function VoucherDetailModal({
@@ -29,7 +30,6 @@ export function VoucherDetailModal({
 
   const cleanNote = (note) => {
     if (!note) return '—';
-    // Remove all system tags and history markers
     return note
       .split(/\[تعديل بعد الفوترة\]|\[تعديل حديث\]|\[تم تعديله\]|\[تم إصدار الفاتورة|\[تمت الفوترة\]|\[إضافة مراجعة\]|\[مستند رقم|\[نوع:|<!--/)[0]
       .trim() || '—';
@@ -53,171 +53,230 @@ export function VoucherDetailModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
         dir="rtl"
         onClick={onClose}
       >
         <motion.div
           onClick={(e) => e.stopPropagation()}
-          initial={{ opacity: 0, scale: 0.98, y: 10 }}
+          initial={{ opacity: 0, scale: 0.99, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.98, y: 10 }}
-          className={`w-full ${showVoucherHistory ? 'max-w-6xl' : 'max-w-4xl'} bg-white rounded-[2rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden transition-all duration-300`}
+          exit={{ opacity: 0, scale: 0.99, y: 10 }}
+          className={`w-full ${showVoucherHistory ? 'max-w-[1240px]' : 'max-w-5xl'} bg-[#fcfdfe] rounded-[2.5rem] shadow-2xl flex flex-col max-h-[88vh] overflow-hidden transition-all duration-300 border border-white`}
         >
-          {/* HEADER */}
-          <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isIn ? 'bg-indigo-50 text-indigo-600' : 'bg-teal-50 text-teal-600'}`}>
-                <FileText size={24} />
-              </div>
-              <div>
-                <h3 className="text-xl font-black text-[#0f2747]">
-                  {voucher.isTransfer ? 'سند تحويل مخزني' : (isIn ? 'سند إدخال بضاعة' : 'سند إخراج بضاعة')}
-                </h3>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-white'}`}>
-                    {isCompleted ? 'مفوتـر' : 'قيد المراجعة'}
-                  </span>
-                  {isEdited && (
-                    <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 border border-indigo-100">معدّل</span>
-                  )}
-                  <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1 mr-2">
-                    <Timer size={12} /> {voucher.timestamp.toLocaleDateString('ar-SA')}
-                  </span>
+          {/* ─── ENHANCED HEADER WITH INTEGRATED INFO ─── */}
+          <div className="px-10 py-8 bg-white border-b border-slate-100 flex flex-col gap-6 shrink-0 shadow-sm">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-5">
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner ${isIn ? 'bg-indigo-50 text-indigo-500' : 'bg-teal-50 text-teal-500'}`}>
+                        {isIn ? <FileText size={28} /> : <Package size={28} />}
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-3">
+                            <h3 className="text-2xl font-black text-[#0f2747]">
+                                {voucher.isTransfer ? 'سند تحويل مخزني' : (isIn ? 'سند إدخال بضاعة' : 'سند إخراج بضاعة')}
+                            </h3>
+                            <div className="flex gap-1.5 translate-y-0.5">
+                                <span className={`text-[10px] font-black px-3 py-1 rounded-full ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-white shadow-sm'}`}>
+                                    {isCompleted ? 'مفوتـر' : 'قيد المراجعة'}
+                                </span>
+                                {isEdited && (
+                                    <span className="text-[10px] font-black px-3 py-1 rounded-full bg-indigo-500 text-white shadow-sm">معدّل</span>
+                                )}
+                            </div>
+                        </div>
+                        <p className="text-[11px] font-bold text-slate-400 mt-1 flex items-center gap-1.5">
+                            <Timer size={14} className="opacity-50" /> {voucher.timestamp.toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                        </p>
+                    </div>
                 </div>
-              </div>
+                <button onClick={onClose} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all">
+                    <X size={24} />
+                </button>
             </div>
-            <button onClick={onClose} className="p-2 text-slate-300 hover:text-rose-500 transition-colors">
-              <X size={24} />
-            </button>
+
+            {/* INTEGRATED META STRIP (Moved from cards to header strip) */}
+            <div className="flex items-center gap-8 px-2 py-1 border-t border-slate-50 pt-5">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100"><User size={14} /></div>
+                    <div>
+                        <span className="text-[9px] font-black text-slate-400 block uppercase tracking-wider">المستلم</span>
+                        <p className="text-[13px] font-black text-[#0f2747]">{voucher.clientName}</p>
+                    </div>
+                </div>
+                <div className="w-px h-8 bg-slate-100"></div>
+                <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100"><Hash size={14} /></div>
+                    <div>
+                        <span className="text-[9px] font-black text-slate-400 block uppercase tracking-wider">رقم المستند</span>
+                        <p className="text-[13px] font-black text-[#0f2747] tabular-nums">{voucher.voucherCode || '-'}</p>
+                    </div>
+                </div>
+                <div className="w-px h-8 bg-slate-100"></div>
+                <div className="flex-1 flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100"><MessageSquare size={14} /></div>
+                    <div className="min-w-0">
+                        <span className="text-[9px] font-black text-slate-400 block uppercase tracking-wider">الملاحظات</span>
+                        <p className="text-[13px] font-bold text-slate-600 truncate leading-tight">{cleanNote(voucher.line_note)}</p>
+                    </div>
+                </div>
+            </div>
           </div>
 
-          <div className="flex flex-1 overflow-hidden">
-            {/* MAIN CONTENT */}
-            <div className="flex-1 flex flex-col p-8 overflow-y-auto custom-scrollbar">
+          <div className="flex flex-1 overflow-hidden bg-[#fcfdfe]">
+            {/* ─── MAIN TABLE VIEW ─── */}
+            <div className="flex-1 flex flex-col p-10 overflow-y-auto custom-scrollbar">
+              <div className="flex items-center justify-between mb-5 px-1">
+                  <h4 className="text-xs font-black text-[#0f2747] uppercase tracking-[0.15em] flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></div> قائمة الأصناف الحالية
+                  </h4>
+                  <span className="text-[10px] font-black text-slate-300 uppercase">{lines.length} صنف مسجل</span>
+              </div>
               
-              {/* TOP INFO STRIP */}
-              <div className="flex gap-4 mb-8">
-                <div className="flex-1 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <span className="text-[9px] font-black text-slate-400 block mb-1 uppercase tracking-widest">المستلم</span>
-                  <p className="text-sm font-black text-[#0f2747] truncate">{voucher.clientName}</p>
-                </div>
-                <div className="w-32 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <span className="text-[9px] font-black text-slate-400 block mb-1 uppercase tracking-widest">رقم السند</span>
-                  <p className="text-sm font-black text-[#0f2747] tabular-nums">{voucher.voucherCode || '-'}</p>
-                </div>
-                <div className="flex-[2] bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <span className="text-[9px] font-black text-slate-400 block mb-1 uppercase tracking-widest">الملاحظات</span>
-                  <p className="text-xs font-bold text-slate-600 truncate">{cleanNote(voucher.line_note)}</p>
-                </div>
+              <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm flex-1 flex flex-col">
+                  <div className="flex-1 overflow-auto custom-scrollbar">
+                      <table className="w-full text-right border-collapse">
+                        <thead className="sticky top-0 bg-white z-10">
+                          <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50 border-b border-slate-100">
+                            <th className="px-8 py-5 w-16 text-center">م</th>
+                            <th className="px-8 py-5">اسم الصنف</th>
+                            <th className="px-8 py-5 text-center w-32 border-x border-slate-50">الكمية</th>
+                            <th className="px-8 py-5 text-center w-32">القسم</th>
+                            {!isCompleted && <th className="px-8 py-5 text-center w-20 border-r border-slate-50">حذف</th>}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {lines.map((line, idx) => (
+                            <tr key={idx} className="group hover:bg-slate-50/50 transition-all duration-200">
+                              <td className="px-8 py-4 text-center text-slate-300 font-black text-[11px]">{idx + 1}</td>
+                              <td className="px-8 py-4">
+                                <p className="text-[14px] font-black text-[#0f2747] group-hover:text-teal-600">{(line.item || '').replace(/\s*-\s*-$/, '').trim()}</p>
+                                <div className="flex gap-2 mt-1">
+                                    <span className="text-[9px] font-bold text-slate-400">الشركة: {line.company || '—'}</span>
+                                    <span className="text-[9px] font-bold text-slate-400">•</span>
+                                    <span className="text-[9px] font-bold text-slate-400">الوحدة: {line.unit || '—'}</span>
+                                </div>
+                              </td>
+                              <td className="px-8 py-4 text-center">
+                                <span className="text-base font-black text-[#0f2747] tabular-nums">{line.qty}</span>
+                              </td>
+                              <td className="px-8 py-4 text-center">
+                                <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">{line.cat || '-'}</span>
+                              </td>
+                              {!isCompleted && (
+                                <td className="px-8 py-4 text-center">
+                                  <button onClick={() => handleDeleteTransaction(line.id)} className="w-9 h-9 flex items-center justify-center text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
+                                    <Trash2 size={18} />
+                                  </button>
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                  </div>
               </div>
 
-              {/* TABLE AREA */}
-              <div className="flex-1 flex flex-col min-h-0">
-                <div className="flex items-center gap-2 mb-4 px-1">
-                  <Package size={16} className="text-teal-500" />
-                  <h4 className="text-xs font-black text-[#0f2747] uppercase tracking-widest">قائمة الأصناف</h4>
-                  <span className="text-[10px] font-bold text-slate-300 mr-auto">{lines.length} صنف</span>
-                </div>
-                <div className="border border-slate-100 rounded-2xl overflow-hidden shadow-sm">
-                  <table className="w-full text-right border-collapse">
-                    <thead className="bg-slate-50/50">
-                      <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        <th className="px-6 py-4 text-center w-12">م</th>
-                        <th className="px-6 py-4">الصنف</th>
-                        <th className="px-6 py-4 text-center w-24">الكمية</th>
-                        <th className="px-6 py-4 text-center w-24">القسم</th>
-                        {!isCompleted && <th className="px-6 py-4 text-center w-16">حذف</th>}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {lines.map((line, idx) => (
-                        <tr key={idx} className="hover:bg-slate-50/30 transition-colors">
-                          <td className="px-6 py-3 text-center text-slate-300 font-readex text-xs">{idx + 1}</td>
-                          <td className="px-6 py-3">
-                            <p className="text-[13px] font-black text-[#0f2747]">{(line.item || '').replace(/\s*-\s*-$/, '').trim()}</p>
-                            <span className="text-[9px] font-bold text-slate-400">{line.company || '—'}</span>
-                          </td>
-                          <td className="px-6 py-3 text-center font-black text-sm tabular-nums">{line.qty}</td>
-                          <td className="px-6 py-3 text-center">
-                            <span className="text-[9px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">{line.cat || '-'}</span>
-                          </td>
-                          {!isCompleted && (
-                            <td className="px-6 py-3 text-center">
-                              <button onClick={() => handleDeleteTransaction(line.id)} className="text-slate-200 hover:text-rose-500 transition-colors">
-                                <Trash2 size={16} />
-                              </button>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* BUTTONS */}
-              <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-100 shrink-0">
-                <div className="flex gap-2">
-                  <button onClick={() => printVoucher(voucher)} className="flex items-center gap-2 px-6 py-3 bg-slate-100 text-slate-600 rounded-xl text-xs font-black hover:bg-slate-200 transition-all">
-                    <Printer size={16} /> طباعة
-                  </button>
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => setShowVoucherHistory(!showVoucherHistory)} className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black transition-all ${showVoucherHistory ? 'bg-indigo-50 text-indigo-600' : 'bg-white text-slate-400 border border-slate-200 hover:bg-slate-50'}`}>
-                    <History size={16} /> سجل التغييرات
+              <div className="flex items-center justify-between mt-10 shrink-0">
+                <button onClick={() => printVoucher(voucher)} className="flex items-center gap-3 px-8 py-4 bg-white text-slate-600 border border-slate-200 rounded-2xl text-xs font-black hover:bg-slate-50 transition-all shadow-sm">
+                    <Printer size={18} /> معاينة الطباعة
+                </button>
+                <div className="flex gap-3">
+                  <button onClick={() => setShowVoucherHistory(!showVoucherHistory)} className={`flex items-center gap-3 px-8 py-4 rounded-2xl text-xs font-black transition-all ${showVoucherHistory ? 'bg-[#0f2747] text-white shadow-xl' : 'bg-white text-slate-400 border border-slate-200 hover:bg-slate-50'}`}>
+                    <History size={18} /> {showVoucherHistory ? 'إغلاق السجل' : 'عرض سجل التغييرات'}
                   </button>
                   {!isCompleted && !voucher.isTransfer && (
-                    <button onClick={() => handleMarkAsInvoiced(voucher)} className="flex items-center gap-2 px-8 py-3 bg-teal-500 text-white rounded-xl text-xs font-black hover:bg-teal-600 shadow-lg shadow-teal-500/20 transition-all active:scale-95">
-                      <CheckCircle2 size={16} /> {isIn ? 'اعتماد الوارد' : 'إصدار الفاتورة'}
+                    <button onClick={() => handleMarkAsInvoiced(voucher)} className="flex items-center gap-3 px-10 py-4 bg-teal-500 text-white rounded-2xl text-sm font-black hover:bg-teal-600 shadow-xl shadow-teal-500/20 active:scale-95 transition-all">
+                      <CheckCircle2 size={20} /> {isIn ? 'اعتماد الوارد' : 'إصدار الفاتورة'}
                     </button>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* HISTORY SIDEBAR */}
+            {/* ─── ENHANCED HISTORY SIDEBAR (Matches Current Design) ─── */}
             <AnimatePresence>
               {showVoucherHistory && (
                 <motion.div
                   initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 380, opacity: 1 }}
+                  animate={{ width: 440, opacity: 1 }}
                   exit={{ width: 0, opacity: 0 }}
-                  className="bg-[#fcfdfe] border-r border-slate-100 flex flex-col shrink-0 overflow-hidden"
+                  className="bg-[#f8fafb] border-r border-slate-100 flex flex-col shrink-0 overflow-hidden shadow-inner"
                 >
-                  <div className="p-6 bg-white border-b border-slate-100 flex items-center justify-between">
-                    <h4 className="text-sm font-black text-[#0f2747] flex items-center gap-2">
-                      <History size={16} className="text-indigo-600" /> نسخ السند السابقة
-                    </h4>
-                    <button onClick={() => setShowVoucherHistory(false)} className="text-slate-300 hover:text-slate-600 transition-colors">
-                      <ChevronRight size={20} />
+                  <div className="p-8 bg-white border-b border-slate-100 flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <History size={20} className="text-indigo-600" />
+                        <div>
+                            <h4 className="text-sm font-black text-[#0f2747]">النسخ المؤرشفة</h4>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">تتبع التغييرات الزمنية</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setShowVoucherHistory(false)} className="text-slate-300 hover:text-slate-600">
+                      <ChevronRight size={24} />
                     </button>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+
+                  <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
                     {historyEntries.map((entry, idx) => (
-                      <div key={idx} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div className="bg-slate-50 px-4 py-2 flex items-center justify-between border-b border-slate-100">
-                          <span className="text-[10px] font-black text-slate-500 tabular-nums">{new Date(entry.at).toLocaleString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                          <span className="text-[8px] font-black bg-indigo-50 text-indigo-500 px-2 py-0.5 rounded border border-indigo-100">محفوظة</span>
-                        </div>
-                        <div className="p-3">
-                          <table className="w-full text-right text-[10px]">
-                            <tbody className="divide-y divide-slate-50">
-                              {(entry.lines || []).map((ol, oIdx) => {
-                                const current = lines.find(cl => cl.item === ol.item);
-                                const diff = current ? (Number(current.qty) !== Number(ol.qty)) : true;
-                                return (
-                                  <tr key={oIdx} className={diff ? 'bg-amber-50/40' : ''}>
-                                    <td className={`py-1.5 font-bold ${diff ? 'text-amber-700' : 'text-slate-600'}`}>{ol.item}</td>
-                                    <td className="py-1.5 text-center font-black">{ol.qty}</td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
+                      <div key={idx} className="relative">
+                        {/* Timeline Marker */}
+                        <div className="absolute top-0 -right-[27px] w-4 h-4 rounded-full bg-white border-2 border-indigo-400 z-10 shadow-sm" />
+                        
+                        <div className="bg-white rounded-[1.5rem] border border-slate-200/60 shadow-sm overflow-hidden hover:border-indigo-200 transition-colors">
+                          <div className="bg-slate-50 px-5 py-3.5 flex items-center justify-between border-b border-slate-100">
+                            <span className="text-[11px] font-black text-[#0f2747] tabular-nums">
+                                {new Date(entry.at).toLocaleString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            <span className="text-[9px] font-black bg-white px-2 py-1 rounded-lg border border-slate-200 text-slate-400 uppercase tracking-tighter">نسخة مؤرشفة</span>
+                          </div>
+                          
+                          <div className="p-5">
+                            <table className="w-full text-right text-[11px] mb-4">
+                              <thead>
+                                <tr className="text-slate-400 font-black uppercase tracking-widest text-[9px]">
+                                  <th className="pb-3 pr-1">الصنف المـؤرشف</th>
+                                  <th className="pb-3 text-center w-20">الكمية</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-50">
+                                {(entry.lines || []).map((ol, oIdx) => {
+                                  const currentMatch = lines.find(cl => cl.item === ol.item);
+                                  const isChanged = currentMatch && Number(currentMatch.qty) !== Number(ol.qty);
+                                  const isRemoved = !currentMatch;
+                                  
+                                  return (
+                                    <tr key={oIdx} className={`transition-colors ${isRemoved ? 'bg-rose-50/50' : isChanged ? 'bg-amber-50/50' : ''}`}>
+                                      <td className={`py-2.5 px-2 font-black leading-tight ${isRemoved ? 'text-rose-500' : isChanged ? 'text-amber-700' : 'text-slate-700'}`}>
+                                        {ol.item}
+                                        <div className="flex gap-1 mt-1">
+                                            {isRemoved && <span className="text-[8px] font-black text-rose-600">× محذوف</span>}
+                                            {isChanged && <span className="text-[8px] font-black text-amber-600 flex items-center gap-1">
+                                                <ArrowLeft size={8} /> تعدل إلى {currentMatch.qty}
+                                            </span>}
+                                        </div>
+                                      </td>
+                                      <td className="py-2.5 text-center font-black tabular-nums">{ol.qty}</td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                            {entry.notes && (
+                                <div className="mt-2 pt-3 border-t border-slate-50 flex items-start gap-2">
+                                    <MessageSquare size={12} className="text-slate-300 shrink-0 mt-0.5" />
+                                    <p className="text-[10px] font-bold text-slate-400 italic line-clamp-2 leading-relaxed">الملاحظة وقتها: {entry.notes}</p>
+                                </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
+                    {historyEntries.length === 0 && (
+                        <div className="py-20 text-center opacity-30">
+                            <History size={64} strokeWidth={1} className="mx-auto mb-4 text-slate-300" />
+                            <p className="text-sm font-black text-slate-400 uppercase tracking-widest">لا توجد سجلات مؤرشفة</p>
+                        </div>
+                    )}
                   </div>
                 </motion.div>
               )}
