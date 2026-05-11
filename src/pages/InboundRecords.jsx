@@ -431,14 +431,10 @@ export default function InboundRecords({ setActiveView }) {
                            <Package size={14} className="text-teal-600" />
                            قائمة الأصناف المستلمة
                         </h4>
-                        <div className="grid grid-cols-4 gap-3">
+                        <div className="grid grid-cols-3 gap-3">
                            <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
                               <span className="text-[10px] font-black text-slate-400 block mb-1 uppercase">عدد الأصناف</span>
                               <span className="text-lg font-black text-slate-800 dark:text-white tabular-nums block">{selectedRecordSummary.lineCount}</span>
-                           </div>
-                           <div className="bg-emerald-50 dark:bg-emerald-500/10 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-500/20">
-                              <span className="text-[10px] font-black text-emerald-600 block mb-1 uppercase">إجمالي الوارد</span>
-                              <span className="text-lg font-black text-emerald-600 tabular-nums block">{selectedRecordSummary.inboundQty}</span>
                            </div>
                            <div className="bg-teal-50 dark:bg-teal-500/10 p-4 rounded-2xl border border-teal-100 dark:border-teal-500/20">
                               <span className="text-[10px] font-black text-teal-600 block mb-1 uppercase">السليم الحالي</span>

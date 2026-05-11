@@ -245,9 +245,9 @@ export default function InboundItems({ setActiveView }) {
                     <th className="px-4 py-2 text-center w-14 border-x border-slate-100">م</th>
                     <th className="px-4 py-2 text-center border-x border-slate-100">اسم الصنف الوارد</th>
                     <th className="px-4 py-2 text-center w-64 border-x border-slate-100">الشركة</th>
-                    <th className="px-4 py-2 text-center w-32 border-x border-slate-100">إجمالي الوارد</th>
                     <th className="px-4 py-2 text-center w-32 border-x border-slate-100 text-teal-600">السليم الحالي</th>
                     <th className="px-4 py-2 text-center w-32 border-x border-slate-100 text-rose-600">التالف الحالي</th>
+                    <th className="px-4 py-2 text-center w-48 border-x border-slate-100">القسم</th>
                     <th className="px-4 py-2 text-center w-48 border-x border-slate-100">القسم</th>
                     <th className="px-4 py-2 text-center w-48 border-x border-slate-100">وحدة القياس</th>
                   </tr>
@@ -263,11 +263,6 @@ export default function InboundItems({ setActiveView }) {
                       </td>
                       <td className="px-4 py-1.5 text-center align-middle">
                          <div className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200 inline-block">{it.company}</div>
-                      </td>
-                      <td className="px-4 py-1.5 text-center align-middle">
-                         <span className="inline-flex items-center px-3 py-1 bg-[#10b981]/5 text-[#10b981] rounded-lg text-[12px] font-black border border-[#10b981]/10 shadow-sm">
-                            {it.qty}
-                         </span>
                       </td>
                       <td className="px-4 py-1.5 text-center align-middle">
                          <span className="inline-flex items-center px-3 py-1 bg-teal-50 text-teal-700 rounded-lg text-[12px] font-black border border-teal-100 shadow-sm">
@@ -335,10 +330,9 @@ export default function InboundItems({ setActiveView }) {
                           <th className="border border-black py-2 px-3 text-sm font-bold text-center" style={{ width: '40px' }}>م</th>
                           <th className="border border-black py-2 px-3 text-sm font-bold text-right" style={{ width: '35%' }}>اسم الصنف</th>
                           <th className="border border-black py-2 px-3 text-sm font-bold text-right" style={{ width: '25%' }}>الشركة</th>
-                          <th className="border border-black py-2 px-3 text-sm font-bold text-center" style={{ width: '13%' }}>إجمالي الوارد</th>
-                          <th className="border border-black py-2 px-3 text-sm font-bold text-center" style={{ width: '12%' }}>السليم</th>
-                          <th className="border border-black py-2 px-3 text-sm font-bold text-center" style={{ width: '12%' }}>التالف</th>
-                          <th className="border border-black py-2 px-3 text-sm font-bold text-center" style={{ width: '13%' }}>وحدة القياس</th>
+                          <th className="border border-black py-2 px-3 text-sm font-bold text-center" style={{ width: '15%' }}>السليم</th>
+                          <th className="border border-black py-2 px-3 text-sm font-bold text-center" style={{ width: '15%' }}>التالف</th>
+                          <th className="border border-black py-2 px-3 text-sm font-bold text-center" style={{ width: '15%' }}>وحدة القياس</th>
                         </tr>
                       </thead>
                       <tbody>
