@@ -998,11 +998,12 @@ begin
         nullif(v_unit, ''),
         nullif(v_cat, ''),
         -- Preserve invoice tag if voucher was already invoiced
+        -- Preserve invoice tag if voucher was already invoiced
         trim(both from concat_ws(' ',
           nullif(v_notes, ''),
           case when v_is_transfer then '[نوع: تحويل مخزني]' else null end,
           case when v_was_invoiced and v_old_invoice_tag <> '' then v_old_invoice_tag else null end,
-          '[تعديل بعد الفوترة]'
+          case when v_was_invoiced and v_notes !~ '\[تعديل بعد الفوترة\]' then '[تعديل بعد الفوترة]' else null end
         )) || v_history_tag,
         v_receipt_image,
         now(),
