@@ -9,8 +9,8 @@ import {
 import { supabase } from '../../lib/supabaseClient';
 import { getItemName, getCompany, getCategory, getUnit, formatItemDisplay } from '../../lib/itemFields';
 import { toast } from 'sonner';
-import { useAudio } from '../../contexts/AudioContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useData } from '../../contexts/DataContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { normalizeArabic } from '../../lib/arabicTextUtils';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -518,8 +518,7 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
   const { settings } = useSettings();
   const { subscribe } = useRealtimeManager();
 
-  const [items, setItems] = useState([]);
-  const [transactions, setTransactions] = useState([]);
+  const { items, dbTransactionsList: transactions } = useData();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState(() => emptySession(kind));
@@ -629,54 +628,7 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
 
   const triggerExport = (group, mode) => setExportJob({ group, mode });
 
-  const fetchInitialData = useCallback(async () => {
-    try {
-      const { data: itemsData, error: itemsError } = await supabase.from('products').select('id, name, company, cat, unit, stock_qty');
-      if (itemsError) throw itemsError;
-      if (itemsData) setItems(itemsData.map(d => ({ ...d, stockQty: d.stock_qty })));
-
-      const { data: transData, error: transError } = await supabase.from('transactions').select('id, type, timestamp, item_id, batch_id, reference_number, beneficiary, item, company, qty, unit, cat, notes, date, balance_after, receipt_image, is_summary, status').eq('type', KIND_CONFIG[kind].txType).order('timestamp', { ascending: false }).limit(300);
-      if (transError) throw transError;
-      if (transData) setTransactions(transData.map(d => ({ 
-        ...d, 
-        itemId: d.item_id,
-        voucherGroupId: d.batch_id,
-        voucherCode: d.reference_number,
-        lineNote: d.notes,
-        supplier: d.beneficiary,
-        rep: d.beneficiary,
-        status: d.status || 'قيد المراجعة',
-        line_note: d.notes || '',
-        attachment: d.receipt_image || null
-      })));
-    } catch (err) {
-      console.error("❌ VoucherWorkspace: Error fetching data:", err);
-    }
-  }, [kind]);
-
-  // ─── Global Realtime (single connection via RealtimeManagerProvider) ───
-  useEffect(() => {
-    fetchInitialData();
-    const unsubProducts = subscribe('products', '*', fetchInitialData);
-    const unsubTx = subscribe('transactions', '*', (payload) => {
-      if (payload.eventType === 'INSERT') {
-        if (payload.new.type !== KIND_CONFIG[kind].txType) return;
-        const d = payload.new;
-        const newTx = { ...d, itemId: d.item_id, voucherGroupId: d.batch_id, voucherCode: d.reference_number, lineNote: d.notes, supplier: d.beneficiary, rep: d.beneficiary, status: d.status || 'قيد المراجعة', line_note: d.notes || '', attachment: d.receipt_image || null };
-        setTransactions((prev) => [newTx, ...prev].slice(0, 300));
-      } else if (payload.eventType === 'UPDATE') {
-        const d = payload.new;
-        const updatedTx = { ...d, itemId: d.item_id, voucherGroupId: d.batch_id, voucherCode: d.reference_number, lineNote: d.notes, supplier: d.beneficiary, rep: d.beneficiary, status: d.status || 'قيد المراجعة', line_note: d.notes || '', attachment: d.receipt_image || null };
-        setTransactions((prev) => prev.map(t => t.id === d.id ? updatedTx : t));
-      } else if (payload.eventType === 'DELETE') {
-        setTransactions((prev) => prev.filter(t => t.id !== payload.old.id));
-      }
-    });
-    return () => { unsubProducts(); unsubTx(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kind]); /* الجلب يتم مرة واحدة بجانب kind */
-
-  // [REMOVED OLD CHANNELS BLOCK - was: const channels = [
+  // Global fetch and Realtime are managed by DataContext
 
   // ─── External Edit Trigger from Dashboard ───
   useEffect(() => {

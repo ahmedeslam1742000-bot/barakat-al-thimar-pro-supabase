@@ -24,7 +24,7 @@ import { useInvoiceModal } from '../hooks/useInvoiceModal';
 import { useReturnModal } from '../hooks/useReturnModal';
 import { useVoucherDetail } from '../hooks/useVoucherDetail';
 import { useItemModal } from '../hooks/useItemModal';
-import { useDataFetcher } from '../hooks/useDataFetcher';
+import { useData } from '../contexts/DataContext';
 import { useTransactionAnalytics } from '../hooks/useTransactionAnalytics';
 import { TransactionDetailModal } from './TransactionDetailModal';
 import { MorningBriefModal } from './MorningBriefModal';
@@ -312,7 +312,7 @@ export default function Dashboard({ setActiveView, activeView }) {
     damageCount,
     shiftStartTime,
     morningBriefData,
-  } = useDataFetcher({ currentUser });
+  } = useData();
 
   // ─── Invoice Modal (extracted to useInvoiceModal hook) ───────────────
 

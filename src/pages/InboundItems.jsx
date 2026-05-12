@@ -11,6 +11,41 @@ import { toast } from 'sonner';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { useRealtimeManager } from '../contexts/RealtimeManagerContext';
 import { useAnimationConfig } from '../hooks/useAnimationConfig';
+import { useDebounce } from '../hooks/useDebounce';
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+const InboundItemRow = React.memo(({ it, idx, getCatIcon }) => (
+  <tr className="group hover:bg-slate-50 transition-colors border-b border-slate-100 h-[52px]">
+    <td className="px-4 py-1.5 text-center align-middle">
+      <span className="text-[11px] font-black text-slate-400">{idx + 1}</span>
+    </td>
+    <td className="px-4 py-1.5 text-center align-middle">
+      <div className="font-bold text-sm text-slate-800 leading-none">{it.item}</div>
+    </td>
+    <td className="px-4 py-1.5 text-center align-middle">
+      <div className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200 inline-block">{it.company}</div>
+    </td>
+    <td className="px-4 py-1.5 text-center align-middle">
+      <span className="inline-flex items-center px-3 py-1 bg-teal-50 text-teal-700 rounded-lg text-[12px] font-black border border-teal-100 shadow-sm">
+        {it.stockQty}
+      </span>
+    </td>
+    <td className="px-4 py-1.5 text-center align-middle">
+      <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[12px] font-black border shadow-sm ${Number(it.damagedQty) > 0 ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
+        {it.damagedQty}
+      </span>
+    </td>
+    <td className="px-4 py-1.5 text-center align-middle">
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border bg-slate-50 text-slate-600 border-slate-100 text-[10px] font-black transition-all">
+        {getCatIcon(it.cat)}
+        {it.cat}
+      </span>
+    </td>
+    <td className="px-4 py-1.5 text-center align-middle">
+      <div className="text-[11px] font-bold text-slate-600">{it.unit || '—'}</div>
+    </td>
+  </tr>
+));
 
 const categoryIcons = {
   'مجمدات': <Snowflake size={16} className="text-blue-500" />,
@@ -24,9 +59,18 @@ export default function InboundItems({ setActiveView }) {
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [categoryFilter, setCategoryFilter] = useState('الكل');
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const { subscribe } = useRealtimeManager();
+
+  const parentRef = React.useRef(null);
+  const rowVirtualizer = useVirtualizer({
+    count: 0, // Will be updated
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 52,
+    overscan: 10,
+  });
 
   // ─── Phase 2: استخدام RPC بدلاً من جلب كل السجلات وحسابها في المتصفح ───
   const fetchInboundItems = useCallback(async () => {
@@ -91,7 +135,7 @@ export default function InboundItems({ setActiveView }) {
     });
 
     return Object.values(groups).filter(it => {
-      const q = normalizeArabic(searchQuery);
+      const q = normalizeArabic(debouncedSearchQuery);
       const matchSearch = normalizeArabic(it.item).includes(q) ||
                           normalizeArabic(it.company || '').includes(q);
       const matchCat = categoryFilter === 'الكل' || it.cat === categoryFilter;
@@ -103,7 +147,10 @@ export default function InboundItems({ setActiveView }) {
       if (catOrder !== 0) return catOrder;
       return a.item.localeCompare(b.item, 'ar');
     });
-  }, [transactions, searchQuery, categoryFilter]);
+  }, [transactions, debouncedSearchQuery, categoryFilter]);
+
+  // Update virtualizer count when items change
+  rowVirtualizer.options.count = filteredItems.length;
 
   const groupedItems = useMemo(() => {
     const groups = {};
@@ -225,7 +272,7 @@ export default function InboundItems({ setActiveView }) {
 
 
           <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex-1 flex flex-col">
-          <div className="flex-1 overflow-auto custom-scrollbar">
+          <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar">
             {loading ? (
               <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
                 <div className="w-12 h-12 border-4 border-slate-100 border-t-emerald-500 rounded-full animate-spin" />
@@ -253,38 +300,20 @@ export default function InboundItems({ setActiveView }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {filteredItems.map((it, idx) => (
-                    <tr key={it.uniqueId} className="group hover:bg-slate-50 transition-colors border-b border-slate-100">
-                      <td className="px-4 py-1.5 text-center align-middle">
-                         <span className="text-[11px] font-black text-slate-400">{idx + 1}</span>
-                      </td>
-                      <td className="px-4 py-1.5 text-center align-middle">
-                         <div className="font-bold text-sm text-slate-800 leading-none">{it.item}</div>
-                      </td>
-                      <td className="px-4 py-1.5 text-center align-middle">
-                         <div className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200 inline-block">{it.company}</div>
-                      </td>
-                      <td className="px-4 py-1.5 text-center align-middle">
-                         <span className="inline-flex items-center px-3 py-1 bg-teal-50 text-teal-700 rounded-lg text-[12px] font-black border border-teal-100 shadow-sm">
-                            {it.stockQty}
-                         </span>
-                      </td>
-                      <td className="px-4 py-1.5 text-center align-middle">
-                         <span className={`inline-flex items-center px-3 py-1 rounded-lg text-[12px] font-black border shadow-sm ${Number(it.damagedQty) > 0 ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
-                            {it.damagedQty}
-                         </span>
-                      </td>
-                      <td className="px-4 py-1.5 text-center align-middle">
-                         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg border bg-slate-50 text-slate-600 border-slate-100 text-[10px] font-black transition-all">
-                            {getCatIcon(it.cat)}
-                            {it.cat}
-                         </span>
-                      </td>
-                      <td className="px-4 py-1.5 text-center align-middle">
-                         <div className="text-[11px] font-bold text-slate-600">{it.unit || '—'}</div>
-                      </td>
-                    </tr>
+                  {rowVirtualizer.getVirtualItems().length > 0 && rowVirtualizer.getVirtualItems()[0].start > 0 && (
+                    <tr><td style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} colSpan={8} /></tr>
+                  )}
+                  {rowVirtualizer.getVirtualItems().map((virtualRow) => (
+                    <InboundItemRow 
+                      key={filteredItems[virtualRow.index].uniqueId} 
+                      it={filteredItems[virtualRow.index]} 
+                      idx={virtualRow.index} 
+                      getCatIcon={getCatIcon} 
+                    />
                   ))}
+                  {rowVirtualizer.getVirtualItems().length > 0 && (
+                    <tr><td style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} colSpan={8} /></tr>
+                  )}
                 </tbody>
               </table>
             )}

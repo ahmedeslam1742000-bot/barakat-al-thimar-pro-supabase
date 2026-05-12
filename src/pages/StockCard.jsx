@@ -9,8 +9,10 @@ import {
   Database, AlertTriangle
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+import { useData } from '../contexts/DataContext';
 import { toast } from 'sonner';
 import { normalizeArabic } from '../lib/arabicTextUtils';
+import { useDebounce } from '../hooks/useDebounce';
 
 const categoryIcons = {
   'مجمدات': <Snowflake size={16} className="text-blue-500" />,
@@ -21,8 +23,7 @@ const categoryIcons = {
 const getCatIcon = (cat) => categoryIcons[cat] || <Package size={16} className="text-slate-400" />;
 
 export default function StockCard({ setActiveView }) {
-  const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState([]);
+  const { items, isLoading: loading } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('الكل');
   
@@ -39,35 +40,7 @@ export default function StockCard({ setActiveView }) {
     return () => window.removeEventListener('keydown', handleEsc);
   }, []);
 
-  const fetchItems = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('name', { ascending: true });
 
-      if (error) throw error;
-      setItems(data || []);
-    } catch (err) {
-      console.error('Error fetching items:', err);
-      toast.error('حدث خطأ أثناء تحميل الأصناف');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchItems();
-  }, [fetchItems]);
-
-  // ── Realtime: تحديث تلقائي عند تغيير بيانات المنتجات ──────────────────
-  useEffect(() => {
-    const channel = supabase.channel('stock-card-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => { void fetchItems(); })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [fetchItems]);
 
   const fetchItemHistory = useCallback(async (item) => {
     setHistoryLoading(true);
@@ -148,13 +121,12 @@ export default function StockCard({ setActiveView }) {
     const channel = supabase.channel('stock-card-history-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => {
         void fetchItemHistory(selectedItem);
-        // تحديث معلومات الصنف في الواجهة (الرصيد الحالي)
-        void fetchItems();
+        // DataContext updates items globally
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [isModalOpen, selectedItem, fetchItemHistory, fetchItems]);
+  }, [isModalOpen, selectedItem, fetchItemHistory]);
 
   const handleItemClick = (item) => {
     setSelectedItem(item);
@@ -162,15 +134,17 @@ export default function StockCard({ setActiveView }) {
     fetchItemHistory(item);
   };
 
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
   const filteredItems = useMemo(() => {
     return items.filter(it => {
-      const q = normalizeArabic(searchQuery);
+      const q = normalizeArabic(debouncedSearchQuery);
       const matchSearch = normalizeArabic(it.name).includes(q) ||
                           normalizeArabic(it.company || '').includes(q);
       const matchCat = categoryFilter === 'الكل' || it.cat === categoryFilter;
       return matchSearch && matchCat;
     });
-  }, [items, searchQuery, categoryFilter]);
+  }, [items, debouncedSearchQuery, categoryFilter]);
 
   const groupedItems = useMemo(() => {
     const groups = {};

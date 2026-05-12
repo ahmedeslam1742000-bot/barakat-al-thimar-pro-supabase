@@ -10,7 +10,63 @@ import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { formatDate } from '../lib/dateUtils';
-import { useRealtimeManager } from '../contexts/RealtimeManagerContext';
+import { useData } from '../contexts/DataContext';
+import { useDebounce } from '../hooks/useDebounce';
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+const InboundRecordRow = React.memo(({ record, idx, setSelectedRecord, setIsDetailsOpen }) => (
+  <tr 
+    onClick={() => { setSelectedRecord(record); setIsDetailsOpen(true); }}
+    className="group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors h-[52px]"
+  >
+    <td className="px-4 text-center">
+      <span className="text-[11px] font-black text-slate-400 group-hover:text-teal-600 transition-colors">{idx + 1}</span>
+    </td>
+    <td className="px-6 text-right">
+      <span className={`text-sm font-black transition-colors ${
+        record.supplier === 'غير محدد' 
+          ? 'text-slate-300 dark:text-slate-600 font-bold' 
+          : 'text-slate-800 dark:text-white group-hover:text-teal-600'
+      }`}>
+        {record.supplier === 'غير محدد' ? 'بدون مورد' : record.supplier}
+      </span>
+    </td>
+    <td className="px-6 text-center">
+      <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 tabular-nums bg-slate-50 dark:bg-slate-800/50 px-2 py-0.5 rounded-md">{record.date}</span>
+    </td>
+    <td className="px-6 text-center">
+      <span className={`px-3 py-1 rounded-lg text-[10px] font-black border transition-all ${
+        record.receiptType === 'فاتورة' 
+          ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-500/10 dark:border-blue-500/20' 
+          : record.receiptType === 'سند'
+            ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-500/10 dark:border-amber-500/20'
+            : 'bg-slate-50 text-slate-400 border-slate-100 dark:bg-slate-800/50 dark:border-slate-700'
+      }`}>
+        {record.receiptType === 'بدون' ? 'بدون سند' : record.receiptType}
+      </span>
+    </td>
+    <td className="px-6 text-center">
+      <span className={`text-xs tabular-nums ${
+        record.receiptNumber === 'N/A' 
+          ? 'text-slate-300 dark:text-slate-600 font-medium' 
+          : 'text-slate-600 dark:text-slate-400 font-black'
+      }`}>
+        {record.receiptNumber === 'N/A' ? 'بدون' : record.receiptNumber}
+      </span>
+    </td>
+    <td className="px-6 text-center">
+      {record.receiptImage ? (
+        <div className="flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 group-hover:scale-110 group-hover:bg-emerald-100 transition-all shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+          </div>
+        </div>
+      ) : (
+        <span className="text-[9px] font-bold text-slate-200 dark:text-slate-700 uppercase tracking-tighter">لا يوجد</span>
+      )}
+    </td>
+  </tr>
+));
 
 const CATS = ['الكل', 'مجمدات', 'بلاستيك', 'تبريد'];
 
@@ -31,7 +87,15 @@ export default function InboundRecords({ setActiveView }) {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isImageZoomed, setIsImageZoomed] = useState(false);
-  const { subscribe } = useRealtimeManager();
+  const { dbTransactionsList, items: globalItems, isLoading: loading } = useData();
+
+  const parentRef = React.useRef(null);
+  const rowVirtualizer = useVirtualizer({
+    count: 0,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 52,
+    overscan: 10,
+  });
 
   // Use a separate effect to handle ESC with correct state access
   useEffect(() => {
@@ -49,78 +113,49 @@ export default function InboundRecords({ setActiveView }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isDetailsOpen, isImageZoomed]);
 
-  // ── fetchRecords: useCallback لتثبيت المرجع للـ Realtime subscription ─
-  const fetchRecords = useCallback(async () => {
-    setLoading(true);
-    try {
-      // 1. جلب معاملات الوارد
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('id, batch_id, beneficiary, date, timestamp, receipt_type, reference_number, receipt_image, is_summary, item, item_id, qty, unit, cat, balance_after, company')
-        .eq('type', 'in')
-        .order('timestamp', { ascending: false });
+  const records = useMemo(() => {
+    if (!dbTransactionsList) return [];
+    
+    // 1. Filter inbound transactions
+    const inboundTx = dbTransactionsList.filter(tx => tx.type === 'in');
 
-      if (error) throw error;
+    // 2. Map global items for stock snapshot
+    let stockMap = {};
+    (globalItems || []).forEach(p => {
+      stockMap[p.id] = {
+        currentStock: Number(p.stock_qty ?? 0),
+        currentDamaged: Number(p.damaged_qty ?? 0),
+      };
+    });
 
-      // 2. جمع item_ids لجلب الرصيد الحالي
-      const itemIds = [...new Set(
-        (data || []).filter(d => d.item_id && !d.is_summary).map(d => d.item_id)
-      )];
-
-      let stockMap = {};
-      const { data: productData } = await supabase
-        .from('products')
-        .select('id, stock_qty, damaged_qty');
-        
-      (productData || []).forEach(p => {
-        stockMap[p.id] = {
-          currentStock: Number(p.stock_qty ?? 0),
-          currentDamaged: Number(p.damaged_qty ?? 0),
+    // 3. Group by batch_id
+    const grouped = inboundTx.reduce((acc, current) => {
+      const id = current.batch_id || `SINGLE-${current.id}`;
+      if (!acc[id]) {
+        acc[id] = {
+          id,
+          supplier: current.beneficiary || 'غير محدد',
+          date: current.date,
+          timestamp: current.timestamp,
+          receiptType: current.receipt_type || 'بدون',
+          receiptNumber: current.reference_number || 'N/A',
+          receiptImage: current.receipt_image,
+          items: [],
+          categories: new Set(),
         };
-      });
-
-      // 3. التجميع حسب batch_id
-      const grouped = (data || []).reduce((acc, current) => {
-        const id = current.batch_id || `SINGLE-${current.id}`;
-        if (!acc[id]) {
-          acc[id] = {
-            id,
-            supplier: current.beneficiary || 'غير محدد',
-            date: current.date,
-            timestamp: current.timestamp,
-            receiptType: current.receipt_type || 'بدون',
-            receiptNumber: current.reference_number || 'N/A',
-            receiptImage: current.receipt_image,
-            items: [],
-            categories: new Set(),
-          };
-        }
-        if (current.is_summary === true) {
-          acc[id].summaryRow = current;
-          return acc;
-        }
-        const stockSnapshot = stockMap[current.item_id] || { currentStock: null, currentDamaged: null };
-        acc[id].items.push({ ...current, ...stockSnapshot });
-        if (current.cat) acc[id].categories.add(current.cat);
+      }
+      if (current.is_summary === true) {
+        acc[id].summaryRow = current;
         return acc;
-      }, {});
+      }
+      const stockSnapshot = stockMap[current.item_id] || { currentStock: null, currentDamaged: null };
+      acc[id].items.push({ ...current, ...stockSnapshot });
+      if (current.cat) acc[id].categories.add(current.cat);
+      return acc;
+    }, {});
 
-      setRecords(Object.values(grouped).filter(r => r.items.length > 0));
-    } catch (err) {
-      console.error('Error fetching records:', err);
-      toast.error('فشل في تحميل السجلات');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // ── التحميل الأولي + الاشتراك عبر المدير المركزي ─────────────────────────────────
-  useEffect(() => {
-    void fetchRecords();
-    const unsubTx       = subscribe('transactions', '*', () => void fetchRecords());
-    const unsubProducts = subscribe('products',     '*', () => void fetchRecords());
-    return () => { unsubTx(); unsubProducts(); };
-  }, [fetchRecords, subscribe]);
+    return Object.values(grouped).filter(r => r.items.length > 0);
+  }, [dbTransactionsList, globalItems]);
 
   const filteredRecords = useMemo(() => {
     return records.filter(r => {
@@ -144,6 +179,8 @@ export default function InboundRecords({ setActiveView }) {
       return matchesSearch && matchesCat && matchesDate;
     });
   }, [records, searchQuery, categoryFilter, dateRange]);
+
+  rowVirtualizer.options.count = filteredRecords.length;
 
   const handlePrint = () => {
     window.print();
@@ -266,7 +303,7 @@ export default function InboundRecords({ setActiveView }) {
 
       {/* ═══ TABLE SECTION ═══ */}
       <div className="flex-1 overflow-hidden flex flex-col bg-slate-50/30 dark:bg-slate-900/50 p-6 pt-2">
-        <div className="flex-1 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div ref={parentRef} className="flex-1 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
            <table className="w-full border-collapse">
               <thead className="sticky top-0 z-20 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                  <tr className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
@@ -281,7 +318,7 @@ export default function InboundRecords({ setActiveView }) {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                  {loading ? (
                     <tr>
-                       <td colSpan="7" className="py-24 text-center">
+                       <td colSpan="6" className="py-24 text-center">
                           <div className="flex flex-col items-center gap-4">
                              <div className="w-10 h-10 border-4 border-teal-100 border-t-teal-600 rounded-full animate-spin"></div>
                              <span className="text-slate-400 font-bold text-sm">جاري تحميل الأرشيف...</span>
@@ -293,60 +330,23 @@ export default function InboundRecords({ setActiveView }) {
                        <td colSpan="6" className="py-24 text-center text-slate-400 font-bold">لا توجد سجلات مطابقة</td>
                     </tr>
                  ) : (
-                    filteredRecords.map((record, idx) => (
-                       <tr 
-                         key={record.id}
-                         onClick={() => { setSelectedRecord(record); setIsDetailsOpen(true); }}
-                         className="group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors h-[48px]"
-                       >
-                          <td className="px-4 text-center">
-                             <span className="text-[11px] font-black text-slate-400 group-hover:text-teal-600 transition-colors">{idx + 1}</span>
-                          </td>
-                          <td className="px-6 text-right">
-                             <span className={`text-sm font-black transition-colors ${
-                                record.supplier === 'غير محدد' 
-                                  ? 'text-slate-300 dark:text-slate-600 font-bold' 
-                                  : 'text-slate-800 dark:text-white group-hover:text-teal-600'
-                             }`}>
-                                {record.supplier === 'غير محدد' ? 'بدون مورد' : record.supplier}
-                             </span>
-                          </td>
-                          <td className="px-6 text-center">
-                             <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 tabular-nums bg-slate-50 dark:bg-slate-800/50 px-2 py-0.5 rounded-md">{record.date}</span>
-                          </td>
-                          <td className="px-6 text-center">
-                             <span className={`px-3 py-1 rounded-lg text-[10px] font-black border transition-all ${
-                                record.receiptType === 'فاتورة' 
-                                  ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-500/10 dark:border-blue-500/20' 
-                                  : record.receiptType === 'سند'
-                                    ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-500/10 dark:border-amber-500/20'
-                                    : 'bg-slate-50 text-slate-400 border-slate-100 dark:bg-slate-800/50 dark:border-slate-700'
-                             }`}>
-                                {record.receiptType === 'بدون' ? 'بدون سند' : record.receiptType}
-                             </span>
-                          </td>
-                          <td className="px-6 text-center">
-                             <span className={`text-xs tabular-nums ${
-                                record.receiptNumber === 'N/A' 
-                                  ? 'text-slate-300 dark:text-slate-600 font-medium' 
-                                  : 'text-slate-600 dark:text-slate-400 font-black'
-                             }`}>
-                                {record.receiptNumber === 'N/A' ? 'بدون' : record.receiptNumber}
-                             </span>
-                          </td>
-                          <td className="px-6 text-center">
-                             {record.receiptImage ? (
-                                <div className="flex items-center justify-center">
-                                   <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20 group-hover:scale-110 group-hover:bg-emerald-100 transition-all shadow-sm">
-                                      <ImageIcon size={14} />
-                                   </div>
-                                </div>
-                             ) : (
-                                <span className="text-[9px] font-bold text-slate-200 dark:text-slate-700 uppercase tracking-tighter">لا يوجد</span>
-                             )}
-                          </td>
-                       </tr>
-                    ))
+                    <>
+                    {rowVirtualizer.getVirtualItems().length > 0 && rowVirtualizer.getVirtualItems()[0].start > 0 && (
+                      <tr><td style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} colSpan={6} /></tr>
+                    )}
+                    {rowVirtualizer.getVirtualItems().map((virtualRow) => (
+                      <InboundRecordRow 
+                        key={filteredRecords[virtualRow.index].id} 
+                        record={filteredRecords[virtualRow.index]} 
+                        idx={virtualRow.index} 
+                        setSelectedRecord={setSelectedRecord} 
+                        setIsDetailsOpen={setIsDetailsOpen} 
+                      />
+                    ))}
+                    {rowVirtualizer.getVirtualItems().length > 0 && (
+                      <tr><td style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} colSpan={6} /></tr>
+                    )}
+                    </>
                  )}
               </tbody>
            </table>

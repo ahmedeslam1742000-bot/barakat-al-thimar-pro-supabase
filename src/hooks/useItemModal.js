@@ -193,20 +193,41 @@ export function useItemModal({
   const handleNameInput = useCallback((val) => {
     setItemForm(prev => ({ ...prev, name: val }));
     if (!val.trim()) { setNameSuggestions([]); return; }
-    const filtered = [...new Set(items.map(i => i.name))]
-      .filter(n => (normalizeArabic(n) || '').includes(normalizeArabic(val)))
-      .slice(0, 5);
-    setNameSuggestions(filtered);
+    const normVal = normalizeArabic(val);
+    const uniqueNames = new Set();
+    const suggestions = [];
+    for (const item of items) {
+      const nName = item.normName || normalizeArabic(item.name || '');
+      if (nName.includes(normVal)) {
+        if (!uniqueNames.has(item.name)) {
+          uniqueNames.add(item.name);
+          suggestions.push(item.name);
+          if (suggestions.length === 5) break;
+        }
+      }
+    }
+    setNameSuggestions(suggestions);
     setActiveNameIdx(-1);
   }, [items]);
 
   const handleCompanyInput = useCallback((val) => {
     setItemForm(prev => ({ ...prev, company: val }));
     if (!val.trim()) { setCompanySuggestions([]); return; }
-    const filtered = [...new Set(items.map(i => i.company || 'بدون شركة'))]
-      .filter(c => (normalizeArabic(c) || '').includes(normalizeArabic(val)))
-      .slice(0, 5);
-    setCompanySuggestions(filtered);
+    const normVal = normalizeArabic(val);
+    const uniqueComps = new Set();
+    const suggestions = [];
+    for (const item of items) {
+      const comp = item.company || 'بدون شركة';
+      const nComp = item.normCompany || normalizeArabic(comp);
+      if (nComp.includes(normVal)) {
+        if (!uniqueComps.has(comp)) {
+          uniqueComps.add(comp);
+          suggestions.push(comp);
+          if (suggestions.length === 5) break;
+        }
+      }
+    }
+    setCompanySuggestions(suggestions);
     setActiveCompIdx(-1);
   }, [items]);
 
@@ -250,9 +271,17 @@ export function useItemModal({
     const normComp = normalizeArabic(itemForm.company);
 
     if (!editingSessionId) {
-      if (items.some(i => normalizeArabic(i.name) === normName && normalizeArabic(i.company || 'بدون شركة') === normComp)) {
-        return toast.error('هذا الصنف مسجل مسبقاً');
+      let isDuplicate = false;
+      for (const i of items) {
+        const iNormName = i.normName || normalizeArabic(i.name || '');
+        const iNormComp = i.normCompany || normalizeArabic(i.company || 'بدون شركة');
+        if (iNormName === normName && iNormComp === normComp) {
+          isDuplicate = true;
+          break;
+        }
       }
+      if (isDuplicate) return toast.error('هذا الصنف مسجل مسبقاً');
+      
       if (sessionItems.some(i => normalizeArabic(i.name) === normName && normalizeArabic(i.company) === normComp)) {
         return toast.error('تم إضافة الصنف للقائمة بالفعل');
       }

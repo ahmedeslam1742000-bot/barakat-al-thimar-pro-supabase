@@ -6,6 +6,7 @@ import {
 import { supabase } from '../lib/supabaseClient';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../contexts/DataContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { useDebounce } from '../hooks/useDebounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -44,61 +45,11 @@ const InventoryItemRow = React.memo(({ item, idx, lowStockThreshold }) => {
 });
 
 export default function StockInventory({ setActiveView }) {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { items } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [catFilter, setCatFilter] = useState('الكل');
   const { isViewer } = useAuth();
   const { settings } = useSettings();
-
-  // ── SUPABASE FETCH ─────────────────────────────────────────────────────
-  const fetchItems = useCallback(async () => {
-    const { data: itemsData } = await supabase.from('products').select('id, name, company, cat, unit, stock_qty, damaged_qty, search_key');
-    if (itemsData) {
-      setItems(itemsData.map(d => ({
-        ...d,
-        stockQty: Number(d.stock_qty) || 0,
-        damagedQty: Number(d.damaged_qty) || 0,
-        searchKey: d.search_key || normalizeArabic(`${d.name || ''} ${d.company || ''} ${d.cat || ''}`),
-        createdAt: d.created_at
-      })));
-    }
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    void fetchItems();
-
-    const itemsChannel = supabase.channel('public:products:inventory')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
-        try {
-          if (payload.eventType === 'INSERT') {
-            setItems(prev => [{
-              ...payload.new,
-              stockQty: Number(payload.new.stock_qty) || 0,
-              damagedQty: Number(payload.new.damaged_qty) || 0,
-              searchKey: payload.new.search_key || normalizeArabic(`${payload.new.name || ''} ${payload.new.company || ''} ${payload.new.cat || ''}`),
-              createdAt: payload.new.created_at,
-            }, ...prev]);
-          } else if (payload.eventType === 'UPDATE') {
-            setItems(prev => prev.map(p => p.id === payload.new.id ? {
-              ...payload.new,
-              stockQty: Number(payload.new.stock_qty) || 0,
-              damagedQty: Number(payload.new.damaged_qty) || 0,
-              searchKey: payload.new.search_key || normalizeArabic(`${payload.new.name || ''} ${payload.new.company || ''} ${payload.new.cat || ''}`),
-              createdAt: payload.new.created_at,
-            } : p));
-          } else if (payload.eventType === 'DELETE') {
-            setItems(prev => prev.filter(p => p.id !== payload.old.id));
-          }
-        } catch (err) {
-          console.error('[Realtime] inventory products handler error:', err);
-        }
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(itemsChannel); };
-  }, [fetchItems]);
 
   // Client-side sort (avoids compound index)
   const sortedItems = useMemo(() => {
@@ -118,7 +69,9 @@ export default function StockInventory({ setActiveView }) {
   const filteredItems = useMemo(() => {
     const q = normalizeArabic(debouncedSearchTerm);
     let result = sortedItems.filter(i => {
-      const matchesSearch = q === '' || (i.searchKey && i.searchKey.includes(q));
+      // searchKey is usually normalized. We can also fallback to normName + normCompany
+      const searchData = i.searchKey || `${i.normName || ''} ${i.normCompany || ''} ${i.cat || ''}`;
+      const matchesSearch = q === '' || searchData.includes(q);
       const matchesCat = catFilter === 'الكل' || i.cat === catFilter;
       return matchesSearch && matchesCat;
     });
@@ -358,7 +311,7 @@ export default function StockInventory({ setActiveView }) {
 
 
 
-  if (loading) {
+  if (!items || items.length === 0) {
     return (
       <div className="h-full flex items-center justify-center font-readex">
         <div className="flex flex-col items-center gap-4">

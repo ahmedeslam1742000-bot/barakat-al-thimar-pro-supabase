@@ -9,11 +9,63 @@ import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../contexts/DataContext';
+import { useDebounce } from '../hooks/useDebounce';
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+const PriceItemRow = React.memo(({ item, idx, isViewer, openEditModal }) => {
+  return (
+    <tr className="group hover:bg-indigo-50/10 transition-colors h-[52px]">
+      <td className="px-6 py-2 text-center align-middle">
+        <span className="text-[13px] font-bold text-slate-300 tabular-nums">{idx + 1}</span>
+      </td>
+      <td className="px-6 py-2 align-middle">
+        <span className="text-[15px] font-black text-slate-800 tracking-tight whitespace-nowrap">
+          {item.name} - {item.company || 'بدون شركة'}
+        </span>
+      </td>
+      <td className="px-6 py-2 text-center align-middle">
+        <span className="text-[10px] font-black px-2.5 py-1 rounded-lg border bg-slate-50 text-slate-500 border-slate-100">
+          {item.cat || 'أخرى'}
+        </span>
+      </td>
+      <td className="px-6 py-2 text-center align-middle">
+        <span className="text-[11px] font-bold text-slate-400">{item.unit || 'وحدة'}</span>
+      </td>
+      <td className="px-6 py-2 text-center align-middle">
+        <div className="flex items-center justify-center text-slate-400 font-bold tabular-nums">
+          <span className="text-lg">{item.old_price || 0}</span>
+        </div>
+      </td>
+      <td className="px-6 py-2 text-center align-middle">
+        <div className="flex items-center justify-center gap-2 text-emerald-600 font-black tabular-nums bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 inline-flex mx-auto">
+          <span className="text-xl">{item.price || 0}</span>
+          {item.price > (item.old_price || 0) ? (
+            <TrendingUp size={14} />
+          ) : item.price < (item.old_price || 0) ? (
+            <TrendingDown size={14} />
+          ) : null}
+        </div>
+      </td>
+      <td className="px-6 py-2 text-center align-middle">
+        {!isViewer && (
+          <button 
+            onClick={() => openEditModal(item)}
+            className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center shadow-sm group/btn mx-auto"
+          >
+            <Pencil size={18} className="group-hover/btn:scale-110 transition-transform" />
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+});
 
 export default function PriceList({ setActiveView }) {
   const { isViewer } = useAuth();
-  const [items, setItems] = useState([]);
+  const { items, fetchInitialData } = useData();
   const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [loading, setLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -22,6 +74,14 @@ export default function PriceList({ setActiveView }) {
   const [newPrice, setNewPrice] = useState('');
   const [selectedCat, setSelectedCat] = useState('الكل');
   const inputRef = useRef(null);
+  const parentRef = useRef(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: filteredItems.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 52,
+    overscan: 10,
+  });
 
   // Refs for current state to avoid closure issues in event listener
   const stateRef = useRef({ isEditModalOpen, isSaveConfirmOpen, isExitConfirmOpen, newPrice, selectedItem });
@@ -34,42 +94,19 @@ export default function PriceList({ setActiveView }) {
     return cats;
   }, [items]);
 
-  // --- FETCH DATA ---
-  const fetchPrices = useCallback(async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, company, price, old_price, cat, unit')
-        .order('name');
-      if (error) throw error;
-      setItems(data || []);
-    } catch (err) {
-      console.error('Error fetching prices:', err);
-      toast.error('حدث خطأ أثناء تحميل الأسعار');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchPrices();
-    const channel = supabase.channel('price-sync')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => { void fetchPrices(); })
-      .subscribe();
-    return () => supabase.removeChannel(channel);
-  }, [fetchPrices]);
-
   // --- FILTERING ---
   const filteredItems = useMemo(() => {
+    if (!items || items.length === 0) return [];
+    const q = normalizeArabic(debouncedSearchQuery);
     return items.filter(item => {
-      const q = normalizeArabic(searchQuery);
-      const matchesSearch = normalizeArabic(item.name).includes(q) || 
-                            normalizeArabic(item.company || '').includes(q);
+      const matchesSearch = !q || (item.normName && item.normName.includes(q)) || 
+                            (item.normCompany && item.normCompany.includes(q));
       const matchesCat = selectedCat === 'الكل' || item.cat === selectedCat;
       return matchesSearch && matchesCat;
     });
-  }, [items, searchQuery, selectedCat]);
+  }, [items, debouncedSearchQuery, selectedCat]);
+
+  rowVirtualizer.options.count = filteredItems.length;
 
   // --- EDIT LOGIC ---
   const openEditModal = (item) => {
@@ -113,7 +150,9 @@ export default function PriceList({ setActiveView }) {
       toast.success(`تم تحديث سعر "${selectedItem.name}" بنجاح`);
       setIsSaveConfirmOpen(false);
       setIsEditModalOpen(false);
-      void fetchPrices();
+      
+      // Update global context gracefully
+      if (fetchInitialData) fetchInitialData();
     } catch (err) {
       console.error('Update error:', err);
       toast.error(err.message || 'حدث خطأ غير متوقع أثناء تحديث السعر');
@@ -232,7 +271,7 @@ export default function PriceList({ setActiveView }) {
 
       {/* ═══ PRICES TABLE ═══ */}
       <div className="flex-1 overflow-hidden bg-white rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col">
-        <div className="flex-1 overflow-auto custom-scrollbar">
+        <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
               <div className="w-12 h-12 border-4 border-slate-100 border-t-indigo-500 rounded-full animate-spin" />
@@ -257,43 +296,21 @@ export default function PriceList({ setActiveView }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filteredItems.map((item, idx) => (
-                  <tr key={item.id} className="group hover:bg-indigo-50/10 transition-colors">
-                    <td className="px-6 py-2 text-center align-middle">
-                      <span className="text-[13px] font-bold text-slate-300 tabular-nums">{idx + 1}</span>
-                    </td>
-                    <td className="px-6 py-2 align-middle">
-                      <span className="text-[15px] font-black text-slate-800 tracking-tight whitespace-nowrap">{item.name} - {item.company || 'بدون شركة'}</span>
-                    </td>
-                    <td className="px-6 py-2 text-center align-middle">
-                      <span className="text-[10px] font-black px-2.5 py-1 rounded-lg border bg-slate-50 text-slate-500 border-slate-100">{item.cat || 'أخرى'}</span>
-                    </td>
-                    <td className="px-6 py-2 text-center align-middle">
-                      <span className="text-[11px] font-bold text-slate-400">{item.unit || 'وحدة'}</span>
-                    </td>
-                    <td className="px-6 py-2 text-center align-middle">
-                      <div className="flex items-center justify-center text-slate-400 font-bold tabular-nums">
-                        <span className="text-lg">{item.old_price || 0}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-2 text-center align-middle">
-                      <div className="flex items-center justify-center gap-2 text-emerald-600 font-black tabular-nums bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 inline-flex mx-auto">
-                        <span className="text-xl">{item.price || 0}</span>
-                        {item.price > (item.old_price || 0) ? <TrendingUp size={14} /> : item.price < (item.old_price || 0) ? <TrendingDown size={14} /> : null}
-                      </div>
-                    </td>
-                    <td className="px-6 py-2 text-center align-middle">
-                      {!isViewer && (
-                        <button 
-                          onClick={() => openEditModal(item)}
-                          className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center shadow-sm group/btn mx-auto"
-                        >
-                          <Pencil size={18} className="group-hover/btn:scale-110 transition-transform" />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
+                {rowVirtualizer.getVirtualItems().length > 0 && rowVirtualizer.getVirtualItems()[0].start > 0 && (
+                  <tr><td style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} colSpan={7} /></tr>
+                )}
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => (
+                  <PriceItemRow 
+                    key={filteredItems[virtualRow.index].id} 
+                    item={filteredItems[virtualRow.index]} 
+                    idx={virtualRow.index} 
+                    isViewer={isViewer} 
+                    openEditModal={openEditModal} 
+                  />
                 ))}
+                {rowVirtualizer.getVirtualItems().length > 0 && (
+                  <tr><td style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} colSpan={7} /></tr>
+                )}
               </tbody>
             </table>
           )}

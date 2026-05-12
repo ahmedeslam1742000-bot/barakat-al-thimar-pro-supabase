@@ -19,6 +19,7 @@ const ReceiptVouchers = lazy(() => import('./pages/ReceiptVouchers'));
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SettingsProvider } from './contexts/SettingsContext';
+import { DataProvider } from './contexts/DataContext';
 import { Toaster } from 'sonner';
 import { Package, Truck, ArrowUpRight, RotateCcw, Download, Upload, User, FileStack, BookOpen, ClipboardList, Activity, Settings as SettingsIcon, BarChart3, Tags, History, TrendingUp, Banknote, ShieldOff } from 'lucide-react';
 
@@ -60,6 +61,18 @@ function AuthenticatedApp() {
     return <Login />;
   }
 
+  return (
+    <DataProvider currentUser={currentUser}>
+      <AuthenticatedAppContent 
+        activeView={activeView} 
+        setActiveView={setActiveView} 
+        canAccess={canAccess} 
+      />
+    </DataProvider>
+  );
+}
+
+function AuthenticatedAppContent({ activeView, setActiveView, canAccess }) {
   const renderView = () => {
     // Permission Check
     if (!canAccess(activeView)) {

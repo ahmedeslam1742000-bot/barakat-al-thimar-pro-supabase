@@ -11,6 +11,33 @@ import { useAudio } from '../contexts/AudioContext';
 import { useAuth } from '../contexts/AuthContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { getItemName, getCompany, getCategory, getUnit, formatItemDisplay } from '../lib/itemFields';
+import { useData } from '../contexts/DataContext';
+import { useDebounce } from '../hooks/useDebounce';
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+const ReturnVoucherRow = React.memo(({ v, idx, setSelectedVoucher, setIsDetailsModalOpen }) => (
+  <tr 
+    key={v.id} 
+    onClick={() => { setSelectedVoucher(v); setIsDetailsModalOpen(true); }}
+    className="group hover:bg-orange-50/20 transition-all border-b border-slate-100 cursor-pointer h-[52px]"
+  >
+    <td className="px-6 py-3 text-center align-middle">
+      <span className="text-xs font-black text-slate-300 group-hover:text-orange-500 transition-colors tabular-nums">{idx + 1}</span>
+    </td>
+    <td className="px-6 py-3 text-right align-middle">
+      <span className="text-sm font-black text-slate-700 tracking-tight leading-none">{v.beneficiary || 'غير محدد'}</span>
+    </td>
+    <td className="px-6 py-3 text-center align-middle">
+      <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-lg">{v.rep}</span>
+    </td>
+    <td className="px-6 py-3 text-center align-middle">
+      <span className="text-xs font-black text-orange-600 bg-orange-50 px-3 py-1 rounded-lg border border-orange-100 shadow-sm">{v.items.length} صنف</span>
+    </td>
+    <td className="px-6 py-3 text-center align-middle">
+      <span className="text-xs font-black text-slate-400 tabular-nums">{v.date}</span>
+    </td>
+  </tr>
+));
 
 const formatDate = (date) => {
   if (!date) return '';
@@ -113,8 +140,7 @@ export default function Returns({ setActiveView }) {
   const { playSuccess, playWarning } = useAudio();
   const { currentUser, isViewer } = useAuth();
 
-  const [items, setItems] = useState([]);
-  const [transactions, setTransactions] = useState([]);
+  const { items, dbTransactionsList: transactions } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('الكل');
   const [companyFilter, setCompanyFilter] = useState('الكل');
@@ -131,6 +157,13 @@ export default function Returns({ setActiveView }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
+  const parentRef = useRef(null);
+  const rowVirtualizer = useVirtualizer({
+    count: 0,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 52,
+    overscan: 10,
+  });
 
   const itemNameRef = useRef(null);
   const [bulkRep, setBulkRep] = useState('');
@@ -141,6 +174,22 @@ export default function Returns({ setActiveView }) {
   const [draftQty, setDraftQty] = useState('');
   const [draftStatus, setDraftStatus] = useState('سليم');
   const [searchIdx, setSearchIdx] = useState(-1);
+
+  const parentRef = useRef(null);
+  const rowVirtualizer = useVirtualizer({
+    count: 0,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 52,
+    overscan: 10,
+  });
+
+  const parentRef = useRef(null);
+  const rowVirtualizer = useVirtualizer({
+    count: 0, // Updated below
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 52,
+    overscan: 10,
+  });
 
   // Auto-focus on item search when modal opens
   useEffect(() => {
@@ -163,45 +212,21 @@ export default function Returns({ setActiveView }) {
     return () => window.removeEventListener('keydown', handleGlobalKeys);
   }, []);
 
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      const { data: itemsData } = await supabase.from('products').select('id, name, company, cat, unit, stock_qty');
-      if (itemsData) setItems(itemsData.map(d => ({ ...d, stockQty: d.stock_qty, damagedQty: d.damaged_qty })));
-
-      const { data: transData } = await supabase.from('transactions').select('id, type, timestamp, item_id, item, company, qty, unit, cat, status, rep, beneficiary, date, batch_id, is_summary, total_qty, balance_after').order('timestamp', { ascending: false }).limit(400);
-      if (transData) setTransactions(transData.map(d => ({ ...d, itemId: d.item_id })));
-    };
-
-    fetchInitialData();
-
-    const channels = [
-      supabase.channel('public:products:returns').on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchInitialData).subscribe(),
-      supabase.channel('public:transactions:returns').on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          const newTx = { ...payload.new, itemId: payload.new.item_id };
-          setTransactions((prev) => [newTx, ...prev].slice(0, 400));
-        } else if (payload.eventType === 'UPDATE') {
-          setTransactions((prev) => prev.map(t => t.id === payload.new.id ? { ...payload.new, itemId: payload.new.item_id } : t));
-        } else if (payload.eventType === 'DELETE') {
-          setTransactions((prev) => prev.filter(t => t.id !== payload.old.id));
-        }
-      }).subscribe()
-    ];
-
-    return () => { channels.forEach(c => supabase.removeChannel(c)); };
-  }, []);
+  
 
   const returnTxs = useMemo(() => transactions.filter((t) => t.type === 'return'), [transactions]);
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  const debouncedSearchNameText = useDebounce(searchNameText, 300);
 
   const itemSuggestions = useMemo(() => {
     if (!searchNameText || selectedItem) return [];
-    const q = normalizeArabic(searchNameText);
+    const q = normalizeArabic(debouncedSearchNameText);
     return items.filter((i) => {
       const n = normalizeArabic(getItemName(i));
       const c = normalizeArabic(getCompany(i) || '');
       return n.includes(q) || c.includes(q);
     });
-  }, [items, searchNameText, selectedItem]);
+  }, [items, debouncedSearchNameText, selectedItem]);
 
   const dynamicCompanies = ['الكل', ...new Set(items.map((i) => getCompany(i)))].filter(Boolean);
 
@@ -227,13 +252,13 @@ export default function Returns({ setActiveView }) {
         .filter((tx) => {
           const sk = normalizeArabic(`${tx.item} ${tx.company} ${tx.rep || ''}`);
           return (
-            sk.includes(normalizeArabic(searchQuery)) &&
+            (debouncedSearchQuery === "" || sk.includes(normalizeArabic(debouncedSearchQuery))) &&
             (categoryFilter === 'الكل' || tx.cat === categoryFilter) &&
             (companyFilter === 'الكل' || (tx.company || 'بدون شركة') === companyFilter) &&
             (!showHotOnly || (hotMap[tx._iid] || 0) >= 50)
           );
         }),
-    [returnTxs, items, searchQuery, categoryFilter, companyFilter, showHotOnly, hotMap]
+    [returnTxs, items, debouncedSearchQuery, categoryFilter, companyFilter, showHotOnly, hotMap]
   );
 
   const groupedVouchers = useMemo(() => {
@@ -259,7 +284,7 @@ export default function Returns({ setActiveView }) {
     const list = Object.values(groups);
 
     return list.filter(v => {
-      const q = normalizeArabic(searchQuery);
+      const q = normalizeArabic(debouncedSearchQuery);
       const searchStr = normalizeArabic(`${v.rep} ${v.id}`);
       const matchSearch = searchStr.includes(q);
       
@@ -287,7 +312,9 @@ export default function Returns({ setActiveView }) {
       const dateB = new Date(b.timestamp || b.date);
       return dateB - dateA;
     });
-  }, [returnTxs, searchQuery, startDate, endDate]);
+  }, [returnTxs, debouncedSearchQuery, startDate, endDate]);
+
+  rowVirtualizer.options.count = groupedVouchers.length;
 
   const todayTotal = useMemo(() => {
     const t = formatDate(new Date());
@@ -597,7 +624,7 @@ export default function Returns({ setActiveView }) {
       <div className="flex-1 overflow-hidden p-6 pt-4 relative">
         
         <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden h-full flex flex-col">
-          <div className="flex-1 overflow-auto custom-scrollbar">
+          <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar">
             {loading ? (
               <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
                 <div className="w-12 h-12 border-4 border-slate-100 border-t-orange-500 rounded-full animate-spin" />
@@ -622,34 +649,22 @@ export default function Returns({ setActiveView }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {groupedVouchers.map((v, idx) => (
-                    <tr 
-                      key={v.id} 
-                      onClick={() => { setSelectedVoucher(v); setIsDetailsModalOpen(true); }}
-                      className="group hover:bg-orange-50/20 transition-all border-b border-slate-100 cursor-pointer"
-                    >
-                      <td className="px-6 py-3 text-center align-middle">
-                         <span className="text-xs font-black text-slate-300 group-hover:text-orange-500 transition-colors tabular-nums">{idx + 1}</span>
-                      </td>
-                      <td className="px-6 py-3 text-right align-middle">
-                         <span className="text-sm font-black text-slate-700 tracking-tight leading-none">{v.beneficiary || 'غير محدد'}</span>
-                      </td>
-                      <td className="px-6 py-3 text-center align-middle">
-                         <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100 group-hover:bg-white text-slate-600 rounded-lg border border-slate-200/50 transition-all">
-                            <User size={12} className="text-orange-500" />
-                            <span className="text-[11px] font-black">{v.rep || '—'}</span>
-                         </div>
-                      </td>
-                      <td className="px-6 py-3 text-center align-middle">
-                         <div className="flex flex-col items-center">
-                            <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-100">{v.items.length} صنف</span>
-                         </div>
-                      </td>
-                      <td className="px-6 py-3 text-center align-middle">
-                         <span className="text-[12px] font-black text-slate-500 tabular-nums">{v.date}</span>
-                      </td>
-                    </tr>
+                  {rowVirtualizer.getVirtualItems().length > 0 && rowVirtualizer.getVirtualItems()[0].start > 0 && (
+                    <tr><td style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} colSpan={5} /></tr>
+                  )}
+                  {rowVirtualizer.getVirtualItems().map((virtualRow) => (
+                    <ReturnVoucherRow 
+                      key={groupedVouchers[virtualRow.index].id} 
+                      v={groupedVouchers[virtualRow.index]} 
+                      idx={virtualRow.index} 
+                      setSelectedVoucher={setSelectedVoucher} 
+                      setIsDetailsModalOpen={setIsDetailsModalOpen} 
+                    />
                   ))}
+                  {rowVirtualizer.getVirtualItems().length > 0 && (
+                    <tr><td style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} colSpan={5} /></tr>
+                  )}
+
                 </tbody>
               </table>
             )}

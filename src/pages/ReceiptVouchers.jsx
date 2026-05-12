@@ -10,6 +10,77 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
+import { useData } from '../contexts/DataContext';
+import { useDebounce } from '../hooks/useDebounce';
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+const ReceiptVoucherRow = React.memo(({ v, idx, openEdit, setViewVoucher, toggleDepositStatus, formatDateToDisplay }) => (
+  <tr className="group hover:bg-slate-50 transition-colors h-[52px]">
+    <td className="px-6 py-4 text-center">
+      <span className="text-[11px] font-black text-slate-400">{idx + 1}</span>
+    </td>
+    <td className="px-6 py-4 text-center">
+      <div className="flex flex-col items-center">
+        <span className="text-xs font-black text-slate-800">{formatDateToDisplay(v.date)}</span>
+      </div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="flex flex-col">
+        <span className="text-sm font-black text-[#0f2747]">{v.repName}</span>
+        <span className="text-[10px] font-bold text-slate-400">اسم المندوب</span>
+      </div>
+    </td>
+    <td className="px-6 py-4">
+      <div className="flex flex-col">
+        <span className="text-sm font-black text-slate-800">{v.customerName}</span>
+        <span className="text-[10px] font-bold text-slate-400">اسم العميل</span>
+      </div>
+    </td>
+    <td className="px-6 py-4 text-center">
+      <div className="flex flex-col items-center">
+        <span className="text-sm font-black text-primary bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10">{v.voucherNo}</span>
+        <span className="text-[10px] font-bold text-slate-400 mt-1">رقم السند</span>
+      </div>
+    </td>
+    <td className="px-6 py-4 text-center">
+      <div className="flex flex-col items-center">
+        <span className={`text-xs font-black ${v.invoiceNo === 'دفعة من الحساب' ? 'text-amber-600' : 'text-slate-600'}`}>
+          {v.invoiceNo}
+        </span>
+        <span className="text-[10px] font-bold text-slate-400 mt-1">رقم الفاتورة</span>
+      </div>
+    </td>
+    <td className="px-6 py-4 text-center">
+      <div className="flex items-center justify-center gap-1.5 text-emerald-600 font-black tabular-nums bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 mx-auto w-fit">
+        <span className="text-lg">{v.amount.toLocaleString()}</span>
+        <Banknote size={14} />
+      </div>
+    </td>
+    <td className="px-6 py-4 text-center">
+      <button 
+        onClick={() => toggleDepositStatus(v.id, v.is_deposited)}
+        className={`px-3 py-1.5 rounded-xl text-[10px] font-black border transition-all flex items-center gap-2 mx-auto ${
+          v.is_deposited 
+            ? 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100' 
+            : 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100'
+        }`}
+      >
+        {v.is_deposited ? <CheckCircle2 size={14} /> : <Clock size={14} />}
+        {v.is_deposited ? 'تم الإيداع' : 'في الخزينة'}
+      </button>
+    </td>
+    <td className="px-6 py-4">
+      <div className="flex items-center justify-center gap-2">
+        <button onClick={() => setViewVoucher(v)} className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:bg-primary hover:text-white transition-all flex items-center justify-center shadow-sm">
+          <Eye size={16} />
+        </button>
+        <button onClick={() => openEdit(v)} className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center shadow-sm">
+          <Pencil size={16} />
+        </button>
+      </div>
+    </td>
+  </tr>
+));
 
 // Helper to format date to DD/MM/YYYY
 const formatDateToDisplay = (dateStr) => {
@@ -26,11 +97,21 @@ export default function ReceiptVouchers({ setActiveView }) {
   const [isConfirmSaveOpen, setIsConfirmSaveOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [viewVoucher, setViewVoucher] = useState(null);
+  const { receiptVouchers, repsList: repsFromContext, isLoading: globalLoading } = useData();
   
   // Reps for autocomplete
-  const [reps, setReps] = useState([]);
+  const reps = useMemo(() => repsFromContext.map(name => ({ name })), [repsFromContext]);
   const [repSearchQuery, setRepSearchQuery] = useState('');
   const [isRepDropdownOpen, setIsRepDropdownOpen] = useState(false);
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  const parentRef = React.useRef(null);
+  const rowVirtualizer = useVirtualizer({
+    count: 0,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 52,
+    overscan: 10,
+  });
 
   // Form State
   const emptyForm = {
@@ -98,23 +179,20 @@ export default function ReceiptVouchers({ setActiveView }) {
     }
   };
 
-  // Fetch vouchers on mount + real-time subscription
+  // Removed local fetching, now using DataContext
   useEffect(() => {
-    fetchVouchers();
-    const channel = supabase
-      .channel('public:receipt_vouchers')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'receipt_vouchers' }, fetchVouchers)
-      .subscribe();
-    return () => supabase.removeChannel(channel);
+    // We can keep this if we need manual refresh, but DataContext handles real-time
   }, []);
 
   const filteredVouchers = useMemo(() => {
-    return vouchers.filter(v =>
-      (v.voucherNo || '').includes(searchTerm) ||
-      (v.repName || '').includes(searchTerm) ||
-      (v.customerName || '').includes(searchTerm)
+    return receiptVouchers.filter(v =>
+      (v.voucherNo || '').includes(debouncedSearchTerm) ||
+      (v.repName || '').includes(debouncedSearchTerm) ||
+      (v.customerName || '').includes(debouncedSearchTerm)
     );
-  }, [vouchers, searchTerm]);
+  }, [receiptVouchers, debouncedSearchTerm]);
+
+  rowVirtualizer.options.count = filteredVouchers.length;
 
   // Dirty check
   const isDirty = useMemo(() => {
@@ -188,7 +266,7 @@ export default function ReceiptVouchers({ setActiveView }) {
         toast.success('✅ تم حفظ السند بنجاح');
       }
 
-      await fetchVouchers();
+      await fetchInitialData();
     } catch (err) {
       console.error('❌ confirmSave error:', err);
       toast.error(`خطأ في الحفظ: ${err?.message || 'حدث خطأ غير متوقع'}`);

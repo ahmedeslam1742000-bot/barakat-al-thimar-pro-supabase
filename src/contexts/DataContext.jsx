@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { normalizeArabic } from '../lib/arabicTextUtils';
 
 // Voucher type constants (mirror of Dashboard module-level consts)
 const FUNCTIONAL_INBOUND_TYPE = 'سند إدخال';
@@ -51,10 +52,13 @@ function processTx(d) {
  * Dependencies injected via params:
  *   currentUser — authenticated user object (used as subscription trigger)
  */
-export function useDataFetcher({ currentUser }) {
+const DataContext = createContext(null);
+
+export function DataProvider({ children, currentUser }) {
   // ─── Primary Data State ───────────────────────────────────────────────
   const [items, setItems] = useState([]);
   const [dbTransactionsList, setDbTransactionsList] = useState([]);
+  const [receiptVouchers, setReceiptVouchers] = useState([]);
   const [repsList, setRepsList] = useState([]);
   const [dashboardStats, setDashboardStats] = useState({
     stockInCount: 0,
@@ -72,7 +76,9 @@ export function useDataFetcher({ currentUser }) {
 
       const { data: itemsData, error: itemsError } = await supabase
         .from('products')
-        .select('id, name, company, cat, unit, stock_qty, damaged_qty, search_key, created_at');
+        .select('id, name, company, cat, unit, stock_qty, damaged_qty, search_key, created_at, price, old_price')
+        .order('name')
+        .limit(10000);
       if (itemsError) throw itemsError;
       if (itemsData) {
         setItems(itemsData.map(d => ({
@@ -81,6 +87,8 @@ export function useDataFetcher({ currentUser }) {
           damagedQty: Number(d.damaged_qty) || 0,
           searchKey: d.search_key || (d.name ? `${d.name} ${d.company || ''} ${d.cat || ''}` : ''),
           createdAt: d.created_at,
+          normName: normalizeArabic(d.name),
+          normCompany: normalizeArabic(d.company || 'بدون شركة')
         })));
       }
 
@@ -88,10 +96,31 @@ export function useDataFetcher({ currentUser }) {
         .from('transactions')
         .select('id, type, timestamp, item, company, qty, unit, cat, supplier, beneficiary, loc, location, rep, recipient, reference_number, batch_id, is_summary, item_id, notes, status')
         .order('timestamp', { ascending: false })
-        .limit(200);
+        .limit(1500);
       if (transError) throw transError;
       if (transData) {
         setDbTransactionsList(transData.map(processTx));
+      }
+
+      const { data: rvData, error: rvError } = await supabase
+        .from('receipt_vouchers')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1500);
+      if (rvData) {
+        setReceiptVouchers(rvData.map(r => ({
+          id: r.id,
+          date: r.date,
+          repName: r.rep_name,
+          customerName: r.customer_name,
+          voucherNo: r.voucher_no,
+          invoiceNo: r.invoice_no || '',
+          isAccountPayment: !r.invoice_no || r.invoice_no === 'دفعة من الحساب',
+          amount: Number(r.amount),
+          type: r.type,
+          is_deposited: r.is_deposited || false,
+          deposited_at: r.deposited_at || null,
+        })));
       }
 
       const { data: dashboardRpcData, error: dashboardRpcError } = await supabase.rpc('inventory_dashboard_today');
@@ -128,6 +157,8 @@ export function useDataFetcher({ currentUser }) {
               damagedQty: Number(payload.new.damaged_qty) || 0,
               searchKey: payload.new.search_key || (payload.new.name ? `${payload.new.name} ${payload.new.company || ''} ${payload.new.cat || ''}` : ''),
               createdAt: payload.new.created_at,
+              normName: normalizeArabic(payload.new.name),
+              normCompany: normalizeArabic(payload.new.company || 'بدون شركة')
             }, ...prev]);
           } else if (payload.eventType === 'UPDATE') {
             setItems(prev => prev.map(p => p.id === payload.new.id ? {
@@ -136,6 +167,8 @@ export function useDataFetcher({ currentUser }) {
               damagedQty: Number(payload.new.damaged_qty) || 0,
               searchKey: payload.new.search_key || (payload.new.name ? `${payload.new.name} ${payload.new.company || ''} ${payload.new.cat || ''}` : ''),
               createdAt: payload.new.created_at,
+              normName: normalizeArabic(payload.new.name),
+              normCompany: normalizeArabic(payload.new.company || 'بدون شركة')
             } : p));
           } else if (payload.eventType === 'DELETE') {
             setItems(prev => prev.filter(p => p.id !== payload.old.id));
@@ -167,9 +200,55 @@ export function useDataFetcher({ currentUser }) {
 
       });
 
+    const rvChannel = supabase
+      .channel('public:receipt_vouchers:dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'receipt_vouchers' }, (payload) => {
+        try {
+          if (payload.eventType === 'INSERT') {
+            const r = payload.new;
+            setReceiptVouchers(prev => [{
+              id: r.id,
+              date: r.date,
+              repName: r.rep_name,
+              customerName: r.customer_name,
+              voucherNo: r.voucher_no,
+              invoiceNo: r.invoice_no || '',
+              isAccountPayment: !r.invoice_no || r.invoice_no === 'دفعة من الحساب',
+              amount: Number(r.amount),
+              type: r.type,
+              is_deposited: r.is_deposited || false,
+              deposited_at: r.deposited_at || null,
+            }, ...prev].slice(0, 1500));
+          } else if (payload.eventType === 'UPDATE') {
+            const r = payload.new;
+            setReceiptVouchers(prev => prev.map(v => v.id === r.id ? {
+              id: r.id,
+              date: r.date,
+              repName: r.rep_name,
+              customerName: r.customer_name,
+              voucherNo: r.voucher_no,
+              invoiceNo: r.invoice_no || '',
+              isAccountPayment: !r.invoice_no || r.invoice_no === 'دفعة من الحساب',
+              amount: Number(r.amount),
+              type: r.type,
+              is_deposited: r.is_deposited || false,
+              deposited_at: r.deposited_at || null,
+            } : v));
+          } else if (payload.eventType === 'DELETE') {
+            setReceiptVouchers(prev => prev.filter(v => v.id !== payload.old.id));
+          }
+        } catch (err) {
+          if (import.meta.env.DEV) console.error('[Realtime] receipt_vouchers handler error:', err);
+        }
+      })
+      .subscribe((status) => {
+
+      });
+
     return () => {
       supabase.removeChannel(itemsChannel);
       supabase.removeChannel(transChannel);
+      supabase.removeChannel(rvChannel);
     };
   }, [currentUser, fetchInitialData]);
 
@@ -357,8 +436,7 @@ export function useDataFetcher({ currentUser }) {
     };
   }, [items]);
 
-  // ─── Public API ───────────────────────────────────────────────────────
-  return {
+  const value = {
     // Core data
     items, setItems,
     dbTransactionsList, setDbTransactionsList,
@@ -380,4 +458,18 @@ export function useDataFetcher({ currentUser }) {
     // Morning Brief
     morningBriefData,
   };
+
+  return (
+    <DataContext.Provider value={value}>
+      {children}
+    </DataContext.Provider>
+  );
+}
+
+export function useData() {
+  const context = useContext(DataContext);
+  if (!context) {
+    throw new Error('useData must be used within a DataProvider');
+  }
+  return context;
 }
