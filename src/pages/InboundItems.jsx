@@ -4,15 +4,15 @@ import {
   History, Search, Filter, Calendar, Package, 
   TrendingUp, ArrowLeft, Download, FileText, 
   ChevronDown, Layers, Box, Snowflake, Archive,
-  LogOut, FileDown, X, Printer
+  LogOut, FileDown, X, Printer, Thermometer, LayoutGrid
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { normalizeArabic } from '../lib/arabicTextUtils';
-import { useRealtimeManager } from '../contexts/RealtimeManagerContext';
 import { useAnimationConfig } from '../hooks/useAnimationConfig';
 import { useDebounce } from '../hooks/useDebounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { useAuth } from '../contexts/AuthContext';
 
 const InboundItemRow = React.memo(({ it, idx, getCatIcon }) => (
   <tr className="group hover:bg-slate-50 transition-colors border-b border-slate-100 h-[52px]">
@@ -62,7 +62,6 @@ export default function InboundItems({ setActiveView }) {
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [categoryFilter, setCategoryFilter] = useState('الكل');
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
-  const { subscribe } = useRealtimeManager();
 
   const parentRef = React.useRef(null);
   const rowVirtualizer = useVirtualizer({
@@ -103,13 +102,18 @@ export default function InboundItems({ setActiveView }) {
     }
   }, []);
 
-  // ─── Subscribe via global Realtime Manager (one connection for entire app) ───
+  // ─── Subscribe via direct Supabase channel (triggers unique RPC, not covered by DataContext) ───
   useEffect(() => {
     void fetchInboundItems();
-    const unsubProducts     = subscribe('products',     '*', () => void fetchInboundItems());
-    const unsubTransactions = subscribe('transactions', '*', () => void fetchInboundItems());
-    return () => { unsubProducts(); unsubTransactions(); };
-  }, [fetchInboundItems, subscribe]);
+
+    const channel = supabase
+      .channel('inbound-items-refresh')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => void fetchInboundItems())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => void fetchInboundItems())
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [fetchInboundItems]);
 
   const filteredItems = useMemo(() => {
     const allItems = transactions.filter(t => !t.is_summary);

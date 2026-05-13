@@ -4,8 +4,9 @@ import {
   X, Printer, Trash2, History, RotateCcw,
   FileText, CheckCircle2, Timer, User,
   Hash, MessageSquare, Package, ChevronRight,
-  ArrowLeft
+  ArrowLeft, Calendar
 } from 'lucide-react';
+import { normalizeArabic } from '../lib/arabicTextUtils';
 
 export function VoucherDetailModal({
   isOpen,
@@ -47,129 +48,142 @@ export function VoucherDetailModal({
   const historyEntries = parseHistory(voucher.line_note);
   const isEdited = historyEntries.length > 0;
 
+  // Render Table Row
+  const TableHeader = ({ isMain }) => (
+    <thead className="bg-slate-100/80 dark:bg-slate-800/80 sticky top-0 z-10 backdrop-blur-sm">
+      <tr className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
+        <th className="px-4 py-3 text-center w-10">م</th>
+        <th className="px-4 py-3 text-right border-x border-slate-200/50 dark:border-slate-700/50">اسم الصنف</th>
+        <th className="px-4 py-3 text-center w-28">الشركة</th>
+        <th className="px-4 py-3 text-center w-24 border-x border-slate-200/50 dark:border-slate-700/50">الكمية</th>
+        <th className="px-4 py-3 text-center w-24">الوحدة</th>
+        <th className="px-4 py-3 text-center w-28 border-x border-slate-200/50 dark:border-slate-700/50">القسم</th>
+        <th className="px-4 py-3 text-center w-16">
+          {isMain && !isCompleted ? 'إجراء' : ''}
+        </th>
+      </tr>
+    </thead>
+  );
+
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
+        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
         dir="rtl"
         onClick={onClose}
       >
         <motion.div
           onClick={(e) => e.stopPropagation()}
-          initial={{ opacity: 0, scale: 0.99, y: 10 }}
+          initial={{ opacity: 0, scale: 0.98, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.99, y: 10 }}
-          className={`w-full ${showVoucherHistory ? 'max-w-[1240px]' : 'max-w-5xl'} bg-[#fcfdfe] rounded-[2.5rem] shadow-2xl flex flex-col max-h-[88vh] overflow-hidden transition-all duration-300 border border-white`}
+          exit={{ opacity: 0, scale: 0.98, y: 10 }}
+          className={`w-full ${showVoucherHistory ? 'max-w-[95vw]' : 'max-w-5xl'} bg-white dark:bg-slate-900 rounded-3xl shadow-2xl flex flex-col h-[90vh] overflow-hidden transition-all duration-300 border border-slate-200 dark:border-slate-700`}
         >
-          {/* ─── ENHANCED HEADER WITH INTEGRATED INFO ─── */}
-          <div className="px-10 py-8 bg-white border-b border-slate-100 flex flex-col gap-6 shrink-0 shadow-sm">
-            <div className="flex items-center justify-between">
+          {/* ─── COMPACT HEADER ─── */}
+          <header className="px-6 py-5 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex flex-col gap-4 shrink-0 relative overflow-hidden">
+            <div className="flex items-center justify-between z-10">
                 <div className="flex items-center gap-5">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner ${isIn ? 'bg-indigo-50 text-indigo-500' : 'bg-teal-50 text-teal-500'}`}>
-                        {isIn ? <FileText size={28} /> : <Package size={28} />}
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${isIn ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'}`}>
+                        {isIn ? <FileText size={24} /> : <Package size={24} />}
                     </div>
-                    <div>
+                    <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-3">
-                            <h3 className="text-2xl font-black text-[#0f2747]">
+                            <h3 className="text-2xl font-black text-slate-800 dark:text-white leading-none">
                                 {voucher.isTransfer ? 'سند تحويل مخزني' : (isIn ? 'سند إدخال بضاعة' : 'سند إخراج بضاعة')}
                             </h3>
-                            <div className="flex gap-1.5 translate-y-0.5">
-                                <span className={`text-[10px] font-black px-3 py-1 rounded-full ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-white shadow-sm'}`}>
-                                    {isCompleted ? 'مفوتـر' : 'قيد المراجعة'}
+                            <div className="flex gap-1.5">
+                                <span className={`text-[10px] font-black px-2 py-1 rounded shadow-sm ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-slate-900'}`}>
+                                    {isCompleted ? 'مكتمل ومفوتـر' : 'قيد الانتظار'}
                                 </span>
-                                {isEdited && (
-                                    <span className="text-[10px] font-black px-3 py-1 rounded-full bg-indigo-500 text-white shadow-sm">معدّل</span>
-                                )}
+                                {isEdited && <span className="text-[10px] font-black px-2 py-1 rounded bg-indigo-500 text-white shadow-sm">معدّل</span>}
                             </div>
                         </div>
-                        <p className="text-[11px] font-bold text-slate-400 mt-1 flex items-center gap-1.5">
-                            <Timer size={14} className="opacity-50" /> {voucher.timestamp.toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                        </p>
                     </div>
                 </div>
-                <button onClick={onClose} className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-all">
+                
+                {!showVoucherHistory && (
+                  <div className="flex items-center gap-5 bg-white dark:bg-slate-800 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 max-w-3xl mx-6">
+                      <div className="flex-1 min-w-0">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">المستلم</span>
+                          <p className="text-sm font-black text-slate-700 dark:text-slate-200 truncate">{voucher.clientName}</p>
+                      </div>
+                      <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
+                      <div className="flex-1 min-w-0">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">رقم السند</span>
+                          <p className="text-sm font-black text-slate-700 dark:text-slate-200 tabular-nums">{voucher.voucherCode || '—'}</p>
+                      </div>
+                      <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
+                      <div className="flex-[2] min-w-0">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">الملاحظات</span>
+                          <p className="text-sm font-bold text-slate-600 dark:text-slate-300 truncate">{cleanNote(voucher.line_note)}</p>
+                      </div>
+                  </div>
+                )}
+
+                <button onClick={onClose} className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-xl transition-all">
                     <X size={24} />
                 </button>
             </div>
+          </header>
 
-            {/* INTEGRATED META STRIP (Moved from cards to header strip) */}
-            <div className="flex items-center gap-8 px-2 py-1 border-t border-slate-50 pt-5">
-                <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100"><User size={14} /></div>
-                    <div>
-                        <span className="text-[9px] font-black text-slate-400 block uppercase tracking-wider">المستلم</span>
-                        <p className="text-[13px] font-black text-[#0f2747]">{voucher.clientName}</p>
-                    </div>
-                </div>
-                <div className="w-px h-8 bg-slate-100"></div>
-                <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100"><Hash size={14} /></div>
-                    <div>
-                        <span className="text-[9px] font-black text-slate-400 block uppercase tracking-wider">رقم المستند</span>
-                        <p className="text-[13px] font-black text-[#0f2747] tabular-nums">{voucher.voucherCode || '-'}</p>
-                    </div>
-                </div>
-                <div className="w-px h-8 bg-slate-100"></div>
-                <div className="flex-1 flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100"><MessageSquare size={14} /></div>
-                    <div className="min-w-0">
-                        <span className="text-[9px] font-black text-slate-400 block uppercase tracking-wider">الملاحظات</span>
-                        <p className="text-[13px] font-bold text-slate-600 truncate leading-tight">{cleanNote(voucher.line_note)}</p>
-                    </div>
-                </div>
-            </div>
-          </div>
-
-          <div className="flex flex-1 overflow-hidden bg-[#fcfdfe]">
-            {/* ─── MAIN TABLE VIEW ─── */}
-            <div className="flex-1 flex flex-col p-10 overflow-y-auto custom-scrollbar">
-              <div className="flex items-center justify-between mb-5 px-1">
-                  <h4 className="text-xs font-black text-[#0f2747] uppercase tracking-[0.15em] flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-teal-500 animate-pulse"></div> قائمة الأصناف الحالية
+          <div className="flex flex-1 overflow-hidden bg-white dark:bg-slate-900">
+            
+            {/* ─── MAIN CONTENT: CURRENT ITEMS TABLE ─── */}
+            <div className={`flex flex-col p-6 overflow-hidden border-l border-slate-100 dark:border-slate-800 ${showVoucherHistory ? 'w-1/2' : 'w-full'} transition-all duration-300`}>
+              <div className="flex items-center justify-between mb-4 px-1">
+                  <h4 className="text-[13px] font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                      <div className="w-1.5 h-4 bg-indigo-500 rounded-sm" /> الاصدار الحالي
                   </h4>
-                  <span className="text-[10px] font-black text-slate-300 uppercase">{lines.length} صنف مسجل</span>
+                  <span className="text-[11px] font-black text-slate-500 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1 rounded flex items-center gap-1.5 shadow-sm">
+                      <Calendar size={14} /> 
+                      تاريخ هذا الاصدار: {voucher.timestamp.toLocaleString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
               </div>
+
+              {showVoucherHistory && (
+                  <div className="flex gap-4 mb-6 bg-slate-50/80 dark:bg-slate-800/80 p-4 rounded-xl border border-slate-100 dark:border-slate-700 h-[72px] items-center">
+                      <div className="flex-1 min-w-0">
+                          <span className="text-[8px] font-black text-slate-400 block mb-1 uppercase tracking-widest">المستلم الحالي</span>
+                          <p className="text-[13px] font-black text-slate-700 dark:text-slate-200 truncate">{voucher.clientName || '—'}</p>
+                      </div>
+                      <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
+                      <div className="flex-1 min-w-0 text-center">
+                          <span className="text-[8px] font-black text-slate-400 block mb-1 uppercase tracking-widest">رقم السند الحالي</span>
+                          <p className="text-[13px] font-black text-slate-700 dark:text-slate-200 tabular-nums">{voucher.voucherCode || '—'}</p>
+                      </div>
+                      <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
+                      <div className="flex-[2] min-w-0">
+                          <span className="text-[8px] font-black text-slate-400 block mb-1 uppercase tracking-widest">الملاحظات الحالية</span>
+                          <p className="text-[13px] font-bold text-slate-600 dark:text-slate-300 truncate">{cleanNote(voucher.line_note)}</p>
+                      </div>
+                  </div>
+              )}
               
-              <div className="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm flex-1 flex flex-col">
-                  <div className="flex-1 overflow-auto custom-scrollbar">
-                      <table className="w-full text-right border-collapse">
-                        <thead className="sticky top-0 bg-white z-10">
-                          <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50 border-b border-slate-100">
-                            <th className="px-8 py-5 w-16 text-center">م</th>
-                            <th className="px-8 py-5">اسم الصنف</th>
-                            <th className="px-8 py-5 text-center w-32 border-x border-slate-50">الكمية</th>
-                            <th className="px-8 py-5 text-center w-32">القسم</th>
-                            {!isCompleted && <th className="px-8 py-5 text-center w-20 border-r border-slate-50">حذف</th>}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
+              <div className="flex-1 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden flex flex-col shadow-sm">
+                  <div className="flex-1 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900">
+                      <table className="w-full text-right border-collapse text-sm">
+                        <TableHeader isMain={true} />
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                           {lines.map((line, idx) => (
-                            <tr key={idx} className="group hover:bg-slate-50/50 transition-all duration-200">
-                              <td className="px-8 py-4 text-center text-slate-300 font-black text-[11px]">{idx + 1}</td>
-                              <td className="px-8 py-4">
-                                <p className="text-[14px] font-black text-[#0f2747] group-hover:text-teal-600">{(line.item || '').replace(/\s*-\s*-$/, '').trim()}</p>
-                                <div className="flex gap-2 mt-1">
-                                    <span className="text-[9px] font-bold text-slate-400">الشركة: {line.company || '—'}</span>
-                                    <span className="text-[9px] font-bold text-slate-400">•</span>
-                                    <span className="text-[9px] font-bold text-slate-400">الوحدة: {line.unit || '—'}</span>
-                                </div>
+                            <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-50 dark:border-slate-800/50 last:border-0">
+                              <td className="px-4 py-2.5 text-center text-slate-400 font-black">{idx + 1}</td>
+                              <td className="px-4 py-2.5 font-black text-slate-800 dark:text-slate-200 border-x border-slate-100 dark:border-slate-800/50 text-[13px]">{(line.item || '').replace(/\s*-\s*-$/, '').trim()}</td>
+                              <td className="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500">{line.company || '—'}</td>
+                              <td className="px-4 py-2.5 text-center font-black tabular-nums border-x border-slate-100 dark:border-slate-800/50 text-[14px]">{line.qty}</td>
+                              <td className="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500">{line.unit || '—'}</td>
+                              <td className="px-4 py-2.5 text-center border-x border-slate-100 dark:border-slate-800/50 text-[11px] font-bold text-slate-500 w-24">
+                                <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded border border-indigo-100">{line.cat || '-'}</span>
                               </td>
-                              <td className="px-8 py-4 text-center">
-                                <span className="text-base font-black text-[#0f2747] tabular-nums">{line.qty}</span>
+                              <td className="px-4 py-2.5 text-center w-16">
+                                {!isCompleted && (
+                                    <button onClick={() => handleDeleteTransaction(line.id)} className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all">
+                                      <Trash2 size={16} />
+                                    </button>
+                                )}
                               </td>
-                              <td className="px-8 py-4 text-center">
-                                <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-3 py-1 rounded-lg border border-indigo-100">{line.cat || '-'}</span>
-                              </td>
-                              {!isCompleted && (
-                                <td className="px-8 py-4 text-center">
-                                  <button onClick={() => handleDeleteTransaction(line.id)} className="w-9 h-9 flex items-center justify-center text-slate-200 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
-                                    <Trash2 size={18} />
-                                  </button>
-                                </td>
-                              )}
                             </tr>
                           ))}
                         </tbody>
@@ -177,108 +191,149 @@ export function VoucherDetailModal({
                   </div>
               </div>
 
-              <div className="flex items-center justify-between mt-10 shrink-0">
-                <button onClick={() => printVoucher(voucher)} className="flex items-center gap-3 px-8 py-4 bg-white text-slate-600 border border-slate-200 rounded-2xl text-xs font-black hover:bg-slate-50 transition-all shadow-sm">
-                    <Printer size={18} /> معاينة الطباعة
-                </button>
+              {/* COMPACT FOOTER */}
+              <footer className="flex items-center justify-between mt-6 shrink-0">
+                <div />
                 <div className="flex gap-3">
-                  <button onClick={() => setShowVoucherHistory(!showVoucherHistory)} className={`flex items-center gap-3 px-8 py-4 rounded-2xl text-xs font-black transition-all ${showVoucherHistory ? 'bg-[#0f2747] text-white shadow-xl' : 'bg-white text-slate-400 border border-slate-200 hover:bg-slate-50'}`}>
-                    <History size={18} /> {showVoucherHistory ? 'إغلاق السجل' : 'عرض سجل التغييرات'}
+                  <button 
+                    onClick={() => setShowVoucherHistory(!showVoucherHistory)} 
+                    className={`flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-black transition-all shadow-sm ${showVoucherHistory ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 border border-indigo-200' : 'bg-white dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700 hover:bg-slate-50'}`}
+                  >
+                    <History size={18} /> {showVoucherHistory ? 'إغلاق السجل' : 'سجل التغييرات'}
                   </button>
                   {!isCompleted && !voucher.isTransfer && (
-                    <button onClick={() => handleMarkAsInvoiced(voucher)} className="flex items-center gap-3 px-10 py-4 bg-teal-500 text-white rounded-2xl text-sm font-black hover:bg-teal-600 shadow-xl shadow-teal-500/20 active:scale-95 transition-all">
-                      <CheckCircle2 size={20} /> {isIn ? 'اعتماد الوارد' : 'إصدار الفاتورة'}
+                    <button 
+                      onClick={() => handleMarkAsInvoiced(voucher)} 
+                      className="flex items-center gap-2 px-8 py-3 bg-emerald-500 text-white rounded-xl text-sm font-black hover:bg-emerald-600 shadow-sm active:scale-95 transition-all"
+                    >
+                      <CheckCircle2 size={20} /> {isIn ? 'اعتماد الدخول' : 'تأكيد وإصدار'}
                     </button>
                   )}
                 </div>
-              </div>
+              </footer>
             </div>
 
-            {/* ─── ENHANCED HISTORY SIDEBAR (Matches Current Design) ─── */}
+            {/* ─── SIDEBAR: HISTORY TABLE (SIDE-BY-SIDE) ─── */}
             <AnimatePresence>
               {showVoucherHistory && (
-                <motion.div
+                <motion.aside
                   initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 440, opacity: 1 }}
+                  animate={{ width: '50%', opacity: 1 }}
                   exit={{ width: 0, opacity: 0 }}
-                  className="bg-[#f8fafb] border-r border-slate-100 flex flex-col shrink-0 overflow-hidden shadow-inner"
+                  transition={{ type: 'tween', duration: 0.3 }}
+                  className="bg-slate-50 dark:bg-slate-900/50 flex flex-col shrink-0 overflow-hidden"
                 >
-                  <div className="p-8 bg-white border-b border-slate-100 flex items-center justify-between shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <History size={20} className="text-indigo-600" />
-                        <div>
-                            <h4 className="text-sm font-black text-[#0f2747]">النسخ المؤرشفة</h4>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">تتبع التغييرات الزمنية</p>
-                        </div>
+                  <div className="p-6 flex-1 flex flex-col overflow-hidden">
+                    <div className="flex items-center justify-between mb-4 px-1">
+                        <h4 className="text-[13px] font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                            <div className="w-1.5 h-4 bg-amber-500 rounded-sm" /> الاصدار المؤرشف
+                        </h4>
+                        <span className="text-[11px] font-black text-slate-500 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1 rounded flex items-center gap-1.5 shadow-sm">
+                            <Calendar size={14} /> 
+                            {historyEntries.length > 0 ? (
+                                <>تاريخ هذا الاصدار: {(historyEntries.length > 0 ? new Date(historyEntries[0].at) : voucher.timestamp).toLocaleString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</>
+                            ) : 'لا يوجد سجل'}
+                        </span>
                     </div>
-                    <button onClick={() => setShowVoucherHistory(false)} className="text-slate-300 hover:text-slate-600">
-                      <ChevronRight size={24} />
-                    </button>
-                  </div>
 
-                  <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
-                    {historyEntries.map((entry, idx) => (
-                      <div key={idx} className="relative">
-                        {/* Timeline Marker */}
-                        <div className="absolute top-0 -right-[27px] w-4 h-4 rounded-full bg-white border-2 border-indigo-400 z-10 shadow-sm" />
-                        
-                        <div className="bg-white rounded-[1.5rem] border border-slate-200/60 shadow-sm overflow-hidden hover:border-indigo-200 transition-colors">
-                          <div className="bg-slate-50 px-5 py-3.5 flex items-center justify-between border-b border-slate-100">
-                            <span className="text-[11px] font-black text-[#0f2747] tabular-nums">
-                                {new Date(entry.at).toLocaleString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                            <span className="text-[9px] font-black bg-white px-2 py-1 rounded-lg border border-slate-200 text-slate-400 uppercase tracking-tighter">نسخة مؤرشفة</span>
-                          </div>
-                          
-                          <div className="p-5">
-                            <table className="w-full text-right text-[11px] mb-4">
-                              <thead>
-                                <tr className="text-slate-400 font-black uppercase tracking-widest text-[9px]">
-                                  <th className="pb-3 pr-1">الصنف المـؤرشف</th>
-                                  <th className="pb-3 text-center w-20">الكمية</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-50">
-                                {(entry.lines || []).map((ol, oIdx) => {
-                                  const currentMatch = lines.find(cl => cl.item === ol.item);
-                                  const isChanged = currentMatch && Number(currentMatch.qty) !== Number(ol.qty);
-                                  const isRemoved = !currentMatch;
+                    <div className="flex-1 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden flex flex-col shadow-sm bg-white dark:bg-slate-900 relative">
+                        {historyEntries.length > 0 ? (
+                            <div className="flex-1 overflow-y-auto custom-scrollbar">
+                                {historyEntries.map((entry, idx) => {
+                                  // Determine if meta data changed in this history entry
+                                  const oldClient = entry.clientName || entry.recipient || entry.client;
+                                  const oldCode = entry.voucherCode || entry.code;
+                                  const oldNotes = entry.notes || entry.line_note;
                                   
+                                  const currentClient = voucher.clientName || voucher.recipient;
+                                  const currentCode = voucher.voucherCode;
+                                  const currentNotes = cleanNote(voucher.line_note);
+
+                                  const hasOldClient = oldClient && normalizeArabic(oldClient) !== normalizeArabic(currentClient);
+                                  const hasOldCode = oldCode && normalizeArabic(oldCode) !== normalizeArabic(currentCode);
+                                  const hasOldNotes = oldNotes && normalizeArabic(cleanNote(oldNotes)) !== normalizeArabic(currentNotes);
+                                  
+                                  const hasMetaChanges = hasOldClient || hasOldCode || hasOldNotes;
+
+                                  // Only display the first entry (most recent archive) as full view to mimic side-by-side
+                                  if (idx !== 0) return null;
+
                                   return (
-                                    <tr key={oIdx} className={`transition-colors ${isRemoved ? 'bg-rose-50/50' : isChanged ? 'bg-amber-50/50' : ''}`}>
-                                      <td className={`py-2.5 px-2 font-black leading-tight ${isRemoved ? 'text-rose-500' : isChanged ? 'text-amber-700' : 'text-slate-700'}`}>
-                                        {ol.item}
-                                        <div className="flex gap-1 mt-1">
-                                            {isRemoved && <span className="text-[8px] font-black text-rose-600">× محذوف</span>}
-                                            {isChanged && <span className="text-[8px] font-black text-amber-600 flex items-center gap-1">
-                                                <ArrowLeft size={8} /> تعدل إلى {currentMatch.qty}
-                                            </span>}
+                                    <div key={idx} className="flex flex-col h-full">
+                                      {hasMetaChanges && (
+                                        <div className="flex gap-4 mb-6 bg-slate-50/80 dark:bg-slate-800/80 p-4 rounded-xl border border-slate-100 dark:border-slate-700 h-[72px] items-center">
+                                            <div className="flex-1 min-w-0">
+                                                <span className="text-[8px] font-black text-slate-400 block mb-1 uppercase tracking-widest">المستلم القديم</span>
+                                                <p className={`text-[13px] font-black truncate ${hasOldClient ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>{oldClient || '—'}</p>
+                                            </div>
+                                            <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
+                                            <div className="flex-1 min-w-0 text-center">
+                                                <span className="text-[8px] font-black text-slate-400 block mb-1 uppercase tracking-widest">رقم السند القديم</span>
+                                                <p className={`text-[13px] font-black tabular-nums ${hasOldCode ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>{oldCode || '—'}</p>
+                                            </div>
+                                            <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
+                                            <div className="flex-[2] min-w-0">
+                                                <span className="text-[8px] font-black text-slate-400 block mb-1 uppercase tracking-widest">الملاحظات القديمة</span>
+                                                <p className={`text-[13px] font-bold truncate ${hasOldNotes ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>{cleanNote(oldNotes)}</p>
+                                            </div>
                                         </div>
-                                      </td>
-                                      <td className="py-2.5 text-center font-black tabular-nums">{ol.qty}</td>
-                                    </tr>
+                                      )}
+
+                                      <table className="w-full text-right border-collapse text-sm">
+                                        <TableHeader isMain={false} />
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                          {(entry.lines || []).map((ol, oIdx) => {
+                                            // Normalize strings for matching using the professional Arabic utility
+                                            const olItemNorm = normalizeArabic(ol.item);
+                                            
+                                            const currentMatch = lines.find(cl => normalizeArabic(cl.item) === olItemNorm);
+                                            const isChanged = currentMatch && Number(currentMatch.qty) !== Number(ol.qty);
+                                            const isRemoved = !currentMatch;
+                                            
+                                            // Extract company/unit/cat from the string if it's formatted like "Item Name - Company" or just fallback to '-'
+                                            const parts = ol.item.split(' - ');
+                                            const rawName = parts[0];
+                                            const rawCompany = parts.length > 1 ? parts[1] : '—';
+
+                                            return (
+                                              <tr key={oIdx} className={`group transition-all duration-200 border-b border-slate-50 dark:border-slate-800/50 last:border-0 ${
+                                                isRemoved ? 'bg-rose-50/80 hover:bg-rose-100/80 dark:bg-rose-500/10' : 
+                                                isChanged ? 'bg-amber-50/80 hover:bg-amber-100/80 dark:bg-amber-500/10' : 
+                                                'bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800/50'
+                                              }`}>
+                                                <td className="px-4 py-2.5 text-center text-slate-400 font-black">{oIdx + 1}</td>
+                                                <td className={`px-4 py-2.5 font-black border-x border-slate-100 dark:border-slate-800/50 text-[13px] ${isRemoved ? 'text-rose-700 dark:text-rose-400 line-through decoration-rose-300' : (isChanged ? 'text-amber-700 dark:text-amber-600' : 'text-slate-800 dark:text-slate-200')}`}>
+                                                    {rawName}
+                                                    {isRemoved && <span className="mr-3 text-[9px] font-black text-rose-600 bg-rose-100/80 dark:bg-rose-500/20 px-2 py-0.5 rounded shadow-sm border border-rose-200 dark:border-rose-500/30 no-underline inline-block">محذوف</span>}
+                                                    {isChanged && <span className="mr-3 text-[9px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 no-underline inline-block">تعديل كمية</span>}
+                                                </td>
+                                                <td className="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500">{rawCompany}</td>
+                                                <td className={`px-4 py-2.5 text-center font-black tabular-nums border-x border-slate-100 dark:border-slate-800/50 text-[14px] ${isChanged ? 'text-amber-700 dark:text-amber-400' : ''}`}>
+                                                    {ol.qty}
+                                                </td>
+                                                <td className="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500 w-24">—</td>
+                                                <td className="px-4 py-2.5 text-center border-x border-slate-100 dark:border-slate-800/50 text-[11px] text-slate-400 w-28">—</td>
+                                                <td className="px-4 py-2.5 text-center w-16">
+                                                  {isRemoved && <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">حذف</span>}
+                                                </td>
+                                              </tr>
+                                            );
+                                          })}
+                                        </tbody>
+                                      </table>
+                                    </div>
                                   );
                                 })}
-                              </tbody>
-                            </table>
-                            {entry.notes && (
-                                <div className="mt-2 pt-3 border-t border-slate-50 flex items-start gap-2">
-                                    <MessageSquare size={12} className="text-slate-300 shrink-0 mt-0.5" />
-                                    <p className="text-[10px] font-bold text-slate-400 italic line-clamp-2 leading-relaxed">الملاحظة وقتها: {entry.notes}</p>
-                                </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {historyEntries.length === 0 && (
-                        <div className="py-20 text-center opacity-30">
-                            <History size={64} strokeWidth={1} className="mx-auto mb-4 text-slate-300" />
-                            <p className="text-sm font-black text-slate-400 uppercase tracking-widest">لا توجد سجلات مؤرشفة</p>
-                        </div>
-                    )}
+                            </div>
+                        ) : (
+                            <div className="flex-1 flex flex-col items-center justify-center opacity-40">
+                                <History size={64} strokeWidth={1} className="mb-4 text-slate-400" />
+                                <p className="text-sm font-black text-slate-500 uppercase">لا توجد تغييرات مؤرشفة</p>
+                            </div>
+                        )}
+                    </div>
                   </div>
-                </motion.div>
+                </motion.aside>
               )}
             </AnimatePresence>
           </div>

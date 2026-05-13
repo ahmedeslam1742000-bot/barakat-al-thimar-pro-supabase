@@ -76,13 +76,6 @@ export default function PriceList({ setActiveView }) {
   const inputRef = useRef(null);
   const parentRef = useRef(null);
 
-  const rowVirtualizer = useVirtualizer({
-    count: filteredItems.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 52,
-    overscan: 10,
-  });
-
   // Refs for current state to avoid closure issues in event listener
   const stateRef = useRef({ isEditModalOpen, isSaveConfirmOpen, isExitConfirmOpen, newPrice, selectedItem });
   useEffect(() => {
@@ -105,6 +98,13 @@ export default function PriceList({ setActiveView }) {
       return matchesSearch && matchesCat;
     });
   }, [items, debouncedSearchQuery, selectedCat]);
+
+  const rowVirtualizer = useVirtualizer({
+    count: filteredItems.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 52,
+    overscan: 10,
+  });
 
   rowVirtualizer.options.count = filteredItems.length;
 

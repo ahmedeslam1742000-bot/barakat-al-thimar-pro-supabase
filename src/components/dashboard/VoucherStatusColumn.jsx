@@ -79,7 +79,7 @@ export const VoucherStatusColumn = React.memo(function VoucherStatusColumn({
                           </p>
                           {voucher.line_note && (
                             <p className="text-[9px] font-black text-indigo-500 font-tajawal truncate bg-indigo-50/50 px-1.5 py-0.5 rounded border border-indigo-100/50 w-fit max-w-full">
-                              {voucher.line_note.split(/\[تعديل حديث\]|\[تم تعديله\]|\[تم إصدار الفاتورة|\[إضافة مراجعة\]|\[مستند رقم|\[نوع:|<!--/)[0].trim()}
+                              {voucher.line_note.split(/\[تعديل بعد الفوترة\]|\[تعديل حديث\]|\[تم تعديله\]|\[تم إصدار الفاتورة|\[إضافة مراجعة\]|\[مستند رقم|\[نوع:|<!--/)[0].trim()}
                             </p>
                           )}
                         </div>

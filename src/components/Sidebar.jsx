@@ -71,6 +71,7 @@ const menuGroups = [
     label: 'إدارة المستودع',
     icon: Archive,
     subItems: [
+      { id: 'sales-analytics', label: 'تحليل المبيعات', view: 'sales-analytics' },
       { id: 'inbound-records', label: 'أذونات الواردات', view: 'inbound-records' },
       { id: 'stock-card', label: 'الرصيد التراكمي', view: 'stock-card' },
       { id: 'inventory-check', label: 'جرد المستودع', view: 'inventory' },

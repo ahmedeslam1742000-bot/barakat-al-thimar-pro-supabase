@@ -296,7 +296,20 @@ export function useInvoiceModal({
         };
 
         if (setInvoiceDataForCapture) setInvoiceDataForCapture(invData);
-        await new Promise(r => setTimeout(r, 800));
+
+        // Wait for the InvoiceTemplate to signal it's rendered and ready for capture
+        await new Promise(resolve => {
+          const handler = () => {
+            window.removeEventListener('invoice-ready', handler);
+            resolve();
+          };
+          window.addEventListener('invoice-ready', handler);
+          // Safety fallback to prevent hanging if event never fires
+          setTimeout(() => {
+            window.removeEventListener('invoice-ready', handler);
+            resolve();
+          }, 2500);
+        });
 
         const element = document.getElementById('invoice-capture-area');
         if (element) {
@@ -330,6 +343,13 @@ export function useInvoiceModal({
     uploadToCloudinary, setInvoiceDataForCapture, setInvoiceTimestamps,
     playSuccess, performInvoiceReset, fetchInitialData, setLoading,
   ]);
+
+  // Bypass the unrendered confirmation modal
+  useEffect(() => {
+    if (showInvoiceSaveConfirm) {
+      performInvoiceSave();
+    }
+  }, [showInvoiceSaveConfirm, performInvoiceSave]);
 
   // ─── Public API ───────────────────────────────────────────────────────
   return {

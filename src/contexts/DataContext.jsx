@@ -441,6 +441,7 @@ export function DataProvider({ children, currentUser }) {
     items, setItems,
     dbTransactionsList, setDbTransactionsList,
     repsList, setRepsList,
+    receiptVouchers, setReceiptVouchers,
     fetchInitialData,
     // Voucher derivations
     voucherTransactionsMemo,

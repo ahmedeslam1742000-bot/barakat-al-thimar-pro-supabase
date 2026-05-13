@@ -6,6 +6,16 @@ import React from 'react';
  * Extracted from Dashboard.jsx for performance (code-splitting + smaller re-render surface).
  */
 const InvoiceTemplate = React.memo(({ data }) => {
+  React.useEffect(() => {
+    if (data) {
+      // Small delay to ensure browser has painted the new content
+      const timer = setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('invoice-ready'));
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [data]);
+
   if (!data) return null;
   const isSale = data.type === 'sale';
 

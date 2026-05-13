@@ -14,6 +14,7 @@ import { getItemName, getCompany, getCategory, getUnit, formatItemDisplay } from
 import { useData } from '../contexts/DataContext';
 import { useDebounce } from '../hooks/useDebounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import SmartDateInput from '../components/SmartDateInput';
 
 const ReturnVoucherRow = React.memo(({ v, idx, setSelectedVoucher, setIsDetailsModalOpen }) => (
   <tr 
@@ -174,22 +175,6 @@ export default function Returns({ setActiveView }) {
   const [draftQty, setDraftQty] = useState('');
   const [draftStatus, setDraftStatus] = useState('سليم');
   const [searchIdx, setSearchIdx] = useState(-1);
-
-  const parentRef = useRef(null);
-  const rowVirtualizer = useVirtualizer({
-    count: 0,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 52,
-    overscan: 10,
-  });
-
-  const parentRef = useRef(null);
-  const rowVirtualizer = useVirtualizer({
-    count: 0, // Updated below
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 52,
-    overscan: 10,
-  });
 
   // Auto-focus on item search when modal opens
   useEffect(() => {
@@ -812,7 +797,12 @@ export default function Returns({ setActiveView }) {
             </div>
             <div>
               <label className={LabelClass}>تاريخ الاستلام</label>
-              <input type="date" className={`${InputClass} h-11`} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} required />
+              <SmartDateInput 
+                value={bulkDate} 
+                onChange={(val) => setBulkDate(val)} 
+                className={`${InputClass} pr-12 h-11`}
+                required 
+              />
             </div>
           </div>
 
@@ -1051,11 +1041,10 @@ export default function Returns({ setActiveView }) {
           </div>
           <div>
             <label className={LabelClass}>التاريخ</label>
-            <input
-              type="date"
-              className={InputClass}
+            <SmartDateInput
               value={editForm.date}
-              onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+              onChange={(val) => setEditForm({ ...editForm, date: val })}
+              className={`${InputClass} pr-12`}
               required
             />
           </div>

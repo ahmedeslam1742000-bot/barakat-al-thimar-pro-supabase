@@ -16,6 +16,7 @@ const InboundItems = lazy(() => import('./pages/InboundItems'));
 const StockCard = lazy(() => import('./pages/StockCard'));
 const PriceList = lazy(() => import('./pages/PriceList'));
 const ReceiptVouchers = lazy(() => import('./pages/ReceiptVouchers'));
+const SalesAnalytics = lazy(() => import('./pages/SalesAnalytics'));
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SettingsProvider } from './contexts/SettingsContext';
@@ -36,6 +37,7 @@ const viewConfig = {
   'inbound-records': { component: InboundRecords, title: 'أذونات الواردات', icon: History },
   'stock-card': { component: StockCard, title: 'الرصيد التراكمي', icon: History },
   'price-list': { component: PriceList, title: 'الأسعار', icon: Tags },
+  'sales-analytics': { component: SalesAnalytics, title: 'تحليل المبيعات', icon: TrendingUp },
   'settings': { component: Settings },
 };
 
@@ -105,7 +107,6 @@ function AuthenticatedAppContent({ activeView, setActiveView, canAccess }) {
 }
 
 import { AudioProvider } from './contexts/AudioContext';
-import { RealtimeManagerProvider } from './contexts/RealtimeManagerContext';
 
 function App() {
   return (
@@ -113,10 +114,8 @@ function App() {
       <SettingsProvider>
         <AudioProvider>
           <AuthProvider>
-            <RealtimeManagerProvider>
-              <AuthenticatedApp />
-              <Toaster position="top-center" richColors theme="light" />
-            </RealtimeManagerProvider>
+            <AuthenticatedApp />
+            <Toaster position="top-center" richColors theme="light" />
           </AuthProvider>
         </AudioProvider>
       </SettingsProvider>

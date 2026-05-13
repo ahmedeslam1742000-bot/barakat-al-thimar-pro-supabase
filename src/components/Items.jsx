@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Plus, X, Pencil, Trash2, FileText, 
@@ -9,6 +9,7 @@ import {
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../contexts/DataContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 
 const CATS = ['مجمدات', 'بلاستيك', 'تبريد'];
@@ -16,10 +17,10 @@ const UNITS = ['كرتونة', 'قطعة', 'كيلو', 'لتر', 'طرد', 'عل
 
 export default function Items({ setActiveView }) {
   const { isViewer } = useAuth();
-  const [items, setItems] = useState([]);
+  // ─── Items from global DataContext (no independent fetch or Realtime channel needed) ───
+  const { items } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('الكل');
-  const [loading, setLoading] = useState(false);
   const [dynamicCats] = useState(CATS);
   const [dynamicUnits] = useState(UNITS);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
@@ -27,24 +28,6 @@ export default function Items({ setActiveView }) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [formState, setFormState] = useState({ name: '', company: '', cat: 'مجمدات', unit: 'كرتونة' });
-
-  // --- LIVE SUPABASE SYNC ---
-  const fetchInitialData = async () => {
-    setLoading(true);
-    const { data: itemsData } = await supabase.from('products').select('id, name, company, cat, unit, stock_qty').order('name');
-    if (itemsData) {
-      setItems(itemsData.map(d => ({ ...d, stockQty: d.stock_qty })));
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchInitialData();
-    const itemsChannel = supabase.channel('public:products')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchInitialData)
-      .subscribe();
-    return () => supabase.removeChannel(itemsChannel);
-  }, []);
 
   // --- FILTERING ---
   const filteredItems = useMemo(() => {

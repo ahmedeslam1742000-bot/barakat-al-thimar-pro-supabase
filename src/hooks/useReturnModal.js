@@ -198,6 +198,13 @@ export function useReturnModal({
     }
   }, [returnForm, returnItems, playSuccess, performReturnReset, fetchInitialData, setLoading]);
 
+  // Bypass the unrendered confirmation modal
+  useEffect(() => {
+    if (showReturnSaveConfirm) {
+      performReturnSave();
+    }
+  }, [showReturnSaveConfirm, performReturnSave]);
+
   // ─── Public API ───────────────────────────────────────────────────────
   return {
     // State

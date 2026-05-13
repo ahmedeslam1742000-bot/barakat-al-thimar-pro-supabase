@@ -1,16 +1,13 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Search, Plus, X, Pencil, Trash2, FileText, Image, 
-  Snowflake, Package, Archive, Box, AlertTriangle, 
-  Download, ChevronDown, CheckCircle, ArrowUpRight, Flame, User, Printer, Calendar, Layers, LogOut,
-  Sparkles, Eye
+  Search, X,
+  Snowflake, Package, Archive, Box,
+  ArrowUpRight, User, Calendar, Layers, LogOut,
+  Sparkles
 } from 'lucide-react';
-import { supabase } from '../lib/supabaseClient';
-import { toast } from 'sonner';
 import { useAudio } from '../contexts/AudioContext';
-import { useAuth } from '../contexts/AuthContext';
-
+import { useData } from '../contexts/DataContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { formatDate } from '../lib/dateUtils';
 
@@ -22,36 +19,9 @@ const categoryIcons = {
 const getCatIcon = (catName) => categoryIcons[catName] || <Package size={18} className="text-slate-500" />;
 
 export default function StockOut({ setActiveView }) {
-  const { playSuccess } = useAudio();
-  const { currentUser } = useAuth();
-
-  const [items, setItems] = useState([]);
-  const [transactions, setTransactions] = useState([]);
+  // ─── Data from global DataContext (no independent fetch needed) ───
+  const { items, dbTransactionsList: transactions } = useData();
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      setLoading(true);
-      const { data: itemsData } = await supabase.from('products').select('*');
-      if (itemsData) setItems(itemsData);
-      
-      const { data: transData } = await supabase.from('transactions').select('*').order('timestamp', { ascending: false }).limit(400);
-      if (transData) setTransactions(transData);
-      setLoading(false);
-    };
-    fetchInitialData();
-    const channel = supabase.channel('stock-out-sync').on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
-      if (payload.eventType === 'INSERT') {
-        setTransactions((prev) => [payload.new, ...prev].slice(0, 400));
-      } else if (payload.eventType === 'UPDATE') {
-        setTransactions((prev) => prev.map(t => t.id === payload.new.id ? payload.new : t));
-      } else if (payload.eventType === 'DELETE') {
-        setTransactions((prev) => prev.filter(t => t.id !== payload.old.id));
-      }
-    }).subscribe();
-    return () => supabase.removeChannel(channel);
-  }, []);
 
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -167,12 +137,7 @@ export default function StockOut({ setActiveView }) {
       <div className="flex-1 overflow-hidden p-6 pt-4">
         <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden h-full flex flex-col">
           <div className="flex-1 overflow-auto custom-scrollbar">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
-                <div className="w-12 h-12 border-4 border-slate-100 border-t-indigo-500 rounded-full animate-spin" />
-                <p className="font-bold">جاري تحميل سجلات الفواتير...</p>
-              </div>
-            ) : groupedInvoices.length === 0 ? (
+            {groupedInvoices.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full gap-6 text-slate-400 opacity-60">
                 <ArrowUpRight size={40} className="text-slate-200" />
                 <p className="text-lg font-black">لا توجد سجلات</p>

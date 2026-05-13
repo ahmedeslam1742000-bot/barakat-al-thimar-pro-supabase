@@ -10,8 +10,10 @@ import {
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { useAudio } from '../contexts/AudioContext';
+import { useData } from '../contexts/DataContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { formatDate } from '../lib/dateUtils';
+import SmartDateInput from './SmartDateInput';
 
 // --- Premium UI Components ---
 
@@ -31,10 +33,11 @@ const PremiumInput = React.forwardRef(({ className, isError, ...props }, ref) =>
 
 export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
   const { playSuccess, playWarning } = useAudio();
-  const [items, setItems] = useState([]);
+  // ─── Items from global DataContext (no independent fetch needed) ───
+  const { items } = useData();
   const [loading, setLoading] = useState(false);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
-  
+
   // Refs for Advanced Keyboard Navigation
   const itemNameRef = useRef(null);
   const qtyRef = useRef(null);
@@ -77,26 +80,6 @@ export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
   
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
-
-  useEffect(() => {
-    const fetchItems = async () => {
-      try {
-
-        const { data, error } = await supabase.from('products').select('id, name, company, cat, unit, stock_qty');
-        if (error) {
-          console.error("❌ StockInwardModal: Error fetching products:", error);
-          return;
-        }
-        if (data) {
-
-          setItems(data);
-        }
-      } catch (err) {
-        console.error("❌ StockInwardModal: Unexpected error fetching products:", err);
-      }
-    };
-    fetchItems();
-  }, []);
 
   // Handle Global ESC Key
   useEffect(() => {
@@ -455,7 +438,11 @@ export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
                     </div>
                     <div className="group">
                       <CompactLabel required>تاريخ التوريد</CompactLabel>
-                      <input type="date" className="w-full h-9 bg-white border border-slate-100 rounded-xl px-3 font-bold text-xs outline-none focus:border-[#279489]/40 transition-all text-center" value={stockForm.date} onChange={e => setStockForm({ ...stockForm, date: e.target.value })} />
+                      <SmartDateInput 
+                        value={stockForm.date} 
+                        onChange={(val) => setStockForm({ ...stockForm, date: val })} 
+                        className="w-full h-9 bg-white border border-slate-100 rounded-xl px-3 pr-9 font-bold text-xs outline-none focus:border-[#279489]/40 transition-all text-center"
+                      />
                     </div>
                     <div className="group">
                       <CompactLabel required>نوع المستند</CompactLabel>
