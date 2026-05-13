@@ -113,7 +113,7 @@ export default function InboundRecords({ setActiveView }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isDetailsOpen, isImageZoomed]);
 
-  const records = useMemo(() => {
+  const computedRecords = useMemo(() => {
     if (!dbTransactionsList) return [];
     
     // 1. Filter inbound transactions
@@ -158,7 +158,7 @@ export default function InboundRecords({ setActiveView }) {
   }, [dbTransactionsList, globalItems]);
 
   const filteredRecords = useMemo(() => {
-    return records.filter(r => {
+    return computedRecords.filter(r => {
       // Exclude unspecified suppliers
       if (r.supplier === 'غير محدد') return false;
 
