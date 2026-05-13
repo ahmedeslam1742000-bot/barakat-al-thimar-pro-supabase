@@ -78,8 +78,6 @@ const categoryIcons = {
 };
 
 export default function InboundRecords({ setActiveView }) {
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('الكل');
   const [dateRange, setDateRange] = useState({ from: '', to: '' });
@@ -87,7 +85,7 @@ export default function InboundRecords({ setActiveView }) {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isImageZoomed, setIsImageZoomed] = useState(false);
-  const { dbTransactionsList, items: globalItems, isLoading: loading } = useData();
+  const { dbTransactionsList, items: globalItems, isLoading: isDataLoading } = useData();
 
   const parentRef = React.useRef(null);
   const rowVirtualizer = useVirtualizer({
