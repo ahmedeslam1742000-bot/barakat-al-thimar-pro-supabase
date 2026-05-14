@@ -283,14 +283,20 @@ export function VoucherDetailModal({
                                         <TableHeader isMain={false} />
                                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                           {(entry.lines || []).map((ol, oIdx) => {
-                                            // Normalize strings for matching using the professional Arabic utility
-                                            const olItemNorm = normalizeArabic(ol.item);
+                                            // Normalize the base item name (ignore company suffix after ' - ') for flexible matching
+                                            const olBaseName = normalizeArabic(ol.item.split(' - ')[0].trim());
                                             
-                                            const currentMatch = lines.find(cl => normalizeArabic(cl.item) === olItemNorm);
-                                            const isChanged = currentMatch && Number(currentMatch.qty) !== Number(ol.qty);
+                                            // Match current line by base name only (flexible match)
+                                            const currentMatch = lines.find(cl => {
+                                              const clBase = normalizeArabic((cl.item || '').split(' - ')[0].trim());
+                                              return clBase === olBaseName;
+                                            });
+                                            
                                             const isRemoved = !currentMatch;
+                                            const isChanged = !isRemoved && Number(currentMatch.qty) !== Number(ol.qty);
+                                            const isUnchanged = !isRemoved && !isChanged;
                                             
-                                            // Extract company/unit/cat from the string if it's formatted like "Item Name - Company" or just fallback to '-'
+                                            // Extract display name & company from archived item string
                                             const parts = ol.item.split(' - ');
                                             const rawName = parts[0];
                                             const rawCompany = parts.length > 1 ? parts[1] : '—';
@@ -299,22 +305,43 @@ export function VoucherDetailModal({
                                               <tr key={oIdx} className={`group transition-all duration-200 border-b border-slate-50 dark:border-slate-800/50 last:border-0 ${
                                                 isRemoved ? 'bg-rose-50/80 hover:bg-rose-100/80 dark:bg-rose-500/10' : 
                                                 isChanged ? 'bg-amber-50/80 hover:bg-amber-100/80 dark:bg-amber-500/10' : 
-                                                'bg-white hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800/50'
+                                                'bg-white hover:bg-slate-50/50 dark:bg-slate-900 dark:hover:bg-slate-800/50'
                                               }`}>
                                                 <td className="px-4 py-2.5 text-center text-slate-400 font-black">{oIdx + 1}</td>
-                                                <td className={`px-4 py-2.5 font-black border-x border-slate-100 dark:border-slate-800/50 text-[13px] ${isRemoved ? 'text-rose-700 dark:text-rose-400 line-through decoration-rose-300' : (isChanged ? 'text-amber-700 dark:text-amber-600' : 'text-slate-800 dark:text-slate-200')}`}>
+                                                <td className={`px-4 py-2.5 font-black border-x border-slate-100 dark:border-slate-800/50 text-[13px] ${
+                                                  isRemoved ? 'text-rose-700 dark:text-rose-400 line-through decoration-rose-300/60' : 
+                                                  isChanged ? 'text-amber-700 dark:text-amber-500' : 
+                                                  'text-slate-700 dark:text-slate-200'
+                                                }`}>
                                                     {rawName}
-                                                    {isRemoved && <span className="mr-3 text-[9px] font-black text-rose-600 bg-rose-100/80 dark:bg-rose-500/20 px-2 py-0.5 rounded shadow-sm border border-rose-200 dark:border-rose-500/30 no-underline inline-block">محذوف</span>}
-                                                    {isChanged && <span className="mr-3 text-[9px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 no-underline inline-block">تعديل كمية</span>}
+                                                    {isRemoved && (
+                                                      <span className="mr-3 text-[9px] font-black text-rose-600 bg-rose-100 dark:bg-rose-500/20 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-500/30 no-underline inline-block">
+                                                        🗑 محذوف
+                                                      </span>
+                                                    )}
+                                                    {isChanged && (
+                                                      <span className="mr-3 text-[9px] font-black text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-500/30 no-underline inline-block">
+                                                        ✏️ تعديل كمية
+                                                      </span>
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500">{rawCompany}</td>
-                                                <td className={`px-4 py-2.5 text-center font-black tabular-nums border-x border-slate-100 dark:border-slate-800/50 text-[14px] ${isChanged ? 'text-amber-700 dark:text-amber-400' : ''}`}>
+                                                <td className={`px-4 py-2.5 text-center font-black tabular-nums border-x border-slate-100 dark:border-slate-800/50 text-[14px] ${
+                                                  isChanged ? 'text-amber-600 dark:text-amber-400 line-through decoration-amber-300/60' : 
+                                                  isRemoved ? 'text-rose-400' : 
+                                                  'text-slate-700 dark:text-slate-300'
+                                                }`}>
                                                     {ol.qty}
+                                                    {isChanged && (
+                                                      <span className="text-emerald-600 dark:text-emerald-400 no-underline mr-2 text-[13px]">← {currentMatch.qty}</span>
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500 w-24">—</td>
                                                 <td className="px-4 py-2.5 text-center border-x border-slate-100 dark:border-slate-800/50 text-[11px] text-slate-400 w-28">—</td>
                                                 <td className="px-4 py-2.5 text-center w-16">
-                                                  {isRemoved && <span className="text-[9px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">حذف</span>}
+                                                  {isRemoved && <span className="text-[9px] font-black text-rose-600 bg-rose-50 dark:bg-rose-500/10 px-2 py-0.5 rounded border border-rose-200">حذف</span>}
+                                                  {isChanged && <span className="text-[9px] font-black text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded border border-amber-200">تعديل</span>}
+                                                  {isUnchanged && <span className="text-[9px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">كما هو</span>}
                                                 </td>
                                               </tr>
                                             );
