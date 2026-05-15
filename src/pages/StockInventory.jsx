@@ -11,7 +11,7 @@ import { normalizeArabic } from '../lib/arabicTextUtils';
 import { useDebounce } from '../hooks/useDebounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { toast } from 'sonner';
-import { isInvalidCompany } from '../lib/itemFields';
+import { isInvalidCompany, getItemName } from '../lib/itemFields';
 
 const InventoryItemRow = React.memo(({ item, idx, lowStockThreshold }) => {
   const safeThreshold = Number(lowStockThreshold || 0);
@@ -25,7 +25,7 @@ const InventoryItemRow = React.memo(({ item, idx, lowStockThreshold }) => {
     <td className="px-4 py-2 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
       <div className="flex items-center justify-between gap-3">
       <div className="font-bold text-sm text-slate-800 dark:text-white">
-        {item.name}
+        {getItemName(item)}
         {!isInvalidCompany(item.company) && (
           <span className="text-slate-400 font-normal"> - {item.company}</span>
         )}
@@ -136,7 +136,8 @@ export default function StockInventory({ setActiveView }) {
       let rows = '';
       groupedItems[cat].forEach((item, idx) => {
         const bg = idx % 2 === 0 ? '#ffffff' : '#f0faf9';
-        const itemDisplayName = item.name + (isInvalidCompany(item.company) ? '' : ` <span style="color:#64748b;font-weight:700;"> - ${item.company}</span>`);
+        const cleanName = getItemName(item);
+        const itemDisplayName = cleanName + (isInvalidCompany(item.company) ? '' : ` <span style="color:#64748b;font-weight:700;"> - ${item.company}</span>`);
         rows += `<tr style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:${bg};">
           <td style="border:1px solid #cbd5e1;padding:10px 12px;text-align:center;font-size:14px;font-weight:700;color:#334155;">${idx + 1}</td>
           <td style="border:1px solid #cbd5e1;padding:10px 12px;text-align:right;font-size:14px;font-weight:700;color:#1e293b;">${itemDisplayName}</td>
@@ -471,7 +472,7 @@ export default function StockInventory({ setActiveView }) {
                   <tr key={item.id} className="border-b-2 border-slate-900">
                     <td className="border-x-2 border-slate-900 py-3 px-3 text-lg font-bold">{idx + 1}</td>
                     <td className="border-x-2 border-slate-900 py-3 px-3 text-right text-xl font-bold">
-                      {item.name}
+                      {getItemName(item)}
                       {!isInvalidCompany(item.company) && (
                         <span className="text-slate-600 font-bold"> - {item.company}</span>
                       )}
