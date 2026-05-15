@@ -1790,6 +1790,8 @@ export default function ReceiptVouchers({ setActiveView }) {
             </table>
           </div>
         </div>
+      )}
+
       {/* ─── FOOTER: Total Amount ─── */}
       {(selectedJournalEntry?.total_amount || journalForm.totalAmount) && (
         <div className="mt-6 border-t-[3px] border-double border-slate-800 pt-6 flex items-center justify-between">
