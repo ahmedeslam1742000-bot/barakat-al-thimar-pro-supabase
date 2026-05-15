@@ -44,7 +44,7 @@ const menuGroups = [
   },
   {
     id: 'receipt-vouchers',
-    label: 'سندات قبض',
+    label: 'سندات تحصيل',
     icon: Banknote,
     isStatic: true,
     view: 'receipt-vouchers'

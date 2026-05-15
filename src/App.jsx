@@ -32,7 +32,7 @@ const viewConfig = {
   'returns': { component: Returns, title: 'مرتجع', icon: RotateCcw },
   'voucher-outward': { component: VoucherOutward, title: 'سند إخراج', icon: Upload },
   'reps': { component: Reps, title: 'المناديب', icon: User },
-  'receipt-vouchers': { component: ReceiptVouchers, title: 'سندات قبض', icon: Banknote },
+  'receipt-vouchers': { component: ReceiptVouchers, title: 'سندات تحصيل', icon: Banknote },
   'inventory': { component: StockInventory, title: 'المخزون الحالي', icon: ClipboardList },
   'inbound-records': { component: InboundRecords, title: 'أذونات الواردات', icon: History },
   'stock-card': { component: StockCard, title: 'الرصيد التراكمي', icon: History },

@@ -475,7 +475,7 @@ export default function ReceiptVouchers({ setActiveView }) {
     const html = `
       <html dir="rtl">
         <head>
-          <title>تقرير سندات القبض</title>
+          <title>تقرير سندات التحصيل</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
             
@@ -662,7 +662,7 @@ export default function ReceiptVouchers({ setActiveView }) {
         <body>
           <div class="header-container">
             <div>
-              <div class="report-main-title">تقرير سندات القبض</div>
+              <div class="report-main-title">تقرير سندات التحصيل</div>
             </div>
             <div class="meta-info">
               <div class="meta-item">تاريخ الإصدار: <span>${new Date().toLocaleDateString('ar-SA')}</span></div>
@@ -764,7 +764,7 @@ export default function ReceiptVouchers({ setActiveView }) {
             <Banknote size={28} className="text-white drop-shadow-lg" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">سندات القبض</h1>
+            <h1 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">سندات التحصيل</h1>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">إدارة التحصيل المالي</span>
@@ -834,7 +834,7 @@ export default function ReceiptVouchers({ setActiveView }) {
             }`}
           >
             <Banknote size={16} />
-            سندات القبض
+            سندات التحصيل
           </button>
           <button
             onClick={() => setActiveTable('expenses')}
@@ -1012,9 +1012,9 @@ export default function ReceiptVouchers({ setActiveView }) {
                   </div>
                   <div>
                     <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">
-                      {editId ? 'تعديل سند قبض' : 'تحصيل مبلغ نقدي'}
+                      {editId ? 'تعديل سند تحصيل' : 'تحصيل مبلغ نقدي'}
                     </h2>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">تسجيل عملية قبض مالي جديدة في النظام</p>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">تسجيل عملية تحصيل مالي جديدة في النظام</p>
                   </div>
                 </div>
                 <button onClick={handleCloseModal} className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:rotate-90 transition-all shadow-sm"><X size={24} /></button>
@@ -1141,7 +1141,7 @@ export default function ReceiptVouchers({ setActiveView }) {
                   </div>
                   <div>
                     <h2 className="text-xl font-black text-slate-800 dark:text-white">
-                      تفاصيل سند القبض
+                      تفاصيل سند التحصيل
                     </h2>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">سند رقم: {viewVoucher.voucherNo}</p>
                   </div>
@@ -1608,7 +1608,7 @@ export default function ReceiptVouchers({ setActiveView }) {
                 <div className="grid grid-cols-1 gap-8">
                   {/* Linked Vouchers */}
                   <div className="space-y-4 text-right" dir="rtl">
-                    <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 flex items-center gap-2 border-r-4 border-emerald-500 pr-3">سندات القبض المرتبطة</h3>
+                    <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 flex items-center gap-2 border-r-4 border-emerald-500 pr-3">سندات التحصيل المرتبطة</h3>
                     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
                       <table className="w-full text-right text-xs" dir="rtl">
                         <thead className="bg-slate-50/50 dark:bg-slate-900/50">
@@ -1723,7 +1723,7 @@ export default function ReceiptVouchers({ setActiveView }) {
       {selectedVoucherIds.length > 0 && (
         <div className="mb-10">
           <h2 className="text-xl font-black text-slate-800 border-r-4 border-emerald-500 pr-3 mb-6">
-            أولاً: محصلات سندات القبض
+            أولاً: محصلات سندات التحصيل
           </h2>
           <div className="border border-slate-200 rounded-2xl overflow-hidden">
             <table className="w-full text-right text-sm">

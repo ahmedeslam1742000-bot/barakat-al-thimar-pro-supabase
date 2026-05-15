@@ -45,7 +45,7 @@ function S6Permissions({ users = [] }) {
   const PAGES = [
     { id: 'dashboard', label: 'لوحة القيادة' }, { id: 'items', label: 'الأصناف' },
     { id: 'stock-in', label: 'الوارد' }, { id: 'stock-out', label: 'الفواتير' },
-    { id: 'returns', label: 'المرتجع' }, { id: 'receipt-vouchers', label: 'سندات قبض' },
+    { id: 'returns', label: 'المرتجع' }, { id: 'receipt-vouchers', label: 'سندات تحصيل' },
     { id: 'voucher-outward', label: 'سند إخراج' }, { id: 'inventory', label: 'جرد المستودع' },
     { id: 'inbound-records', label: 'أذونات الواردات' }, { id: 'stock-card', label: 'الرصيد التراكمي' },
     { id: 'reps', label: 'المناديب' }, { id: 'price-list', label: 'الأسعار' }, { id: 'settings', label: 'الإعدادات' }
