@@ -44,14 +44,6 @@ const ReceiptVoucherRow = React.memo(({ v, idx, openEdit, setViewVoucher, toggle
       </div>
     </td>
     <td className="px-6 py-4 text-center">
-      <div className="flex flex-col items-center">
-        <span className={`text-xs font-black ${v.invoiceNo === 'دفعة من الحساب' ? 'text-amber-600' : 'text-slate-600'}`}>
-          {v.invoiceNo}
-        </span>
-        <span className="text-[10px] font-bold text-slate-400 mt-1">رقم الفاتورة</span>
-      </div>
-    </td>
-    <td className="px-6 py-4 text-center">
       <div className="flex items-center justify-center gap-1.5 text-emerald-600 font-black tabular-nums bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 mx-auto w-fit">
         <span className="text-lg">{v.amount.toLocaleString()}</span>
         <Banknote size={14} />
@@ -91,17 +83,19 @@ const formatDateToDisplay = (dateStr) => {
 };
 
 export default function ReceiptVouchers({ setActiveView }) {
+  const { receiptVouchers, repExpenses, repsList: reps, fetchInitialData } = useData();
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isSettlementWizardOpen, setIsSettlementWizardOpen] = useState(false);
+  const [selectedVoucherIds, setSelectedVoucherIds] = useState([]);
+  const [selectedExpenseIds, setSelectedExpenseIds] = useState([]);
+  const [settlementType, setSettlementType] = useState('pending'); // pending, settled
   const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false);
   const [isConfirmSaveOpen, setIsConfirmSaveOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [viewVoucher, setViewVoucher] = useState(null);
-  const { receiptVouchers, repsList: repsFromContext, isLoading: globalLoading } = useData();
-  
-  // Reps for autocomplete
-  const reps = useMemo(() => repsFromContext.map(name => ({ name })), [repsFromContext]);
   const [repSearchQuery, setRepSearchQuery] = useState('');
   const [isRepDropdownOpen, setIsRepDropdownOpen] = useState(false);
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -116,14 +110,12 @@ export default function ReceiptVouchers({ setActiveView }) {
 
   // Form State
   const emptyForm = {
-    date: '', 
-    repName: '', // This will be synced with repSearchQuery during validation
+    date: new Date().toISOString().split('T')[0], 
+    repName: '', 
     customerName: '',
     amount: '',
     type: 'نقدي',
-    invoiceNo: '',
-    voucherNo: '',
-    isAccountPayment: false
+    voucherNo: ''
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -139,19 +131,17 @@ export default function ReceiptVouchers({ setActiveView }) {
     if (error) {
       console.error('❌ fetchVouchers error:', error);
     } else {
-      setVouchers((data || []).map(r => ({
-        id: r.id,
-        date: r.date,
-        repName: r.rep_name,
-        customerName: r.customer_name,
-        voucherNo: r.voucher_no,
-        invoiceNo: r.invoice_no || '',
-        isAccountPayment: !r.invoice_no || r.invoice_no === 'دفعة من الحساب',
-        amount: Number(r.amount),
-        type: r.type,
-        is_deposited: r.is_deposited || false,
-        deposited_at: r.deposited_at || null,
-      })));
+        setVouchers((data || []).map(r => ({
+          id: r.id,
+          date: r.date,
+          repName: r.rep_name,
+          customerName: r.customer_name,
+          voucherNo: r.voucher_no,
+          amount: Number(r.amount),
+          type: r.type,
+          is_deposited: r.is_deposited || false,
+          deposited_at: r.deposited_at || null,
+        })));
     }
   };
 
@@ -186,19 +176,85 @@ export default function ReceiptVouchers({ setActiveView }) {
   }, []);
 
   const filteredVouchers = useMemo(() => {
-    return receiptVouchers.filter(v =>
-      (v.voucherNo || '').includes(debouncedSearchTerm) ||
-      (v.repName || '').includes(debouncedSearchTerm) ||
-      (v.customerName || '').includes(debouncedSearchTerm)
-    );
-  }, [receiptVouchers, debouncedSearchTerm]);
+    return receiptVouchers.filter(v => {
+      const matchesSearch = (v.voucherNo || '').includes(debouncedSearchTerm) ||
+                            (v.repName || '').includes(debouncedSearchTerm) ||
+                            (v.customerName || '').includes(debouncedSearchTerm);
+      const matchesStatus = settlementType === 'all' || 
+                            (settlementType === 'pending' && !v.is_settled) || 
+                            (settlementType === 'settled' && v.is_settled);
+      return matchesSearch && matchesStatus;
+    });
+  }, [receiptVouchers, debouncedSearchTerm, settlementType]);
+
+  const toggleVoucherSelection = (id) => {
+    setSelectedVoucherIds(prev => prev.includes(id) ? prev.filter(vid => vid !== id) : [...prev, id]);
+  };
+
+  const handleSaveExpense = async () => {
+    if (!expenseForm.repName || !expenseForm.amount || !expenseForm.statement) {
+      toast.error('يرجى إكمال جميع الحقول الإلزامية');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('representative_expenses').insert([{
+        rep_name: expenseForm.repName,
+        amount: Number(expenseForm.amount),
+        statement: expenseForm.statement,
+        date: expenseForm.date
+      }]);
+      if (error) throw error;
+      toast.success('تم تسجيل المصروف بنجاح');
+      setIsExpenseModalOpen(false);
+      setExpenseForm({ date: new Date().toISOString().split('T')[0], repName: '', amount: '', statement: '' });
+      setExpRepSearchQuery('');
+    } catch (err) {
+      console.error('SaveExpense error:', err);
+      toast.error('خطأ أثناء حفظ المصروف');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFinalSettlement = async () => {
+    setLoading(true);
+    try {
+      const batchId = crypto.randomUUID();
+      // Update Vouchers
+      const { error: vError } = await supabase
+        .from('receipt_vouchers')
+        .update({ is_settled: true, settlement_batch_id: batchId })
+        .in('id', selectedVoucherIds);
+      if (vError) throw vError;
+
+      // Update Expenses
+      if (selectedExpenseIds.length > 0) {
+        const { error: eError } = await supabase
+          .from('representative_expenses')
+          .update({ is_settled: true, settlement_batch_id: batchId })
+          .in('id', selectedExpenseIds);
+        if (eError) throw eError;
+      }
+
+      toast.success('تم ترحيل البيانات وتسوية الحساب بنجاح ✅');
+      setSelectedVoucherIds([]);
+      setSelectedExpenseIds([]);
+      setIsSettlementWizardOpen(false);
+    } catch (err) {
+      console.error('Settlement error:', err);
+      toast.error('خطأ أثناء إتمام التسوية');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   rowVirtualizer.options.count = filteredVouchers.length;
 
   // Dirty check
   const isDirty = useMemo(() => {
     const { repName: _, ...formData } = form;
-    const emptyData = { date: '', customerName: '', amount: '', type: 'نقدي', invoiceNo: '', voucherNo: '', isAccountPayment: false };
+    const emptyData = { date: new Date().toISOString().split('T')[0], customerName: '', amount: '', type: 'نقدي', voucherNo: '' };
     return JSON.stringify(formData) !== JSON.stringify(emptyData) || repSearchQuery !== '';
   }, [form, repSearchQuery]);
 
@@ -216,10 +272,8 @@ export default function ReceiptVouchers({ setActiveView }) {
     const currentForm = { ...form, repName: finalRepName };
 
     const requiredFields = ['date', 'repName', 'customerName', 'amount', 'type', 'voucherNo'];
-    if (!currentForm.isAccountPayment) {
-      requiredFields.push('invoiceNo');
-    }
-
+    // Invoice number is now optional to prevent blocking, but we keep the logic for Account Payment
+    
     for (const field of requiredFields) {
       if (!currentForm[field]) {
         toast.error(`يرجى إكمال الحقل: ${getLabelText(field)}`);
@@ -245,7 +299,7 @@ export default function ReceiptVouchers({ setActiveView }) {
         rep_name: finalRepName,
         customer_name: form.customerName,
         voucher_no: form.voucherNo,
-        invoice_no: form.isAccountPayment ? 'دفعة من الحساب' : (form.invoiceNo || ''),
+        invoice_no: '',
         amount: Number(form.amount),
         type: form.type,
       };
@@ -297,9 +351,7 @@ export default function ReceiptVouchers({ setActiveView }) {
       customerName: voucher.customerName,
       amount: voucher.amount,
       type: voucher.type,
-      invoiceNo: voucher.invoiceNo === 'دفعة من الحساب' ? '' : voucher.invoiceNo,
-      voucherNo: voucher.voucherNo,
-      isAccountPayment: voucher.isAccountPayment
+      voucherNo: voucher.voucherNo
     });
     setRepSearchQuery(voucher.repName);
     setEditId(voucher.id);
@@ -339,7 +391,6 @@ export default function ReceiptVouchers({ setActiveView }) {
           <td class="font-bold">${v.repName}</td>
           <td>${v.customerName}</td>
           <td class="text-center">${v.voucherNo}</td>
-          <td class="text-center">${v.invoiceNo}</td>
           <td class="text-center font-bold text-emerald">${v.amount.toLocaleString()} ر.س</td>
           <td class="text-center"><span class="badge ${type === 'نقدي' ? 'badge-cash' : type === 'شبكة' ? 'badge-card' : 'badge-transfer'}">${v.type}</span></td>
         </tr>
@@ -354,10 +405,9 @@ export default function ReceiptVouchers({ setActiveView }) {
               <th width="12%">التاريخ</th>
               <th width="18%">المندوب</th>
               <th width="18%">العميل</th>
-              <th width="12%">رقم السند</th>
-              <th width="12%">رقم الفاتورة</th>
+              <th width="15%">رقم السند</th>
               <th width="15%">المبلغ</th>
-              <th width="8%">نوع التحصيل</th>
+              <th width="12%">نوع التحصيل</th>
             </tr>
           </thead>
           <tbody>
@@ -365,7 +415,7 @@ export default function ReceiptVouchers({ setActiveView }) {
           </tbody>
           <tfoot>
             <tr>
-              <td colspan="6" class="text-left font-bold" style="padding-left: 20px;">إجمالي (${type}):</td>
+              <td colspan="5" class="text-left font-bold" style="padding-left: 20px;">إجمالي (${type}):</td>
               <td class="text-center font-black text-emerald" style="font-size: 14px;">${subtotal.toLocaleString()} ر.س</td>
               <td></td>
             </tr>
@@ -637,7 +687,6 @@ export default function ReceiptVouchers({ setActiveView }) {
       customerName: 'اسم العميل',
       amount: 'المبلغ',
       type: 'نوع التحصيل',
-      invoiceNo: 'رقم الفاتورة',
       voucherNo: 'رقم السند'
     };
     return labels[key] || key;
@@ -682,6 +731,17 @@ export default function ReceiptVouchers({ setActiveView }) {
         <div className="flex items-center gap-2 shrink-0">
           <button 
             onClick={() => {
+              setExpenseForm({ date: new Date().toISOString().split('T')[0], repName: '', amount: '', statement: '' });
+              setExpRepSearchQuery('');
+              setIsExpenseModalOpen(true);
+            }}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-2xl font-black text-xs shadow-lg shadow-amber-600/20 hover:scale-[1.02] active:scale-[0.98] transition-all group"
+          >
+            <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
+            <span>إضافة مصروف</span>
+          </button>
+          <button 
+            onClick={() => {
               setForm(emptyForm);
               setRepSearchQuery('');
               setEditId(null);
@@ -693,19 +753,35 @@ export default function ReceiptVouchers({ setActiveView }) {
             <span>إنشاء سند جديد</span>
           </button>
           <button 
-            onClick={handlePrint}
-            className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-500 hover:text-emerald-500 transition-all shadow-sm"
+            onClick={selectedVoucherIds.length > 0 ? () => setIsSettlementWizardOpen(true) : handlePrint}
+            className={`p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl transition-all shadow-sm flex items-center gap-2 ${selectedVoucherIds.length > 0 ? 'text-blue-500 border-blue-200 bg-blue-50/50' : 'text-slate-500 hover:text-emerald-500'}`}
           >
             <Printer size={20} />
-          </button>
-          <button 
-            onClick={() => setActiveView && setActiveView('dashboard')}
-            title="العودة للرئيسية"
-            className="flex items-center justify-center w-11 h-11 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 rounded-2xl transition-all hover:bg-rose-100 hover:scale-105 active:scale-95"
-          >
-            <LogOut size={20} strokeWidth={2.5} className="rotate-180" />
+            {selectedVoucherIds.length > 0 && <span className="text-[10px] font-black">طباعة تسوية ({selectedVoucherIds.length})</span>}
           </button>
         </div>
+      </div>
+
+      {/* Tabs for settlement status */}
+      <div className="flex items-center gap-1 mb-6 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl w-fit">
+        {[
+          { id: 'pending', label: 'السندات المعلقة', icon: <Clock size={14} /> },
+          { id: 'settled', label: 'سندات موردة', icon: <CheckCircle2 size={14} /> },
+          { id: 'all', label: 'الكل', icon: <Filter size={14} /> }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setSettlementType(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+              settlementType === tab.id 
+                ? 'bg-white dark:bg-slate-900 text-emerald-600 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
       </div>
 
 
@@ -716,6 +792,17 @@ export default function ReceiptVouchers({ setActiveView }) {
           <table className="w-full text-right border-separate border-spacing-0">
             <thead className="sticky top-0 z-10">
               <tr>
+                <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 border-b border-slate-100 dark:border-slate-700 w-12 text-center">
+                  <input 
+                    type="checkbox" 
+                    className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    checked={filteredVouchers.length > 0 && selectedVoucherIds.length === filteredVouchers.length}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedVoucherIds(filteredVouchers.map(v => v.id));
+                      else setSelectedVoucherIds([]);
+                    }}
+                  />
+                </th>
                 <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 w-16 text-center">م</th>
                 <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">التاريخ</th>
                 <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 min-w-[200px]">اسم المندوب</th>
@@ -728,7 +815,15 @@ export default function ReceiptVouchers({ setActiveView }) {
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
               {filteredVouchers.map((voucher, idx) => (
-                <tr style={{ animationDelay: `${idx * 0.05}s`, opacity: 0 }} key={voucher.id} className="animate-fade-in-up group hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10 transition-colors">
+                <tr style={{ animationDelay: `${idx * 0.05}s`, opacity: 0 }} key={voucher.id} className={`animate-fade-in-up group hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10 transition-colors ${selectedVoucherIds.includes(voucher.id) ? 'bg-emerald-50/50' : ''}`}>
+                  <td className="px-6 py-5 text-center">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      checked={selectedVoucherIds.includes(voucher.id)}
+                      onChange={() => toggleVoucherSelection(voucher.id)}
+                    />
+                  </td>
                   <td className="px-6 py-5 text-center text-xs font-black text-slate-400 group-hover:text-emerald-500 transition-colors">{idx + 1}</td>
                   <td className="px-6 py-5 text-xs font-bold text-slate-700 dark:text-white">{formatDateToDisplay(voucher.date)}</td>
                   <td className="px-6 py-5 text-xs font-black text-slate-700 dark:text-white">
@@ -946,8 +1041,8 @@ export default function ReceiptVouchers({ setActiveView }) {
                     <span className="font-bold text-slate-700 dark:text-white text-sm">{formatDateToDisplay(viewVoucher.date)}</span>
                   </div>
                   <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
-                    <span className="block text-[10px] font-black text-slate-400 mb-1">رقم الفاتورة</span>
-                    <span className="font-bold text-slate-700 dark:text-white text-sm">{viewVoucher.invoiceNo}</span>
+                    <span className="block text-[10px] font-black text-slate-400 mb-1">رقم السند</span>
+                    <span className="font-bold text-slate-700 dark:text-white text-sm">{viewVoucher.voucherNo}</span>
                   </div>
                   <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-100 dark:border-slate-700">
                     <span className="block text-[10px] font-black text-slate-400 mb-1">اسم المندوب</span>
@@ -1014,6 +1109,279 @@ export default function ReceiptVouchers({ setActiveView }) {
           </div>
         )}
       </AnimatePresence>
+      {/* ═══ EXPENSE MODAL ═══ */}
+      <AnimatePresence>
+        {isExpenseModalOpen && (
+          <div key="expense-modal" className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsExpenseModalOpen(false)} className="absolute inset-0 bg-slate-950/40 backdrop-blur-md" />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl border border-white/20 dark:border-slate-800 overflow-hidden flex flex-col"
+            >
+              <div className="px-8 py-6 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/20"><Wallet size={20} /></div>
+                  <h3 className="text-xl font-black text-amber-900 dark:text-amber-100">تسجيل مصروف مندوب</h3>
+                </div>
+                <button onClick={() => setIsExpenseModalOpen(false)} className="p-2 text-amber-400 hover:text-amber-600 transition-colors"><X size={20} /></button>
+              </div>
+              <div className="p-8 space-y-6 overflow-y-auto max-h-[60vh] custom-scrollbar">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 mr-1">المندوب *</label>
+                  <div className="relative">
+                    <input 
+                      type="text" className="w-full h-12 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-4 font-bold text-sm text-center outline-none focus:ring-2 focus:ring-amber-500/20 dark:text-white"
+                      placeholder="ابحث عن المندوب..." value={expRepSearchQuery} onChange={e => setExpRepSearchQuery(e.target.value)}
+                    />
+                    {expRepSearchQuery && expenseForm.repName !== expRepSearchQuery && (
+                      <div className="absolute top-full left-0 right-0 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-xl rounded-xl mt-1 z-10 max-h-40 overflow-y-auto">
+                        {reps.filter(r => r.toLowerCase().includes(expRepSearchQuery.toLowerCase())).map(r => (
+                          <button key={r} onClick={() => { setExpenseForm({...expenseForm, repName: r}); setExpRepSearchQuery(r); }} className="w-full px-4 py-2 text-center font-bold text-xs hover:bg-amber-50 dark:hover:bg-amber-900/50 dark:text-white transition-colors">{r}</button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 mr-1">التاريخ *</label>
+                    <input type="date" className="w-full h-12 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-4 font-bold text-sm text-center outline-none dark:text-white" value={expenseForm.date} onChange={e => setExpenseForm({...expenseForm, date: e.target.value})} />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 mr-1">المبلغ *</label>
+                    <input type="number" className="w-full h-12 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-4 font-black text-lg text-amber-600 text-center outline-none" placeholder="0.00" value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 mr-1">بيان المصروف (اشترى إيه؟) *</label>
+                  <textarea className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-amber-500/20 dark:text-white" rows={3} placeholder="مثال: فاتورة بنزين، صيانة إطار، شراء بضاعة..." value={expenseForm.statement} onChange={e => setExpenseForm({...expenseForm, statement: e.target.value})} />
+                </div>
+              </div>
+              <div className="px-8 py-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3 shrink-0">
+                <button onClick={() => setIsExpenseModalOpen(false)} className="flex-1 py-3.5 rounded-xl font-bold text-slate-400 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">إلغاء</button>
+                <button onClick={handleSaveExpense} disabled={loading} className="flex-1 py-3.5 rounded-xl font-black text-white bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50">
+                  {loading ? <Clock size={18} className="animate-spin" /> : <Save size={18} />}
+                  حفظ المصروف
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ SETTLEMENT WIZARD (Wizard/Reconciliation) ═══ */}
+      <AnimatePresence>
+        {isSettlementWizardOpen && (
+          <div key="settlement-wizard" className="fixed inset-0 z-[250] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsSettlementWizardOpen(false)} className="absolute inset-0 bg-slate-950/60 backdrop-blur-md" />
+            <motion.div 
+              initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 100 }}
+              className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col h-[85vh] border border-white/10"
+            >
+              <div className="px-10 py-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
+                <div className="flex items-center gap-5">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-xl"><CreditCard size={28} /></div>
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">قيد تسوية العهدة والتحصيل</h3>
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">المرحلة الثانية: تصفية المشتريات والمصاريف</p>
+                  </div>
+                </div>
+                <button onClick={() => setIsSettlementWizardOpen(false)} className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-all shadow-sm"><X size={24} /></button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar">
+                {/* Stats Summary */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50 rounded-3xl p-6 flex items-center justify-between shadow-sm">
+                    <div>
+                      <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">إجمالي السندات المختارة</span>
+                      <div className="text-2xl font-black text-emerald-700 dark:text-emerald-400 mt-1">
+                        {filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0).toLocaleString()} <small className="text-xs">ر.س</small>
+                      </div>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20"><Banknote size={24} /></div>
+                  </div>
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/50 rounded-3xl p-6 flex items-center justify-between shadow-sm">
+                    <div>
+                      <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">مصروفات مختارة للخصم</span>
+                      <div className="text-2xl font-black text-amber-700 dark:text-amber-400 mt-1">
+                        {repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0).toLocaleString()} <small className="text-xs">ر.س</small>
+                      </div>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/20"><Wallet size={24} /></div>
+                  </div>
+                </div>
+
+                {/* Expenses List */}
+                <div>
+                  <h4 className="text-sm font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
+                    <Info size={16} className="text-blue-500" />
+                    المصاريف والمشتريات المعلقة للمندوبين المختارين
+                  </h4>
+                  <div className="grid gap-3">
+                    {repExpenses.filter(e => !e.is_settled && selectedVoucherIds.some(vid => filteredVouchers.find(v => v.id === vid)?.repName === e.repName)).length === 0 ? (
+                      <div className="py-20 text-center flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-800">
+                        <AlertTriangle size={32} className="text-slate-200 mb-3" />
+                        <p className="text-sm font-bold text-slate-400">لا توجد مصاريف معلقة لهذه المجموعة</p>
+                      </div>
+                    ) : (
+                      repExpenses.filter(e => !e.is_settled && selectedVoucherIds.some(vid => filteredVouchers.find(v => v.id === vid)?.repName === e.repName)).map(exp => (
+                        <div 
+                          key={exp.id} 
+                          onClick={() => setSelectedExpenseIds(prev => prev.includes(exp.id) ? prev.filter(id => id !== exp.id) : [...prev, exp.id])}
+                          className={`p-5 rounded-3xl border-2 transition-all cursor-pointer flex items-center justify-between group ${selectedExpenseIds.includes(exp.id) ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/10 shadow-lg shadow-amber-500/10' : 'border-slate-100 dark:border-slate-800 hover:border-amber-200'}`}
+                        >
+                          <div className="flex items-center gap-5">
+                            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${selectedExpenseIds.includes(exp.id) ? 'bg-amber-500 border-amber-500 scale-110 shadow-sm' : 'border-slate-300 dark:border-slate-600'}`}>
+                              {selectedExpenseIds.includes(exp.id) && <CheckCircle2 size={14} className="text-white" />}
+                            </div>
+                            <div>
+                              <div className="text-sm font-black text-slate-800 dark:text-white group-hover:text-amber-600 transition-colors">{exp.statement}</div>
+                              <div className="flex items-center gap-3 mt-1.5">
+                                <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-500 px-2.5 py-0.5 rounded-lg border border-slate-200/50 dark:border-slate-700">{formatDateToDisplay(exp.date)}</span>
+                                <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{exp.repName}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-xl font-black text-amber-600 tabular-nums">{exp.amount.toLocaleString()} <small className="text-[10px]">ر.س</small></div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Bar */}
+              <div className="p-10 bg-slate-900 dark:bg-black border-t border-white/5 flex items-center justify-between shrink-0">
+                <div className="text-right">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">صافي التوريد (التحصيل - المصاريف)</span>
+                  <div className="text-3xl font-black text-white mt-1 tabular-nums">
+                    {(filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0) - 
+                      repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0)).toLocaleString()} 
+                    <small className="text-sm mr-1 text-slate-400 font-readex">ر.س</small>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <button onClick={() => setIsSettlementWizardOpen(false)} className="px-8 py-4 rounded-2xl font-bold text-slate-400 hover:text-white transition-colors">إلغاء</button>
+                  <button 
+                    disabled={loading}
+                    onClick={async () => {
+                      handlePrintSettlement();
+                      setTimeout(() => {
+                        const confirmed = window.confirm('هل قمت بطباعة القيد وتأكدت من استلام المبلغ؟ سيتم الآن ترحيل هذه العناصر للأرشيف.');
+                        if (confirmed) handleFinalSettlement();
+                      }, 1000);
+                    }} 
+                    className="px-10 py-4 rounded-2xl font-black text-slate-900 bg-white hover:bg-emerald-50 hover:scale-105 active:scale-95 shadow-2xl shadow-white/10 transition-all flex items-center gap-3 disabled:opacity-50"
+                  >
+                    {loading ? <Clock size={20} className="animate-spin" /> : <Printer size={20} />}
+                    طباعة واعتماد التسوية النهائية
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
+
+  function handlePrintSettlement() {
+    const selVouchers = filteredVouchers.filter(v => selectedVoucherIds.includes(v.id));
+    const selExpenses = repExpenses.filter(e => selectedExpenseIds.includes(e.id));
+    const totalColl = selVouchers.reduce((s, v) => s + v.amount, 0);
+    const totalExp = selExpenses.reduce((s, e) => s + e.amount, 0);
+    const net = totalColl - totalExp;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const voucherRows = selVouchers.map((v, i) => `
+      <tr>
+        <td class="text-center">${i + 1}</td>
+        <td class="text-center">${formatDateToDisplay(v.date)}</td>
+        <td class="font-bold">${v.repName}</td>
+        <td>${v.customerName}</td>
+        <td class="text-center">${v.voucherNo}</td>
+        <td class="text-center font-bold text-emerald">${v.amount.toLocaleString()}</td>
+      </tr>
+    `).join('');
+
+    const expenseRows = selExpenses.map((e, i) => `
+      <tr>
+        <td class="text-center">${i + 1}</td>
+        <td class="text-center">${formatDateToDisplay(e.date)}</td>
+        <td class="font-bold">${e.statement}</td>
+        <td class="text-center font-bold text-amber">${e.amount.toLocaleString()}</td>
+      </tr>
+    `).join('');
+
+    const html = `
+      <html dir="rtl">
+        <head>
+          <title>قيد تسوية وتوريد عهدة</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
+            body { font-family: 'Cairo', sans-serif; padding: 40px; color: #1e293b; line-height: 1.6; }
+            .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; border-bottom: 4px solid #0f172a; padding-bottom: 20px; }
+            .title { font-size: 28px; font-weight: 900; color: #0f172a; }
+            .meta { text-align: left; font-size: 14px; font-weight: bold; color: #64748b; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 13px; }
+            th { background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; text-align: right; color: #64748b; font-weight: 900; }
+            td { border: 1px solid #e2e8f0; padding: 12px; }
+            .section-title { font-size: 16px; font-weight: 900; margin-bottom: 15px; color: #0f172a; border-right: 4px solid #279489; padding-right: 12px; }
+            .text-emerald { color: #059669; }
+            .text-amber { color: #d97706; }
+            .summary-card { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 20px; padding: 30px; margin-top: 40px; }
+            .summary-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #cbd5e1; }
+            .summary-row:last-child { border: none; padding-top: 15px; }
+            .net-box { font-size: 24px; font-weight: 900; color: #0f172a; }
+            .footer-sigs { margin-top: 80px; display: flex; justify-content: space-around; font-weight: 900; color: #64748b; }
+            @media print { body { padding: 0; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title">قيد تسوية وتوريد عهدة</div>
+            <div class="meta">تاريخ القيد: ${new Date().toLocaleDateString('ar-SA')}</div>
+          </div>
+
+          <div class="section-title">أولاً: محصلات سندات القبض</div>
+          <table>
+            <thead>
+              <tr><th width="5%">م</th><th width="15%">التاريخ</th><th width="20%">المندوب</th><th width="25%">العميل</th><th width="15%">رقم السند</th><th width="20%">المبلغ</th></tr>
+            </thead>
+            <tbody>${voucherRows}</tbody>
+            <tfoot><tr><td colspan="5" style="text-align:left; font-weight:900;">إجمالي التحصيل النقدي:</td><td class="text-emerald" style="font-weight:900; text-align:center;">${totalColl.toLocaleString()} ر.س</td></tr></tfoot>
+          </table>
+
+          ${selExpenses.length > 0 ? `
+            <div class="section-title">ثانياً: مصروفات ومشتريات المندوبين مخصومة من العهدة</div>
+            <table>
+              <thead>
+                <tr><th width="5%">م</th><th width="15%">التاريخ</th><th width="65%">بيان المصروف</th><th width="15%">المبلغ</th></tr>
+              </thead>
+              <tbody>${expenseRows}</tbody>
+              <tfoot><tr><td colspan="3" style="text-align:left; font-weight:900;">إجمالي المصروفات المخصومة:</td><td class="text-amber" style="font-weight:900; text-align:center;">${totalExp.toLocaleString()} ر.س</td></tr></tfoot>
+            </table>
+          ` : ''}
+
+          <div class="summary-card">
+            <div class="summary-row"><span>إجمالي التحصيل النقدي</span><span class="text-emerald">${totalColl.toLocaleString()} ر.س</span></div>
+            <div class="summary-row"><span>إجمالي المصروفات والمشتريات (يُخصم)</span><span class="text-amber">(${totalExp.toLocaleString()}) ر.س</span></div>
+            <div class="summary-row net-box"><span>صافي المبلغ المورد للفرع</span><span>${net.toLocaleString()} ر.س</span></div>
+          </div>
+
+          <div class="footer-sigs">
+            <div>توقيع المندوب / المحصل: ..........................</div>
+            <div>توقيع المحاسب المستلم: ..........................</div>
+            <div>توقيع مدير الفرع: ..........................</div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  }
 }
