@@ -94,6 +94,8 @@ export default function ReceiptVouchers({ setActiveView }) {
   const [settlementType, setSettlementType] = useState('pending'); // pending, settled
   const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false);
   const [isConfirmSaveOpen, setIsConfirmSaveOpen] = useState(false);
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [editId, setEditId] = useState(null);
   const [viewVoucher, setViewVoucher] = useState(null);
   const [repSearchQuery, setRepSearchQuery] = useState('');
@@ -642,15 +644,26 @@ export default function ReceiptVouchers({ setActiveView }) {
     printWindow.document.close();
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = (id) => {
+    setDeleteTargetId(id);
+    setIsConfirmDeleteOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTargetId || loading) return;
+    setLoading(true);
     try {
-      const { error } = await supabase.from('receipt_vouchers').delete().eq('id', id);
+      const { error } = await supabase.from('receipt_vouchers').delete().eq('id', deleteTargetId);
       if (error) throw error;
-      toast.success('تم الحذف بنجاح');
-      await fetchVouchers();
+      toast.success('✅ تم حذف السند بنجاح');
+      await fetchInitialData();
     } catch (err) {
       console.error('❌ handleDelete error:', err);
       toast.error('خطأ أثناء الحذف');
+    } finally {
+      setLoading(false);
+      setIsConfirmDeleteOpen(false);
+      setDeleteTargetId(null);
     }
   };
 
@@ -1114,6 +1127,41 @@ export default function ReceiptVouchers({ setActiveView }) {
           </div>
         )}
       </AnimatePresence>
+
+      {/* ═══ CONFIRM DELETE DIALOG ═══ */}
+      <AnimatePresence>
+        {isConfirmDeleteOpen && (
+          <div key="delete-modal" className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setIsConfirmDeleteOpen(false); setDeleteTargetId(null); }} className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="relative w-full max-w-sm bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl border border-slate-100 dark:border-slate-800 p-8 text-center">
+              <div className="w-16 h-16 mx-auto mb-5 rounded-2xl bg-rose-50 dark:bg-rose-500/10 flex items-center justify-center text-rose-500">
+                <Trash2 size={32} />
+              </div>
+              <h3 className="text-xl font-black text-slate-800 dark:text-white mb-2">حذف السند</h3>
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">هل أنت متأكد من حذف هذا السند نهائياً؟ لا يمكن التراجع عن هذا الإجراء.</p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={confirmDelete}
+                  className="flex-1 py-3.5 rounded-xl font-black text-sm text-white bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-500/20 disabled:opacity-60 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                >
+                  {loading ? <Clock size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                  {loading ? 'جاري الحذف...' : 'نعم، احذف'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsConfirmDeleteOpen(false); setDeleteTargetId(null); }}
+                  className="flex-1 py-3.5 rounded-xl font-black text-sm bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* ═══ EXPENSE MODAL ═══ */}
       <AnimatePresence>
         {isExpenseModalOpen && (
