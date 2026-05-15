@@ -112,7 +112,7 @@ export default function MainLayout({ children, activeView, setActiveView }) {
   }, []);
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-50 text-slate-800 flex font-readex transition-colors duration-300" dir="rtl">
+    <div className="h-screen print:h-auto overflow-hidden bg-slate-50 print:bg-white text-slate-800 flex font-readex transition-colors duration-300" dir="rtl">
       <Sidebar 
         isSidebarOpen={isSidebarOpen} 
         setIsSidebarOpen={setIsSidebarOpen}
@@ -122,10 +122,10 @@ export default function MainLayout({ children, activeView, setActiveView }) {
 
       {/* Main Content Area */}
       <main
-        className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out ${isSidebarOpen ? 'lg:mr-48' : 'mr-0'}`}
+        className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out print:mr-0 print:block print:overflow-visible ${isSidebarOpen ? 'lg:mr-48' : 'mr-0'}`}
       >
         {/* Top Navbar - Slimmer and more functional */}
-        <header className="w-full h-12 bg-white border-b border-slate-100 shrink-0 z-40 flex items-center justify-between px-4 sm:px-6 transition-all duration-300">
+        <header className="print:hidden w-full h-12 bg-white border-b border-slate-100 shrink-0 z-40 flex items-center justify-between px-4 sm:px-6 transition-all duration-300">
           <div className="flex items-center gap-3">
             {!isSidebarOpen && (
               <button 
@@ -276,7 +276,7 @@ export default function MainLayout({ children, activeView, setActiveView }) {
 
         {/* ── System Freeze Banner ── */}
         {settings?.systemFrozen && (
-          <div className="shrink-0 flex items-center gap-3 px-6 py-2.5 bg-rose-600 text-white text-xs font-black z-30 shadow-lg shadow-rose-600/20">
+          <div className="print:hidden shrink-0 flex items-center gap-3 px-6 py-2.5 bg-rose-600 text-white text-xs font-black z-30 shadow-lg shadow-rose-600/20">
             <AlertOctagon size={16} className="animate-pulse" />
             <span className="flex-1">النظام مجمَّد — جميع عمليات الإدخال معطّلة حتى يتم إلغاء التجميد من صفحة الإعدادات</span>
             <button type="button" onClick={() => setActiveView('settings')} className="shrink-0 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg transition-colors border border-white/20">الإعدادات</button>
@@ -284,8 +284,8 @@ export default function MainLayout({ children, activeView, setActiveView }) {
         )}
 
         {/* Page Content */}
-        <div className="flex-1 flex flex-col min-h-0 bg-slate-50/30 p-4 sm:p-6 lg:p-8 overflow-hidden">
-          <div className="w-full flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 bg-slate-50/30 print:bg-white p-4 sm:p-6 lg:p-8 print:p-0 overflow-hidden print:overflow-visible print:block">
+          <div className="w-full flex-1 flex flex-col min-h-0 print:block">
             {children}
           </div>
         </div>
