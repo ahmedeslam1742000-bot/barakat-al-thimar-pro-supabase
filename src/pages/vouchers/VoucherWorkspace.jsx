@@ -306,6 +306,7 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
           const historyEntry = {
             at: new Date().toISOString(),
             by: currentUser.name || currentUser.id || 'User',
+            date: groupToEdit.date || groupToEdit.lines?.[0]?.date || null,
             clientName: groupToEdit.rep || groupToEdit.supplier || '—',
             voucherCode: groupToEdit.voucherCode,
             notes: cleanNote(groupToEdit.line_note),

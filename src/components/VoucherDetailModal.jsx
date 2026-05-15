@@ -8,6 +8,14 @@ import {
 } from 'lucide-react';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 
+// Format YYYY-MM-DD to DD/MM/YYYY
+const formatVoucherDate = (dateStr) => {
+  if (!dateStr) return '—';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  return dateStr;
+};
+
 export function VoucherDetailModal({
   isOpen,
   onClose,
@@ -139,7 +147,7 @@ export function VoucherDetailModal({
                   </h4>
                   <span className="text-[11px] font-black text-slate-500 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1 rounded flex items-center gap-1.5 shadow-sm">
                       <Calendar size={14} /> 
-                      تاريخ هذا الاصدار: {voucher.timestamp.toLocaleString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      تاريخ السند: {formatVoucherDate(voucher.date) || '—'}
                   </span>
               </div>
 
@@ -231,7 +239,7 @@ export function VoucherDetailModal({
                         <span className="text-[11px] font-black text-slate-500 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1 rounded flex items-center gap-1.5 shadow-sm">
                             <Calendar size={14} /> 
                             {historyEntries.length > 0 ? (
-                                <>تاريخ هذا الاصدار: {(historyEntries.length > 0 ? new Date(historyEntries[0].at) : voucher.timestamp).toLocaleString('ar-SA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</>
+                                <>تاريخ السند: {formatVoucherDate(historyEntries[0].date) || new Date(historyEntries[0].at).toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' })}</>
                             ) : 'لا يوجد سجل'}
                         </span>
                     </div>
