@@ -1674,7 +1674,7 @@ export default function ReceiptVouchers({ setActiveView }) {
         </div>
 
     {/* ═══ PRINT TEMPLATE (Hidden on screen, visible only on print) ═══ */}
-    <div className="hidden print:flex print:flex-col bg-white text-slate-900 font-readex" dir="rtl" style={{width:'210mm', height:'297mm', padding:'12mm', boxSizing:'border-box', overflow:'hidden'}}>
+    <div className="hidden print:flex print:flex-col bg-white text-slate-900 font-readex w-full" dir="rtl" style={{height:'98vh', padding:'5mm', boxSizing:'border-box'}}>
 
       {/* ─── HEADER: 3 columns ─── */}
       <div className="grid grid-cols-3 items-center border-b-[3px] border-double border-slate-800 pb-4 mb-5">
