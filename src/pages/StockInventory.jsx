@@ -11,6 +11,7 @@ import { normalizeArabic } from '../lib/arabicTextUtils';
 import { useDebounce } from '../hooks/useDebounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { toast } from 'sonner';
+import { isInvalidCompany } from '../lib/itemFields';
 
 const InventoryItemRow = React.memo(({ item, idx, lowStockThreshold }) => {
   const safeThreshold = Number(lowStockThreshold || 0);
@@ -24,7 +25,10 @@ const InventoryItemRow = React.memo(({ item, idx, lowStockThreshold }) => {
     <td className="px-4 py-2 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
       <div className="flex items-center justify-between gap-3">
       <div className="font-bold text-sm text-slate-800 dark:text-white">
-        {item.name}<span className="text-slate-400 font-normal"> - {item.company || 'بدون شركة'}</span>
+        {item.name}
+        {!isInvalidCompany(item.company) && (
+          <span className="text-slate-400 font-normal"> - {item.company}</span>
+        )}
       </div>
       {(isCritical || isWarning) && (
         <span className={`shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black border ${isCritical ? 'bg-rose-50 text-rose-600 border-rose-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
@@ -131,10 +135,10 @@ export default function StockInventory({ setActiveView }) {
     sortedCats.forEach(cat => {
       let rows = '';
       groupedItems[cat].forEach((item, idx) => {
-        const bg = idx % 2 === 0 ? '#ffffff' : '#f0faf9';
+        const itemDisplayName = item.name + (isInvalidCompany(item.company) ? '' : ` <span style="color:#64748b;font-weight:700;"> - ${item.company}</span>`);
         rows += `<tr style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:${bg};">
           <td style="border:1px solid #cbd5e1;padding:10px 12px;text-align:center;font-size:14px;font-weight:700;color:#334155;">${idx + 1}</td>
-          <td style="border:1px solid #cbd5e1;padding:10px 12px;text-align:right;font-size:14px;font-weight:700;color:#1e293b;">${item.name}<span style="color:#64748b;font-weight:700;"> - ${item.company || 'بدون شركة'}</span></td>
+          <td style="border:1px solid #cbd5e1;padding:10px 12px;text-align:right;font-size:14px;font-weight:700;color:#1e293b;">${itemDisplayName}</td>
           <td style="border:1px solid #cbd5e1;padding:10px 12px;text-align:center;font-size:14px;font-weight:700;color:#334155;">${item.unit || '-'}</td>
           <td style="border:1px solid #cbd5e1;padding:10px 12px;text-align:center;font-size:16px;font-weight:900;color:#059669;">${Number(item.stockQty) || 0}</td>
           <td style="border:1px solid #cbd5e1;padding:10px 12px;text-align:center;font-size:16px;font-weight:900;color:#e11d48;">${Number(item.damagedQty) || 0}</td>
@@ -269,7 +273,7 @@ export default function StockInventory({ setActiveView }) {
         const row = catSheet.addRow({
           index: idx + 1,
           name: item.name,
-          company: item.company || '—',
+          company: isInvalidCompany(item.company) ? '—' : item.company,
           unit: item.unit || '—',
           goodQty: Number(item.stockQty) || 0,
           damagedQty: Number(item.damagedQty) || 0
@@ -466,7 +470,10 @@ export default function StockInventory({ setActiveView }) {
                   <tr key={item.id} className="border-b-2 border-slate-900">
                     <td className="border-x-2 border-slate-900 py-3 px-3 text-lg font-bold">{idx + 1}</td>
                     <td className="border-x-2 border-slate-900 py-3 px-3 text-right text-xl font-bold">
-                      {item.name} <span className="text-slate-600 font-bold"> - {item.company || 'بدون شركة'}</span>
+                      {item.name}
+                      {!isInvalidCompany(item.company) && (
+                        <span className="text-slate-600 font-bold"> - {item.company}</span>
+                      )}
                     </td>
                     <td className="border-x-2 border-slate-900 py-3 px-3 text-lg font-bold">{item.unit}</td>
                     <td className="border-x-2 border-slate-900 py-3 px-3 text-2xl font-black text-emerald-700">{Number(item.stockQty) || 0}</td>
