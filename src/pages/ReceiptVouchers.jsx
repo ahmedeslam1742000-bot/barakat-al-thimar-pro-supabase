@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Banknote, Search, Plus, Printer, Filter, 
-  Download, Calendar, User, Hash, Info, 
+  Download, Calendar, User, Hash, Info, Save,
   ArrowUpRight, Clock, CheckCircle2, ChevronRight,
   MoreHorizontal, FileText, CreditCard, Wallet, X,
   ChevronDown, Users, AlertTriangle, Pencil, Trash2,
@@ -98,6 +98,8 @@ export default function ReceiptVouchers({ setActiveView }) {
   const [viewVoucher, setViewVoucher] = useState(null);
   const [repSearchQuery, setRepSearchQuery] = useState('');
   const [isRepDropdownOpen, setIsRepDropdownOpen] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({ date: new Date().toISOString().split('T')[0], repName: '', amount: '', statement: '' });
+  const [expRepSearchQuery, setExpRepSearchQuery] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const parentRef = React.useRef(null);
