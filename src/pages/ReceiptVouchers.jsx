@@ -1650,6 +1650,8 @@ export default function ReceiptVouchers({ setActiveView }) {
                             <th className="px-6 py-4 font-black text-slate-400">البيان</th>
                             <th className="px-6 py-4 font-black text-slate-400 text-left">المبلغ</th>
                           </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                               {repExpenses.filter(e => e.settlement_batch_id === selectedJournalEntry.id).map((e, i) => (
                                 <tr key={e.id}>
                                   <td className="px-6 py-4 text-center text-slate-400 font-bold">{i + 1}</td>
