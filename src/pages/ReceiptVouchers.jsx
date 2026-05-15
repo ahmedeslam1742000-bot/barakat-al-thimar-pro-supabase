@@ -1790,8 +1790,16 @@ export default function ReceiptVouchers({ setActiveView }) {
             </table>
           </div>
         </div>
+      {/* ─── FOOTER: Total Amount ─── */}
+      {(selectedJournalEntry?.total_amount || journalForm.totalAmount) && (
+        <div className="mt-6 border-t-[3px] border-double border-slate-800 pt-6 flex items-center justify-between">
+          <span className="text-base font-black text-slate-600">إجمالي القيد:</span>
+          <span className="text-3xl font-black text-slate-900 tabular-nums">
+            {Number(selectedJournalEntry?.total_amount || journalForm.totalAmount).toLocaleString()}
+            <span className="text-base font-bold text-slate-500 mr-2">ر.س</span>
+          </span>
+        </div>
       )}
-
 
     </div>
   </>
