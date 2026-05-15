@@ -10,6 +10,7 @@ import { useData } from '../contexts/DataContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { useDebounce } from '../hooks/useDebounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { toast } from 'sonner';
 
 const InventoryItemRow = React.memo(({ item, idx, lowStockThreshold }) => {
   const safeThreshold = Number(lowStockThreshold || 0);
