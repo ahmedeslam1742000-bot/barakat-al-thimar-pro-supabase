@@ -59,6 +59,7 @@ export function DataProvider({ children, currentUser }) {
   const [items, setItems] = useState([]);
   const [dbTransactionsList, setDbTransactionsList] = useState([]);
   const [receiptVouchers, setReceiptVouchers] = useState([]);
+  const [repExpenses, setRepExpenses] = useState([]);
   const [repsList, setRepsList] = useState([]);
   const [dashboardStats, setDashboardStats] = useState({
     stockInCount: 0,
@@ -120,6 +121,23 @@ export function DataProvider({ children, currentUser }) {
           type: r.type,
           is_deposited: r.is_deposited || false,
           deposited_at: r.deposited_at || null,
+        })));
+      }
+
+      const { data: expData, error: expError } = await supabase
+        .from('representative_expenses')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1000);
+      if (expData) {
+        setRepExpenses(expData.map(e => ({
+          id: e.id,
+          date: e.date,
+          repName: e.rep_name,
+          amount: Number(e.amount),
+          statement: e.statement,
+          is_settled: e.is_settled || false,
+          settlement_batch_id: e.settlement_batch_id || null,
         })));
       }
 
@@ -245,10 +263,48 @@ export function DataProvider({ children, currentUser }) {
 
       });
 
+    const expChannel = supabase
+      .channel('public:representative_expenses:dashboard')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'representative_expenses' }, (payload) => {
+        try {
+          if (payload.eventType === 'INSERT') {
+            const e = payload.new;
+            setRepExpenses(prev => [{
+              id: e.id,
+              date: e.date,
+              repName: e.rep_name,
+              amount: Number(e.amount),
+              statement: e.statement,
+              is_settled: e.is_settled || false,
+              settlement_batch_id: e.settlement_batch_id || null,
+            }, ...prev].slice(0, 1000));
+          } else if (payload.eventType === 'UPDATE') {
+            const e = payload.new;
+            setRepExpenses(prev => prev.map(v => v.id === e.id ? {
+              id: e.id,
+              date: e.date,
+              repName: e.rep_name,
+              amount: Number(e.amount),
+              statement: e.statement,
+              is_settled: e.is_settled || false,
+              settlement_batch_id: e.settlement_batch_id || null,
+            } : v));
+          } else if (payload.eventType === 'DELETE') {
+            setRepExpenses(prev => prev.filter(v => v.id !== payload.old.id));
+          }
+        } catch (err) {
+          if (import.meta.env.DEV) console.error('[Realtime] representative_expenses handler error:', err);
+        }
+      })
+      .subscribe((status) => {
+
+      });
+
     return () => {
       supabase.removeChannel(itemsChannel);
       supabase.removeChannel(transChannel);
       supabase.removeChannel(rvChannel);
+      supabase.removeChannel(expChannel);
     };
   }, [currentUser, fetchInitialData]);
 
@@ -442,6 +498,7 @@ export function DataProvider({ children, currentUser }) {
     dbTransactionsList, setDbTransactionsList,
     repsList, setRepsList,
     receiptVouchers, setReceiptVouchers,
+    repExpenses, setRepExpenses,
     fetchInitialData,
     // Voucher derivations
     voucherTransactionsMemo,
