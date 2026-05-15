@@ -1650,91 +1650,82 @@ export default function ReceiptVouchers({ setActiveView }) {
                             <th className="px-6 py-4 font-black text-slate-400">البيان</th>
                             <th className="px-6 py-4 font-black text-slate-400 text-left">المبلغ</th>
                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                          {repExpenses.filter(e => e.settlement_batch_id === selectedJournalEntry.id).map((e, i) => (
-                            <tr key={e.id}>
-                              <td className="px-6 py-4 text-center text-slate-400 font-bold">{i + 1}</td>
-                              <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-300">{formatDateToDisplay(e.date)}</td>
-                              <td className="px-6 py-4 font-black text-blue-600">{e.repName}</td>
-                              <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-400">{e.statement}</td>
-                              <td className="px-6 py-4 text-left font-black text-rose-600 tabular-nums">-{e.amount.toLocaleString()}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                              {repExpenses.filter(e => e.settlement_batch_id === selectedJournalEntry.id).map((e, i) => (
+                                <tr key={e.id}>
+                                  <td className="px-6 py-4 text-center text-slate-400 font-bold">{i + 1}</td>
+                                  <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-300">{formatDateToDisplay(e.date)}</td>
+                                  <td className="px-6 py-4 font-black text-blue-600">{e.repName}</td>
+                                  <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-400">{e.statement}</td>
+                                  <td className="px-6 py-4 text-left font-black text-rose-600 tabular-nums">-{e.amount.toLocaleString()}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </div>
+            )}
+          </AnimatePresence>
+        </div>
 
     {/* ═══ PRINT TEMPLATE (Hidden on screen, visible only on print) ═══ */}
     <div className="hidden print:block bg-white text-slate-900 font-readex p-8" dir="rtl">
-      {/* Premium Print Header */}
-      <div className="mb-10">
-        <div className="flex items-end justify-between border-b-[4px] border-double border-slate-800 pb-8">
-          <div className="flex items-center gap-6">
-            <div className="w-20 h-20 bg-white border-[3px] border-slate-800 rounded-[1.5rem] flex items-center justify-center text-slate-800">
-              <FileText size={40} strokeWidth={2.5} />
-            </div>
-            <div>
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight">قيد تسوية</h1>
-            </div>
-          </div>
-          
-          <div className="flex items-stretch gap-4 text-left">
-            <div className="border-2 border-slate-200 rounded-2xl p-4 min-w-[130px] flex flex-col justify-center">
-              <p className="text-lg font-black text-slate-800 tabular-nums leading-none">{new Date().toLocaleDateString('en-GB')}</p>
-            </div>
-            {(selectedJournalEntry?.journal_no || journalForm.journalNo) && (
-              <div className="border-2 border-slate-800 bg-slate-50 rounded-2xl p-4 min-w-[160px] flex flex-col justify-center">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">رقم الدفتر</p>
-                <p className="text-lg font-black text-slate-900 tabular-nums leading-none">
-                  {selectedJournalEntry?.journal_no || journalForm.journalNo}
-                </p>
-              </div>
-            )}
-            {(selectedJournalEntry?.total_amount || journalForm.totalAmount) && (
-              <div className="border-2 border-slate-800 bg-slate-900 rounded-2xl p-4 min-w-[160px] flex flex-col justify-center">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">إجمالي القيد</p>
-                <p className="text-xl font-black text-white tabular-nums leading-none">{Number(selectedJournalEntry?.total_amount || journalForm.totalAmount).toLocaleString()} <span className="text-xs text-slate-300">ر.س</span></p>
-              </div>
-            )}
-          </div>
+
+      {/* ─── HEADER: 3 columns ─── */}
+      <div className="grid grid-cols-3 items-center border-b-[3px] border-double border-slate-800 pb-6 mb-8">
+        {/* RIGHT: Date */}
+        <div className="text-right">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">التاريخ</p>
+          <p className="text-xl font-black text-slate-800 tabular-nums">{new Date().toLocaleDateString('en-GB')}</p>
+        </div>
+
+        {/* CENTER: Title */}
+        <div className="text-center">
+          <h1 className="text-4xl font-black text-slate-900 tracking-tight">قيد تسوية</h1>
+        </div>
+
+        {/* LEFT: Journal No */}
+        <div className="text-left">
+          {(selectedJournalEntry?.journal_no || journalForm.journalNo) && (
+            <>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">رقم الدفتر</p>
+              <p className="text-xl font-black text-slate-800 tabular-nums">
+                {selectedJournalEntry?.journal_no || journalForm.journalNo}
+              </p>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* ─── SUMMARY CARDS ─── */}
       <div className="grid grid-cols-3 gap-6 mb-8">
         <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
           <p className="text-xs font-black text-emerald-600 uppercase tracking-widest mb-1">إجمالي التحصيل</p>
           <div className="text-xl font-black text-emerald-700 tabular-nums">
-            {filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0).toLocaleString()} <span className="text-xs font-readex text-emerald-500/80">ر.س</span>
+            {filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0).toLocaleString()} <span className="text-xs text-emerald-500/80">ر.س</span>
           </div>
         </div>
         <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4">
           <p className="text-xs font-black text-rose-600 uppercase tracking-widest mb-1">إجمالي المصروفات</p>
           <div className="text-xl font-black text-rose-700 tabular-nums">
-            {repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0).toLocaleString()} <span className="text-xs font-readex text-rose-500/80">ر.س</span>
+            {repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0).toLocaleString()} <span className="text-xs text-rose-500/80">ر.س</span>
           </div>
         </div>
         <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
           <p className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-1">صافي التوريد</p>
           <div className="text-xl font-black text-indigo-700 tabular-nums">
-            {(filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0) - repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0)).toLocaleString()} <span className="text-xs font-readex text-indigo-500/80">ر.س</span>
+            {(filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0) - repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0)).toLocaleString()} <span className="text-xs text-indigo-500/80">ر.س</span>
           </div>
         </div>
       </div>
 
-      {/* Vouchers Table */}
+      {/* ─── VOUCHERS TABLE ─── */}
       {selectedVoucherIds.length > 0 && (
-        <div className="mb-10">
-          <h2 className="text-xl font-black text-slate-800 border-r-4 border-emerald-500 pr-3 mb-6">
+        <div className="mb-8">
+          <h2 className="text-xl font-black text-slate-800 border-r-4 border-emerald-500 pr-3 mb-4">
             أولاً: محصلات سندات التحصيل
           </h2>
           <div className="border border-slate-200 rounded-2xl overflow-hidden">
@@ -1766,10 +1757,10 @@ export default function ReceiptVouchers({ setActiveView }) {
         </div>
       )}
 
-      {/* Expenses Table */}
+      {/* ─── EXPENSES TABLE ─── */}
       {selectedExpenseIds.length > 0 && (
-        <div className="mb-10">
-          <h2 className="text-xl font-black text-slate-800 border-r-4 border-amber-500 pr-3 mb-6">
+        <div className="mb-8">
+          <h2 className="text-xl font-black text-slate-800 border-r-4 border-amber-500 pr-3 mb-4">
             ثانياً: مصروفات ومشتريات المندوبين
           </h2>
           <div className="border border-slate-200 rounded-2xl overflow-hidden">
