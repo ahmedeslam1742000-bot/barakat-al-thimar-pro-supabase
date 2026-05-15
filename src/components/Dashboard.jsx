@@ -646,6 +646,24 @@ export default function Dashboard({ setActiveView, activeView }) {
       <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0, pointerEvents: 'none' }}>
         {invoiceDataForCapture && <InvoiceTemplate data={invoiceDataForCapture} />}
       </div>
+
+      <DashboardConfirmationDialogs
+        showInvoiceExitConfirm={showInvoiceExitConfirm}
+        setShowInvoiceExitConfirm={setShowInvoiceExitConfirm}
+        performInvoiceReset={performInvoiceReset}
+        showReturnExitConfirm={showReturnExitConfirm}
+        setShowReturnExitConfirm={setShowReturnExitConfirm}
+        performReturnReset={performReturnReset}
+        showInvoiceSaveConfirm={showInvoiceSaveConfirm}
+        setShowInvoiceSaveConfirm={setShowInvoiceSaveConfirm}
+        performInvoiceSave={performInvoiceSave}
+        showReturnSaveConfirm={showReturnSaveConfirm}
+        setShowReturnSaveConfirm={setShowReturnSaveConfirm}
+        performReturnSave={performReturnSave}
+        invoiceForm={invoiceForm}
+        returnForm={returnForm}
+        loading={loading}
+      />
     </div>
   );
 }
