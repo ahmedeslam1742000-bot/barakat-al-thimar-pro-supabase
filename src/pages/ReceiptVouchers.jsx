@@ -1345,7 +1345,7 @@ export default function ReceiptVouchers({ setActiveView }) {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsSettlementWizardOpen(false)} className="absolute inset-0 bg-slate-950/60 backdrop-blur-md" />
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} transition={{ duration: 0.2 }}
-              className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] border border-white/20 dark:border-white/10"
+              className="relative w-full max-w-6xl bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col h-[85vh] border border-white/20 dark:border-white/10"
             >
               <div className="px-10 py-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-gradient-to-l from-slate-50 to-white dark:from-slate-800/50 dark:to-slate-900 shrink-0">
                 <div className="flex items-center gap-5">
@@ -1358,132 +1358,150 @@ export default function ReceiptVouchers({ setActiveView }) {
                 <button onClick={() => setIsSettlementWizardOpen(false)} className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all shadow-sm"><X size={24} /></button>
               </div>
               
-              <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar bg-slate-50/50 dark:bg-slate-900/50">
-                {/* Stats Summary */}
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="relative overflow-hidden bg-white dark:bg-slate-800 border border-emerald-100 dark:border-emerald-800/30 rounded-3xl p-6 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 dark:bg-emerald-500/5 rounded-bl-full -z-0"></div>
-                    <div className="relative z-10">
-                      <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">إجمالي السندات المختارة</span>
-                      <div className="text-3xl font-black text-slate-800 dark:text-white mt-1 tabular-nums">
-                        {filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0).toLocaleString()} <span className="text-sm text-slate-400 font-readex">ر.س</span>
+              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar bg-slate-50/50 dark:bg-slate-900/50">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full">
+                  
+                  {/* Left Column: Actions & Summary (Fixed-like layout) */}
+                  <div className="lg:col-span-5 space-y-6 flex flex-col">
+                    
+                    {/* Manual Journal Entry Inputs */}
+                    <div className="bg-white dark:bg-slate-800 border border-indigo-100 dark:border-indigo-800/50 rounded-[2rem] p-6 shadow-xl shadow-indigo-500/5 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-32 h-32 bg-indigo-50 dark:bg-indigo-500/10 rounded-br-full -z-0"></div>
+                      <div className="relative z-10">
+                        <div className="flex items-center gap-3 mb-6">
+                          <div className="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/20"><FileText size={20} /></div>
+                          <div>
+                            <h4 className="text-lg font-black text-slate-800 dark:text-white leading-tight">بيانات القيد المحاسبي</h4>
+                            <p className="text-[10px] font-bold text-slate-400 mt-0.5">يرجى إدخال البيانات من واقع السجلات الرسمية</p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-[11px] font-black text-slate-500 mb-2 mr-1">رقم الدفتر (القيد اليومي) *</label>
+                            <input 
+                              type="text" 
+                              className="w-full h-14 px-6 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-lg outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all text-slate-800 dark:text-white placeholder:text-slate-300"
+                              placeholder="0000"
+                              value={journalForm.journalNo}
+                              onChange={e => setJournalForm({...journalForm, journalNo: e.target.value})}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-black text-slate-500 mb-2 mr-1">إجمالي مبلغ القيد *</label>
+                            <div className="relative">
+                              <input 
+                                type="number" 
+                                className="w-full h-14 px-6 pl-14 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-black text-lg outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all text-slate-800 dark:text-white placeholder:text-slate-300"
+                                placeholder="0.00"
+                                value={journalForm.totalAmount}
+                                onChange={e => setJournalForm({...journalForm, totalAmount: e.target.value})}
+                              />
+                              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">ر.س</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div className="relative z-10 w-14 h-14 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20"><Banknote size={28} /></div>
-                  </div>
-                  <div className="relative overflow-hidden bg-white dark:bg-slate-800 border border-rose-100 dark:border-rose-800/30 rounded-3xl p-6 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50 dark:bg-rose-500/5 rounded-bl-full -z-0"></div>
-                    <div className="relative z-10">
-                      <span className="text-[11px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest">إجمالي المصروفات المحددة</span>
-                      <div className="text-3xl font-black text-slate-800 dark:text-white mt-1 tabular-nums">
-                        {repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0).toLocaleString()} <span className="text-sm text-slate-400 font-readex">ر.س</span>
-                      </div>
-                    </div>
-                    <div className="relative z-10 w-14 h-14 rounded-2xl bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-500/20"><Wallet size={28} /></div>
-                  </div>
-                </div>
 
-                {/* Selected Vouchers Summary */}
-                {selectedVoucherIds.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
-                      <Banknote size={18} className="text-emerald-500" />
-                      السندات المحددة للتسوية
-                    </h4>
-                    <div className="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
-                      <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
-                        <table className="w-full text-right">
-                          <thead className="sticky top-0 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-md z-10">
-                            <tr>
-                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 w-12 text-center">م</th>
-                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700">التاريخ</th>
-                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700">رقم السند</th>
-                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 w-1/3">العميل</th>
-                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 text-left">المبلغ</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
-                            {filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).map((v, i) => (
-                              <tr key={v.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                <td className="px-6 py-3 text-center text-xs font-bold text-slate-400">{i + 1}</td>
-                                <td className="px-6 py-3 text-xs font-bold text-slate-500 dark:text-slate-400">{formatDateToDisplay(v.date)}</td>
-                                <td className="px-6 py-3 text-xs font-black text-slate-600 dark:text-slate-300">{v.voucherNo}</td>
-                                <td className="px-6 py-3 text-sm font-bold text-slate-600 dark:text-slate-400">{v.customerName}</td>
-                                <td className="px-6 py-3 text-left text-sm font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
-                                  {v.amount.toLocaleString()} <span className="text-[10px]">ر.س</span>
-                                </td>
+                    {/* Stats Summary */}
+                    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2rem] p-6 shadow-sm space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-100 dark:border-emerald-800/30">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-500 text-white flex items-center justify-center"><Banknote size={18} /></div>
+                          <span className="text-xs font-black text-emerald-800 dark:text-emerald-300">إجمالي السندات ({selectedVoucherIds.length})</span>
+                        </div>
+                        <div className="text-lg font-black text-emerald-700 dark:text-emerald-400 tabular-nums">
+                          {filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0).toLocaleString()}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 bg-rose-50 dark:bg-rose-900/20 rounded-2xl border border-rose-100 dark:border-rose-800/30">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center"><Wallet size={18} /></div>
+                          <span className="text-xs font-black text-rose-800 dark:text-rose-300">إجمالي المصروفات ({selectedExpenseIds.length})</span>
+                        </div>
+                        <div className="text-lg font-black text-rose-700 dark:text-rose-400 tabular-nums">
+                          {repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Right Column: Tables */}
+                  <div className="lg:col-span-7 space-y-6 flex flex-col h-full overflow-hidden">
+                    
+                    {/* Selected Vouchers Summary */}
+                    {selectedVoucherIds.length > 0 && (
+                      <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2rem] p-6 shadow-sm">
+                        <h4 className="text-sm font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2 border-r-4 border-emerald-500 pr-3">
+                          السندات المحددة للتسوية
+                        </h4>
+                        <div className="flex-1 overflow-auto custom-scrollbar bg-slate-50/50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                          <table className="w-full text-right text-xs">
+                            <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800 z-10 shadow-sm">
+                              <tr>
+                                <th className="px-4 py-3 font-black text-slate-500 w-12 text-center">م</th>
+                                <th className="px-4 py-3 font-black text-slate-500">التاريخ</th>
+                                <th className="px-4 py-3 font-black text-slate-500">رقم السند</th>
+                                <th className="px-4 py-3 font-black text-slate-500">العميل</th>
+                                <th className="px-4 py-3 font-black text-slate-500 text-left">المبلغ</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                              {filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).map((v, i) => (
+                                <tr key={v.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                  <td className="px-4 py-2.5 text-center text-[10px] font-bold text-slate-400">{i + 1}</td>
+                                  <td className="px-4 py-2.5 font-bold text-slate-600 dark:text-slate-400">{formatDateToDisplay(v.date)}</td>
+                                  <td className="px-4 py-2.5 font-black text-slate-700 dark:text-slate-300">{v.voucherNo}</td>
+                                  <td className="px-4 py-2.5 font-bold text-slate-600 dark:text-slate-400 truncate max-w-[120px]">{v.customerName}</td>
+                                  <td className="px-4 py-2.5 text-left font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                    {v.amount.toLocaleString()}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )}
+                    )}
 
-                {/* Selected Expenses Summary */}
-                {selectedExpenseIds.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
-                      <Wallet size={18} className="text-rose-500" />
-                      المصاريف المحددة للتسوية
-                    </h4>
-                    <div className="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
-                      <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
-                        <table className="w-full text-right">
-                          <thead className="sticky top-0 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-md z-10">
-                            <tr>
-                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 w-12 text-center">م</th>
-                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700">التاريخ</th>
-                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700">المستفيد</th>
-                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 w-1/3">البيان</th>
-                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 text-left">المبلغ</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
-                            {repExpenses.filter(e => selectedExpenseIds.includes(e.id)).map((exp, i) => (
-                              <tr key={exp.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                <td className="px-6 py-3 text-center text-xs font-bold text-slate-400">{i + 1}</td>
-                                <td className="px-6 py-3 text-xs font-bold text-slate-500 dark:text-slate-400">{formatDateToDisplay(exp.date)}</td>
-                                <td className="px-6 py-3 text-xs font-black text-slate-700 dark:text-slate-200">{exp.repName}</td>
-                                <td className="px-6 py-3 text-sm font-bold text-slate-600 dark:text-slate-400">{exp.statement}</td>
-                                <td className="px-6 py-3 text-left text-sm font-black text-rose-600 dark:text-rose-400 tabular-nums">
-                                  {exp.amount.toLocaleString()} <span className="text-[10px]">ر.س</span>
-                                </td>
+                    {/* Selected Expenses Summary */}
+                    {selectedExpenseIds.length > 0 && (
+                      <div className="flex-1 flex flex-col min-h-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[2rem] p-6 shadow-sm">
+                        <h4 className="text-sm font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2 border-r-4 border-rose-500 pr-3">
+                          المصاريف المحددة للتسوية
+                        </h4>
+                        <div className="flex-1 overflow-auto custom-scrollbar bg-slate-50/50 dark:bg-slate-900/50 rounded-xl border border-slate-100 dark:border-slate-700">
+                          <table className="w-full text-right text-xs">
+                            <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800 z-10 shadow-sm">
+                              <tr>
+                                <th className="px-4 py-3 font-black text-slate-500 w-12 text-center">م</th>
+                                <th className="px-4 py-3 font-black text-slate-500">التاريخ</th>
+                                <th className="px-4 py-3 font-black text-slate-500">المستفيد</th>
+                                <th className="px-4 py-3 font-black text-slate-500">البيان</th>
+                                <th className="px-4 py-3 font-black text-slate-500 text-left">المبلغ</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                              {repExpenses.filter(e => selectedExpenseIds.includes(e.id)).map((exp, i) => (
+                                <tr key={exp.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                  <td className="px-4 py-2.5 text-center text-[10px] font-bold text-slate-400">{i + 1}</td>
+                                  <td className="px-4 py-2.5 font-bold text-slate-600 dark:text-slate-400">{formatDateToDisplay(exp.date)}</td>
+                                  <td className="px-4 py-2.5 font-black text-slate-700 dark:text-slate-300 truncate max-w-[100px]">{exp.repName}</td>
+                                  <td className="px-4 py-2.5 font-bold text-slate-600 dark:text-slate-400 truncate max-w-[120px]">{exp.statement}</td>
+                                  <td className="px-4 py-2.5 text-left font-black text-rose-600 dark:text-rose-400 tabular-nums">
+                                    {exp.amount.toLocaleString()}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )}
+                    )}
 
-                {/* Manual Journal Entry Inputs */}
-                <div className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30 rounded-[2.5rem] p-8 grid grid-cols-2 gap-8 shadow-sm">
-                  <div className="col-span-2 flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/20"><FileText size={20} /></div>
-                    <h4 className="text-lg font-black text-indigo-900 dark:text-indigo-100">بيانات القيد المحاسبي (من واقع السجلات)</h4>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-black text-slate-500 mb-3 uppercase tracking-widest mr-1">رقم الدفتر (القيد اليومي) *</label>
-                    <input 
-                      type="text" 
-                      className="w-full h-16 px-6 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black text-xl text-center outline-none focus:border-indigo-500 transition-all text-indigo-600 dark:text-indigo-400 placeholder:text-slate-200"
-                      placeholder="0000"
-                      value={journalForm.journalNo}
-                      onChange={e => setJournalForm({...journalForm, journalNo: e.target.value})}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-black text-slate-500 mb-3 uppercase tracking-widest mr-1">إجمالي مبلغ القيد *</label>
-                    <input 
-                      type="number" 
-                      className="w-full h-16 px-6 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black text-xl text-center outline-none focus:border-indigo-500 transition-all text-indigo-600 dark:text-indigo-400 placeholder:text-slate-200"
-                      placeholder="0.00"
-                      value={journalForm.totalAmount}
-                      onChange={e => setJournalForm({...journalForm, totalAmount: e.target.value})}
-                    />
                   </div>
                 </div>
               </div>
