@@ -94,6 +94,7 @@ export default function ReceiptVouchers({ setActiveView }) {
   const [selectedExpenseIds, setSelectedExpenseIds] = useState([]);
   const [activeTable, setActiveTable] = useState('vouchers'); // 'vouchers' or 'expenses'
   const [settlementType, setSettlementType] = useState('pending'); // pending, settled
+  const [isConfirmSettlementOpen, setIsConfirmSettlementOpen] = useState(false);
   const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false);
   const [isConfirmSaveOpen, setIsConfirmSaveOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
@@ -1478,8 +1479,7 @@ export default function ReceiptVouchers({ setActiveView }) {
                     onClick={async () => {
                       handlePrintSettlement();
                       setTimeout(() => {
-                        const confirmed = window.confirm('هل قمت بطباعة القيد وتأكدت من استلام المبلغ؟ سيتم الآن ترحيل هذه العناصر للأرشيف.');
-                        if (confirmed) handleFinalSettlement();
+                        setIsConfirmSettlementOpen(true);
                       }, 1000);
                     }} 
                     className="px-10 py-4 rounded-2xl font-black text-white bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/20 active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50"
@@ -1488,6 +1488,45 @@ export default function ReceiptVouchers({ setActiveView }) {
                     اعتماد وطباعة التسوية
                   </button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ CUSTOM SETTLEMENT CONFIRMATION MODAL ═══ */}
+      <AnimatePresence>
+        {isConfirmSettlementOpen && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsConfirmSettlementOpen(false)} className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }} transition={{ duration: 0.2 }}
+              className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-100 dark:border-slate-800 p-8 text-center"
+            >
+              <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-indigo-600 dark:text-indigo-400">
+                <CheckCircle2 size={40} />
+              </div>
+              <h3 className="text-2xl font-black text-slate-800 dark:text-white mb-2">تأكيد الترحيل</h3>
+              <p className="text-slate-500 dark:text-slate-400 mb-8 font-bold leading-relaxed">
+                هل قمت بطباعة القيد وتأكدت من استلام المبلغ في الدرج؟ سيتم الآن ترحيل هذه السندات والمصروفات للأرشيف.
+              </p>
+              
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => setIsConfirmSettlementOpen(false)}
+                  className="flex-1 py-4 font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 rounded-2xl transition-colors"
+                >
+                  تراجع
+                </button>
+                <button 
+                  onClick={() => {
+                    setIsConfirmSettlementOpen(false);
+                    handleFinalSettlement();
+                  }}
+                  className="flex-1 py-4 font-black text-white bg-indigo-600 hover:bg-indigo-700 rounded-2xl shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
+                >
+                  نعم، استلمت المبلغ
+                </button>
               </div>
             </motion.div>
           </div>
