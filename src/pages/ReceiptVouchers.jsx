@@ -1726,31 +1726,31 @@ export default function ReceiptVouchers({ setActiveView }) {
 
       {/* ─── VOUCHERS TABLE ─── */}
       {selectedVoucherIds.length > 0 && (
-        <div className="mb-4">
-          <h2 className="text-sm font-black text-slate-800 border-r-4 border-emerald-500 pr-2 mb-2">
+        <div className="mb-6">
+          <h2 className="text-sm font-black text-slate-800 border-r-4 border-emerald-500 pr-2 mb-3">
             أولاً: محصلات سندات التحصيل
           </h2>
           <div className="border border-slate-200 rounded-xl overflow-hidden">
-            <table className="w-full text-right text-xs">
+            <table className="w-full text-right text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-3 py-2 font-black text-slate-500 w-8 text-center">م</th>
-                  <th className="px-3 py-2 font-black text-slate-500 whitespace-nowrap">التاريخ</th>
-                  <th className="px-3 py-2 font-black text-slate-500 whitespace-nowrap">المندوب</th>
-                  <th className="px-3 py-2 font-black text-slate-500 w-full whitespace-nowrap">العميل</th>
-                  <th className="px-3 py-2 font-black text-slate-500 text-center whitespace-nowrap">رقم السند</th>
-                  <th className="px-3 py-2 font-black text-slate-500 text-left whitespace-nowrap">المبلغ</th>
+                  <th className="px-4 py-3 font-black text-slate-500 w-8 text-center">م</th>
+                  <th className="px-4 py-3 font-black text-slate-500 whitespace-nowrap">التاريخ</th>
+                  <th className="px-4 py-3 font-black text-slate-500 whitespace-nowrap">المندوب</th>
+                  <th className="px-4 py-3 font-black text-slate-500 w-full whitespace-nowrap">العميل</th>
+                  <th className="px-4 py-3 font-black text-slate-500 text-center whitespace-nowrap">رقم السند</th>
+                  <th className="px-4 py-3 font-black text-slate-500 text-left whitespace-nowrap">المبلغ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).map((v, i) => (
                   <tr key={v.id}>
-                    <td className="px-3 py-1.5 text-center text-slate-400 font-black">{i + 1}</td>
-                    <td className="px-3 py-1.5 font-bold text-slate-600 whitespace-nowrap">{formatDateToDisplay(v.date)}</td>
-                    <td className="px-3 py-1.5 font-black text-slate-800 whitespace-nowrap">{v.repName}</td>
-                    <td className="px-3 py-1.5 font-bold text-slate-600 whitespace-nowrap">{v.customerName}</td>
-                    <td className="px-3 py-1.5 text-center font-bold text-slate-500 whitespace-nowrap">{v.voucherNo}</td>
-                    <td className="px-3 py-1.5 text-left font-black text-emerald-600 tabular-nums whitespace-nowrap">{v.amount.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-center text-slate-400 font-black">{i + 1}</td>
+                    <td className="px-4 py-2.5 font-bold text-slate-600 whitespace-nowrap">{formatDateToDisplay(v.date)}</td>
+                    <td className="px-4 py-2.5 font-black text-slate-800 whitespace-nowrap">{v.repName}</td>
+                    <td className="px-4 py-2.5 font-bold text-slate-600 whitespace-nowrap">{v.customerName}</td>
+                    <td className="px-4 py-2.5 text-center font-bold text-slate-500 whitespace-nowrap">{v.voucherNo}</td>
+                    <td className="px-4 py-2.5 text-left font-black text-emerald-600 tabular-nums whitespace-nowrap">{v.amount.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1761,29 +1761,29 @@ export default function ReceiptVouchers({ setActiveView }) {
 
       {/* ─── EXPENSES TABLE ─── */}
       {selectedExpenseIds.length > 0 && (
-        <div className="mb-4">
-          <h2 className="text-sm font-black text-slate-800 border-r-4 border-amber-500 pr-2 mb-2">
+        <div className="mb-6">
+          <h2 className="text-sm font-black text-slate-800 border-r-4 border-amber-500 pr-2 mb-3">
             ثانياً: مصروفات ومشتريات المندوبين
           </h2>
           <div className="border border-slate-200 rounded-xl overflow-hidden">
-            <table className="w-full text-right text-xs">
+            <table className="w-full text-right text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-3 py-2 font-black text-slate-500 w-8 text-center">م</th>
-                  <th className="px-3 py-2 font-black text-slate-500 whitespace-nowrap">التاريخ</th>
-                  <th className="px-3 py-2 font-black text-slate-500 whitespace-nowrap">المستفيد</th>
-                  <th className="px-3 py-2 font-black text-slate-500 w-full whitespace-nowrap">بيان المصروف</th>
-                  <th className="px-3 py-2 font-black text-slate-500 text-left whitespace-nowrap">المبلغ</th>
+                  <th className="px-4 py-3 font-black text-slate-500 w-8 text-center">م</th>
+                  <th className="px-4 py-3 font-black text-slate-500 whitespace-nowrap">التاريخ</th>
+                  <th className="px-4 py-3 font-black text-slate-500 whitespace-nowrap">المستفيد</th>
+                  <th className="px-4 py-3 font-black text-slate-500 w-full whitespace-nowrap">بيان المصروف</th>
+                  <th className="px-4 py-3 font-black text-slate-500 text-left whitespace-nowrap">المبلغ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {repExpenses.filter(e => selectedExpenseIds.includes(e.id)).map((e, i) => (
                   <tr key={e.id}>
-                    <td className="px-3 py-1.5 text-center text-slate-400 font-black">{i + 1}</td>
-                    <td className="px-3 py-1.5 font-bold text-slate-600 whitespace-nowrap">{formatDateToDisplay(e.date)}</td>
-                    <td className="px-3 py-1.5 font-black text-slate-800 whitespace-nowrap">{e.repName}</td>
-                    <td className="px-3 py-1.5 font-bold text-slate-600 whitespace-nowrap">{e.statement}</td>
-                    <td className="px-3 py-1.5 text-left font-black text-rose-600 tabular-nums whitespace-nowrap">{e.amount.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-center text-slate-400 font-black">{i + 1}</td>
+                    <td className="px-4 py-2.5 font-bold text-slate-600 whitespace-nowrap">{formatDateToDisplay(e.date)}</td>
+                    <td className="px-4 py-2.5 font-black text-slate-800 whitespace-nowrap">{e.repName}</td>
+                    <td className="px-4 py-2.5 font-bold text-slate-600 whitespace-nowrap">{e.statement}</td>
+                    <td className="px-4 py-2.5 text-left font-black text-rose-600 tabular-nums whitespace-nowrap">{e.amount.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
