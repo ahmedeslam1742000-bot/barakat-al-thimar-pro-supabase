@@ -1683,35 +1683,30 @@ export default function ReceiptVouchers({ setActiveView }) {
               <FileText size={40} strokeWidth={2.5} />
             </div>
             <div>
-              <h1 className="text-4xl font-black text-slate-900 tracking-tight">قيد تسوية وتوريد عهدة</h1>
-              <div className="mt-2 text-slate-500 font-bold text-sm tracking-wide">
-                مستند مالي معتمد للمراجعة والتدقيق
-              </div>
+              <h1 className="text-4xl font-black text-slate-900 tracking-tight">قيد تسوية</h1>
             </div>
           </div>
           
           <div className="flex items-stretch gap-4 text-left">
             <div className="border-2 border-slate-200 rounded-2xl p-4 min-w-[130px] flex flex-col justify-center">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">تاريخ الاعتماد</p>
               <p className="text-lg font-black text-slate-800 tabular-nums leading-none">{new Date().toLocaleDateString('en-GB')}</p>
             </div>
-            {(selectedJournalEntry?.journal_no || journalForm.journalNo || selectedJournalEntry?.total_amount || journalForm.totalAmount) && (
+            {(selectedJournalEntry?.journal_no || journalForm.journalNo) && (
               <div className="border-2 border-slate-800 bg-slate-50 rounded-2xl p-4 min-w-[160px] flex flex-col justify-center">
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">بيانات السجل</p>
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">رقم الدفتر</p>
                 <p className="text-lg font-black text-slate-900 tabular-nums leading-none">
-                  {(selectedJournalEntry?.journal_no || journalForm.journalNo) ? `دفتر: ${selectedJournalEntry?.journal_no || journalForm.journalNo}` : 'مراجعة الدفتر'}
+                  {selectedJournalEntry?.journal_no || journalForm.journalNo}
                 </p>
+              </div>
+            )}
+            {(selectedJournalEntry?.total_amount || journalForm.totalAmount) && (
+              <div className="border-2 border-slate-800 bg-slate-900 rounded-2xl p-4 min-w-[160px] flex flex-col justify-center">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">إجمالي القيد</p>
+                <p className="text-xl font-black text-white tabular-nums leading-none">{Number(selectedJournalEntry?.total_amount || journalForm.totalAmount).toLocaleString()} <span className="text-xs text-slate-300">ر.س</span></p>
               </div>
             )}
           </div>
         </div>
-
-        {(selectedJournalEntry?.total_amount || journalForm.totalAmount) && (
-          <div className="mt-4 flex items-center justify-between border border-slate-200 p-4 rounded-2xl">
-            <span className="text-sm font-bold text-slate-500">إجمالي قيمة القيد المسجل بالدفتر:</span>
-            <span className="text-2xl font-black text-slate-800 tabular-nums">{Number(selectedJournalEntry?.total_amount || journalForm.totalAmount).toLocaleString()} <span className="text-sm">ر.س</span></span>
-          </div>
-        )}
       </div>
 
       {/* Summary Cards */}
