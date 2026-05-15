@@ -729,7 +729,8 @@ export default function ReceiptVouchers({ setActiveView }) {
   };
 
   return (
-    <div className="h-full flex flex-col p-4 md:p-8 bg-[#f8fafc] dark:bg-slate-950 font-readex overflow-hidden" dir="rtl">
+    <>
+      <div className="print:hidden h-full flex flex-col p-4 md:p-8 bg-[#f8fafc] dark:bg-slate-950 font-readex overflow-hidden" dir="rtl">
       
       {/* ═══ HEADER ═══ */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
@@ -1470,104 +1471,134 @@ export default function ReceiptVouchers({ setActiveView }) {
         )}
       </AnimatePresence>
     </div>
+
+    {/* ═══ PRINT TEMPLATE (Hidden on screen, visible only on print) ═══ */}
+    <div className="hidden print:block bg-white text-slate-900 font-readex p-8" dir="rtl">
+      {/* Elegant Header */}
+      <div className="flex items-center justify-between border-b-[3px] border-slate-800 pb-6 mb-8">
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white">
+            <CreditCard size={32} />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black text-slate-900">قيد تسوية وتوريد عهدة</h1>
+            <p className="text-sm font-bold text-slate-500 mt-1 uppercase tracking-widest">مؤسسة بركة الثمار التجارية</p>
+          </div>
+        </div>
+        <div className="text-left">
+          <p className="text-sm font-bold text-slate-400">تاريخ القيد</p>
+          <p className="text-lg font-black text-slate-800 tabular-nums">{new Date().toLocaleDateString('ar-SA')}</p>
+        </div>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-3 gap-6 mb-10">
+        <div className="bg-emerald-50 border border-emerald-100 rounded-3xl p-6">
+          <p className="text-xs font-black text-emerald-600 uppercase tracking-widest mb-2">إجمالي التحصيل</p>
+          <div className="text-3xl font-black text-emerald-700 tabular-nums">
+            {filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0).toLocaleString()} <span className="text-sm font-readex text-emerald-500/80">ر.س</span>
+          </div>
+        </div>
+        <div className="bg-rose-50 border border-rose-100 rounded-3xl p-6">
+          <p className="text-xs font-black text-rose-600 uppercase tracking-widest mb-2">إجمالي المصروفات</p>
+          <div className="text-3xl font-black text-rose-700 tabular-nums">
+            {repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0).toLocaleString()} <span className="text-sm font-readex text-rose-500/80">ر.س</span>
+          </div>
+        </div>
+        <div className="bg-indigo-50 border border-indigo-100 rounded-3xl p-6">
+          <p className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-2">صافي التوريد</p>
+          <div className="text-3xl font-black text-indigo-700 tabular-nums">
+            {(filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0) - repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0)).toLocaleString()} <span className="text-sm font-readex text-indigo-500/80">ر.س</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Vouchers Table */}
+      {selectedVoucherIds.length > 0 && (
+        <div className="mb-10">
+          <h2 className="text-xl font-black text-slate-800 border-r-4 border-emerald-500 pr-3 mb-6">
+            أولاً: محصلات سندات القبض
+          </h2>
+          <div className="border border-slate-200 rounded-2xl overflow-hidden">
+            <table className="w-full text-right text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-4 font-black text-slate-500 w-12 text-center">م</th>
+                  <th className="px-6 py-4 font-black text-slate-500">التاريخ</th>
+                  <th className="px-6 py-4 font-black text-slate-500">المندوب</th>
+                  <th className="px-6 py-4 font-black text-slate-500 w-1/3">العميل</th>
+                  <th className="px-6 py-4 font-black text-slate-500 text-center">رقم السند</th>
+                  <th className="px-6 py-4 font-black text-slate-500 text-left">المبلغ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).map((v, i) => (
+                  <tr key={v.id}>
+                    <td className="px-6 py-4 text-center text-slate-400 font-black">{i + 1}</td>
+                    <td className="px-6 py-4 font-bold text-slate-600">{formatDateToDisplay(v.date)}</td>
+                    <td className="px-6 py-4 font-black text-slate-800">{v.repName}</td>
+                    <td className="px-6 py-4 font-bold text-slate-600">{v.customerName}</td>
+                    <td className="px-6 py-4 text-center font-bold text-slate-500">{v.voucherNo}</td>
+                    <td className="px-6 py-4 text-left font-black text-emerald-600 tabular-nums">{v.amount.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Expenses Table */}
+      {selectedExpenseIds.length > 0 && (
+        <div className="mb-10">
+          <h2 className="text-xl font-black text-slate-800 border-r-4 border-amber-500 pr-3 mb-6">
+            ثانياً: مصروفات ومشتريات المندوبين
+          </h2>
+          <div className="border border-slate-200 rounded-2xl overflow-hidden">
+            <table className="w-full text-right text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-4 font-black text-slate-500 w-12 text-center">م</th>
+                  <th className="px-6 py-4 font-black text-slate-500">التاريخ</th>
+                  <th className="px-6 py-4 font-black text-slate-500 w-1/2">بيان المصروف</th>
+                  <th className="px-6 py-4 font-black text-slate-500 text-left">المبلغ</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {repExpenses.filter(e => selectedExpenseIds.includes(e.id)).map((e, i) => (
+                  <tr key={e.id}>
+                    <td className="px-6 py-4 text-center text-slate-400 font-black">{i + 1}</td>
+                    <td className="px-6 py-4 font-bold text-slate-600">{formatDateToDisplay(e.date)}</td>
+                    <td className="px-6 py-4 font-black text-slate-800">{e.statement}</td>
+                    <td className="px-6 py-4 text-left font-black text-rose-600 tabular-nums">{e.amount.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Signatures */}
+      <div className="mt-20 pt-10 grid grid-cols-3 gap-8 text-center">
+        <div>
+          <p className="font-bold text-slate-500 mb-12">توقيع المندوب / المحصل</p>
+          <div className="border-b-2 border-dashed border-slate-300 mx-10"></div>
+        </div>
+        <div>
+          <p className="font-bold text-slate-500 mb-12">توقيع المحاسب المستلم</p>
+          <div className="border-b-2 border-dashed border-slate-300 mx-10"></div>
+        </div>
+        <div>
+          <p className="font-bold text-slate-500 mb-12">اعتماد مدير الفرع</p>
+          <div className="border-b-2 border-dashed border-slate-300 mx-10"></div>
+        </div>
+      </div>
+    </div>
+  </>
   );
 
   function handlePrintSettlement() {
-    const selVouchers = filteredVouchers.filter(v => selectedVoucherIds.includes(v.id));
-    const selExpenses = repExpenses.filter(e => selectedExpenseIds.includes(e.id));
-    const totalColl = selVouchers.reduce((s, v) => s + v.amount, 0);
-    const totalExp = selExpenses.reduce((s, e) => s + e.amount, 0);
-    const net = totalColl - totalExp;
-
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const voucherRows = selVouchers.map((v, i) => `
-      <tr>
-        <td class="text-center">${i + 1}</td>
-        <td class="text-center">${formatDateToDisplay(v.date)}</td>
-        <td class="font-bold">${v.repName}</td>
-        <td>${v.customerName}</td>
-        <td class="text-center">${v.voucherNo}</td>
-        <td class="text-center font-bold text-emerald">${v.amount.toLocaleString()}</td>
-      </tr>
-    `).join('');
-
-    const expenseRows = selExpenses.map((e, i) => `
-      <tr>
-        <td class="text-center">${i + 1}</td>
-        <td class="text-center">${formatDateToDisplay(e.date)}</td>
-        <td class="font-bold">${e.statement}</td>
-        <td class="text-center font-bold text-amber">${e.amount.toLocaleString()}</td>
-      </tr>
-    `).join('');
-
-    const html = `
-      <html dir="rtl">
-        <head>
-          <title>قيد تسوية وتوريد عهدة</title>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap');
-            body { font-family: 'Cairo', sans-serif; padding: 40px; color: #1e293b; line-height: 1.6; }
-            .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; border-bottom: 4px solid #0f172a; padding-bottom: 20px; }
-            .title { font-size: 28px; font-weight: 900; color: #0f172a; }
-            .meta { text-align: left; font-size: 14px; font-weight: bold; color: #64748b; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 13px; }
-            th { background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; text-align: right; color: #64748b; font-weight: 900; }
-            td { border: 1px solid #e2e8f0; padding: 12px; }
-            .section-title { font-size: 16px; font-weight: 900; margin-bottom: 15px; color: #0f172a; border-right: 4px solid #279489; padding-right: 12px; }
-            .text-emerald { color: #059669; }
-            .text-amber { color: #d97706; }
-            .summary-card { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 20px; padding: 30px; margin-top: 40px; }
-            .summary-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #cbd5e1; }
-            .summary-row:last-child { border: none; padding-top: 15px; }
-            .net-box { font-size: 24px; font-weight: 900; color: #0f172a; }
-            .footer-sigs { margin-top: 80px; display: flex; justify-content: space-around; font-weight: 900; color: #64748b; }
-            @media print { body { padding: 0; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="title">قيد تسوية وتوريد عهدة</div>
-            <div class="meta">تاريخ القيد: ${new Date().toLocaleDateString('ar-SA')}</div>
-          </div>
-
-          <div class="section-title">أولاً: محصلات سندات القبض</div>
-          <table>
-            <thead>
-              <tr><th width="5%">م</th><th width="15%">التاريخ</th><th width="20%">المندوب</th><th width="25%">العميل</th><th width="15%">رقم السند</th><th width="20%">المبلغ</th></tr>
-            </thead>
-            <tbody>${voucherRows}</tbody>
-            <tfoot><tr><td colspan="5" style="text-align:left; font-weight:900;">إجمالي التحصيل النقدي:</td><td class="text-emerald" style="font-weight:900; text-align:center;">${totalColl.toLocaleString()} ر.س</td></tr></tfoot>
-          </table>
-
-          ${selExpenses.length > 0 ? `
-            <div class="section-title">ثانياً: مصروفات ومشتريات المندوبين مخصومة من العهدة</div>
-            <table>
-              <thead>
-                <tr><th width="5%">م</th><th width="15%">التاريخ</th><th width="65%">بيان المصروف</th><th width="15%">المبلغ</th></tr>
-              </thead>
-              <tbody>${expenseRows}</tbody>
-              <tfoot><tr><td colspan="3" style="text-align:left; font-weight:900;">إجمالي المصروفات المخصومة:</td><td class="text-amber" style="font-weight:900; text-align:center;">${totalExp.toLocaleString()} ر.س</td></tr></tfoot>
-            </table>
-          ` : ''}
-
-          <div class="summary-card">
-            <div class="summary-row"><span>إجمالي التحصيل النقدي</span><span class="text-emerald">${totalColl.toLocaleString()} ر.س</span></div>
-            <div class="summary-row"><span>إجمالي المصروفات والمشتريات (يُخصم)</span><span class="text-amber">(${totalExp.toLocaleString()}) ر.س</span></div>
-            <div class="summary-row net-box"><span>صافي المبلغ المورد للفرع</span><span>${net.toLocaleString()} ر.س</span></div>
-          </div>
-
-          <div class="footer-sigs">
-            <div>توقيع المندوب / المحصل: ..........................</div>
-            <div>توقيع المحاسب المستلم: ..........................</div>
-            <div>توقيع مدير الفرع: ..........................</div>
-          </div>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
+    window.print();
   }
 }
