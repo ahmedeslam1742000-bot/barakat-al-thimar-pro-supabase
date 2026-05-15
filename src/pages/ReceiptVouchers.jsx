@@ -1695,21 +1695,21 @@ export default function ReceiptVouchers({ setActiveView }) {
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">تاريخ الاعتماد</p>
               <p className="text-lg font-black text-slate-800 tabular-nums leading-none">{new Date().toLocaleDateString('en-GB')}</p>
             </div>
-            {(journalForm.journalNo || journalForm.totalAmount) && (
+            {(selectedJournalEntry?.journal_no || journalForm.journalNo || selectedJournalEntry?.total_amount || journalForm.totalAmount) && (
               <div className="border-2 border-slate-800 bg-slate-50 rounded-2xl p-4 min-w-[160px] flex flex-col justify-center">
                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">بيانات السجل</p>
                 <p className="text-lg font-black text-slate-900 tabular-nums leading-none">
-                  {journalForm.journalNo ? `دفتر: ${journalForm.journalNo}` : 'مراجعة الدفتر'}
+                  {(selectedJournalEntry?.journal_no || journalForm.journalNo) ? `دفتر: ${selectedJournalEntry?.journal_no || journalForm.journalNo}` : 'مراجعة الدفتر'}
                 </p>
               </div>
             )}
           </div>
         </div>
 
-        {journalForm.totalAmount && (
+        {(selectedJournalEntry?.total_amount || journalForm.totalAmount) && (
           <div className="mt-4 flex items-center justify-between border border-slate-200 p-4 rounded-2xl">
             <span className="text-sm font-bold text-slate-500">إجمالي قيمة القيد المسجل بالدفتر:</span>
-            <span className="text-2xl font-black text-slate-800 tabular-nums">{Number(journalForm.totalAmount).toLocaleString()} <span className="text-sm">ر.س</span></span>
+            <span className="text-2xl font-black text-slate-800 tabular-nums">{Number(selectedJournalEntry?.total_amount || journalForm.totalAmount).toLocaleString()} <span className="text-sm">ر.س</span></span>
           </div>
         )}
       </div>
@@ -1804,21 +1804,7 @@ export default function ReceiptVouchers({ setActiveView }) {
         </div>
       )}
 
-      {/* Signatures */}
-      <div className="mt-20 pt-10 grid grid-cols-3 gap-8 text-center">
-        <div>
-          <p className="font-bold text-slate-500 mb-12">توقيع المندوب / المحصل</p>
-          <div className="border-b-2 border-dashed border-slate-300 mx-10"></div>
-        </div>
-        <div>
-          <p className="font-bold text-slate-500 mb-12">توقيع المحاسب المستلم</p>
-          <div className="border-b-2 border-dashed border-slate-300 mx-10"></div>
-        </div>
-        <div>
-          <p className="font-bold text-slate-500 mb-12">اعتماد مدير الفرع</p>
-          <div className="border-b-2 border-dashed border-slate-300 mx-10"></div>
-        </div>
-      </div>
+
     </div>
   </>
   );
