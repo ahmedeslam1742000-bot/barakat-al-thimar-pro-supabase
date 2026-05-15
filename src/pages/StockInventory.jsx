@@ -135,6 +135,7 @@ export default function StockInventory({ setActiveView }) {
     sortedCats.forEach(cat => {
       let rows = '';
       groupedItems[cat].forEach((item, idx) => {
+        const bg = idx % 2 === 0 ? '#ffffff' : '#f0faf9';
         const itemDisplayName = item.name + (isInvalidCompany(item.company) ? '' : ` <span style="color:#64748b;font-weight:700;"> - ${item.company}</span>`);
         rows += `<tr style="-webkit-print-color-adjust:exact;print-color-adjust:exact;background:${bg};">
           <td style="border:1px solid #cbd5e1;padding:10px 12px;text-align:center;font-size:14px;font-weight:700;color:#334155;">${idx + 1}</td>
