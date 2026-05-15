@@ -92,9 +92,12 @@ export default function ReceiptVouchers({ setActiveView }) {
   const [isSettlementWizardOpen, setIsSettlementWizardOpen] = useState(false);
   const [selectedVoucherIds, setSelectedVoucherIds] = useState([]);
   const [selectedExpenseIds, setSelectedExpenseIds] = useState([]);
-  const [activeTable, setActiveTable] = useState('vouchers'); // 'vouchers' or 'expenses'
-  const [settlementType, setSettlementType] = useState('pending'); // pending, settled
+  const [activeTable, setActiveTable] = useState('vouchers'); // 'vouchers', 'expenses', 'journal_entries'
+  const [journalEntries, setJournalEntries] = useState([]);
+  const [journalForm, setJournalForm] = useState({ journalNo: '', totalAmount: '' });
   const [isConfirmSettlementOpen, setIsConfirmSettlementOpen] = useState(false);
+  const [isJournalDetailOpen, setIsJournalDetailOpen] = useState(false);
+  const [selectedJournalEntry, setSelectedJournalEntry] = useState(null);
   const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false);
   const [isConfirmSaveOpen, setIsConfirmSaveOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
@@ -184,27 +187,32 @@ export default function ReceiptVouchers({ setActiveView }) {
   }, []);
 
   const filteredVouchers = useMemo(() => {
-    return receiptVouchers.filter(v => {
+    return (receiptVouchers || []).filter(v => {
       const matchesSearch = (v.voucherNo || '').includes(debouncedSearchTerm) ||
                             (v.repName || '').includes(debouncedSearchTerm) ||
                             (v.customerName || '').includes(debouncedSearchTerm);
-      const matchesStatus = settlementType === 'all' || 
-                            (settlementType === 'pending' && !v.is_settled) || 
-                            (settlementType === 'settled' && v.is_settled);
-      return matchesSearch && matchesStatus;
+      // Show only non-settled vouchers in main view
+      return matchesSearch && !v.is_settled;
     });
-  }, [receiptVouchers, debouncedSearchTerm, settlementType]);
+  }, [receiptVouchers, debouncedSearchTerm]);
 
   const filteredExpenses = useMemo(() => {
-    return repExpenses.filter(e => {
+    return (repExpenses || []).filter(e => {
       const matchesSearch = (e.repName || '').includes(debouncedSearchTerm) ||
                             (e.statement || '').includes(debouncedSearchTerm);
-      const matchesStatus = settlementType === 'all' || 
-                            (settlementType === 'pending' && !e.is_settled) || 
-                            (settlementType === 'settled' && e.is_settled);
-      return matchesSearch && matchesStatus;
+      // Show only non-settled expenses in main view
+      return matchesSearch && !e.is_settled;
     });
-  }, [repExpenses, debouncedSearchTerm, settlementType]);
+  }, [repExpenses, debouncedSearchTerm]);
+
+  const fetchJournalEntries = async () => {
+    const { data, error } = await supabase.from('journal_entries').select('*').order('created_at', { ascending: false });
+    if (!error && data) setJournalEntries(data);
+  };
+
+  useEffect(() => {
+    fetchJournalEntries();
+  }, []);
 
   const toggleVoucherSelection = (id) => {
     setSelectedVoucherIds(prev => prev.includes(id) ? prev.filter(vid => vid !== id) : [...prev, id]);
@@ -241,9 +249,22 @@ export default function ReceiptVouchers({ setActiveView }) {
   };
 
   const handleFinalSettlement = async () => {
+    if (!journalForm.journalNo || !journalForm.totalAmount) {
+      toast.error('يرجى إدخال رقم الدفتر ومجموع القيد');
+      return;
+    }
     setLoading(true);
     try {
       const batchId = crypto.randomUUID();
+      
+      // Create Journal Entry Record
+      const { error: jError } = await supabase.from('journal_entries').insert([{
+        id: batchId,
+        journal_no: journalForm.journalNo,
+        total_amount: Number(journalForm.totalAmount)
+      }]);
+      if (jError) throw jError;
+
       // Update Vouchers
       const { error: vError } = await supabase
         .from('receipt_vouchers')
@@ -260,13 +281,16 @@ export default function ReceiptVouchers({ setActiveView }) {
         if (eError) throw eError;
       }
 
-      toast.success('تم ترحيل البيانات وتسوية الحساب بنجاح ✅');
+      toast.success('تم ترحيل القيد بنجاح ✅');
+      setIsSettlementWizardOpen(false);
       setSelectedVoucherIds([]);
       setSelectedExpenseIds([]);
-      setIsSettlementWizardOpen(false);
+      setJournalForm({ journalNo: '', totalAmount: '' });
+      fetchJournalEntries();
+      fetchInitialData();
     } catch (err) {
-      console.error('Settlement error:', err);
-      toast.error('خطأ أثناء إتمام التسوية');
+      console.error('Settlement Error:', err);
+      toast.error('حدث خطأ أثناء الترحيل');
     } finally {
       setLoading(false);
     }
@@ -800,7 +824,7 @@ export default function ReceiptVouchers({ setActiveView }) {
         </div>
       </div>
 
-      {/* Tabs for Table View & Settlement Status */}
+      {/* Tabs for Table View */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 w-full">
         <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
           <button
@@ -821,27 +845,15 @@ export default function ReceiptVouchers({ setActiveView }) {
             <Wallet size={16} />
             المصروفات
           </button>
-        </div>
-
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
-          {[
-            { id: 'pending', label: activeTable === 'vouchers' ? 'سندات معلقة' : 'مصاريف معلقة', icon: <Clock size={14} /> },
-            { id: 'settled', label: activeTable === 'vouchers' ? 'سندات موردة' : 'مصاريف تمت تسويتها', icon: <CheckCircle2 size={14} /> },
-            { id: 'all', label: 'الكل', icon: <Filter size={14} /> }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setSettlementType(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
-                settlementType === tab.id 
-                  ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-sm' 
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
+          <button
+            onClick={() => setActiveTable('journal_entries')}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all ${
+              activeTable === 'journal_entries' ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <FileText size={16} />
+            القيود اليومية
+          </button>
         </div>
       </div>
 
@@ -913,45 +925,26 @@ export default function ReceiptVouchers({ setActiveView }) {
                   </td>
                   <td className="px-6 py-5 text-center text-xs font-black text-slate-400 group-hover:text-emerald-500 transition-colors">{idx + 1}</td>
                   <td className="px-6 py-5 text-xs font-bold text-slate-700 dark:text-white">{formatDateToDisplay(voucher.date)}</td>
-                  <td className="px-6 py-5 text-xs font-black text-slate-700 dark:text-white">
-                    {voucher.repName}
-                  </td>
+                  <td className="px-6 py-5 text-xs font-black text-slate-700 dark:text-white">{voucher.repName}</td>
                   <td className="px-6 py-5 text-xs font-bold text-slate-600 dark:text-slate-300">{voucher.customerName}</td>
                   <td className="px-6 py-5 text-center">
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-black border border-slate-200/50 dark:border-slate-700">
-                      {voucher.voucherNo}
-                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-black border border-slate-200/50 dark:border-slate-700">{voucher.voucherNo}</span>
                   </td>
                   <td className="px-6 py-5 text-center text-sm font-black text-emerald-600 dark:text-emerald-400">{voucher.amount.toLocaleString()} <small className="text-[10px]">ر.س</small></td>
                   <td className="px-6 py-5 text-center">
-                    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black border ${
-                        voucher.is_deposited 
-                          ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50' 
-                          : 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/50'
-                      }`}
-                    >
-                      {voucher.is_deposited ? (
-                        <><Landmark size={12} /> تم الإيداع</>
-                      ) : (
-                        <><Wallet size={12} /> في الخزينة</>
-                      )}
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black border ${voucher.is_deposited ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50' : 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/50'}`}>
+                      {voucher.is_deposited ? <><Landmark size={12} /> تم الإيداع</> : <><Wallet size={12} /> في الخزينة</>}
                     </div>
                   </td>
                   <td className="px-6 py-5 text-center">
                     <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => { e.stopPropagation(); setViewVoucher(voucher); }} className="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all" title="تفاصيل السند (للإيداع)">
-                        <Eye size={16} />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); openEdit(voucher); }} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all" title="تعديل">
-                        <Pencil size={16} />
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(voucher.id, 'voucher'); }} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all" title="مسح">
-                        <Trash2 size={16} />
-                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setViewVoucher(voucher); }} className="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all"><Eye size={16} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); openEdit(voucher); }} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"><Pencil size={16} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(voucher.id, 'voucher'); }} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
-              )) : filteredExpenses.map((expense, idx) => (
+              )) : activeTable === 'expenses' ? filteredExpenses.map((expense, idx) => (
                 <tr 
                   style={{ animationDelay: `${idx * 0.05}s`, opacity: 0 }} 
                   key={expense.id} 
@@ -959,40 +952,45 @@ export default function ReceiptVouchers({ setActiveView }) {
                   className={`animate-fade-in-up group cursor-pointer hover:bg-amber-50/30 dark:hover:bg-amber-900/10 transition-colors ${selectedExpenseIds.includes(expense.id) ? 'bg-amber-50/50' : ''}`}
                 >
                   <td className="px-6 py-5 text-center">
-                    <input 
-                      type="checkbox" 
-                      className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 pointer-events-none"
-                      checked={selectedExpenseIds.includes(expense.id)}
-                      readOnly
-                    />
+                    <input type="checkbox" className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 pointer-events-none" checked={selectedExpenseIds.includes(expense.id)} readOnly />
                   </td>
                   <td className="px-6 py-5 text-center text-xs font-black text-slate-400 group-hover:text-amber-500 transition-colors">{idx + 1}</td>
                   <td className="px-6 py-5 text-xs font-bold text-slate-700 dark:text-white">{formatDateToDisplay(expense.date)}</td>
-                  <td className="px-6 py-5 text-xs font-black text-slate-700 dark:text-white">
-                    {expense.repName}
-                  </td>
+                  <td className="px-6 py-5 text-xs font-black text-slate-700 dark:text-white">{expense.repName}</td>
                   <td className="px-6 py-5 text-xs font-bold text-slate-600 dark:text-slate-300">{expense.statement}</td>
                   <td className="px-6 py-5 text-center text-sm font-black text-rose-600 dark:text-rose-400">-{expense.amount.toLocaleString()} <small className="text-[10px]">ر.س</small></td>
                   <td className="px-6 py-5 text-center">
-                    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black border ${
-                        expense.is_settled 
-                          ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50' 
-                          : 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/50'
-                      }`}
-                    >
-                      {expense.is_settled ? (
-                        <><CheckCircle2 size={12} /> تمت التسوية</>
-                      ) : (
-                        <><Clock size={12} /> معلق</>
-                      )}
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black border bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/50">
+                      <Clock size={12} /> معلق
                     </div>
                   </td>
                   <td className="px-6 py-5 text-center">
                     <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => { e.stopPropagation(); handleDelete(expense.id, 'expense'); }} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all" title="مسح">
-                        <Trash2 size={16} />
-                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(expense.id, 'expense'); }} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all"><Trash2 size={16} /></button>
                     </div>
+                  </td>
+                </tr>
+              )) : journalEntries.map((journal, idx) => (
+                <tr 
+                  key={journal.id} 
+                  onClick={() => { setSelectedJournalEntry(journal); setIsJournalDetailOpen(true); }}
+                  className="animate-fade-in-up group cursor-pointer hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors"
+                >
+                  <td className="px-6 py-5 text-center">
+                    <FileText size={16} className="text-indigo-400 mx-auto" />
+                  </td>
+                  <td className="px-6 py-5 text-center text-xs font-black text-slate-400">{idx + 1}</td>
+                  <td className="px-6 py-5 text-xs font-bold text-slate-700 dark:text-white">{new Date(journal.created_at).toLocaleDateString('ar-EG')}</td>
+                  <td className="px-6 py-5 text-xs font-black text-indigo-600 dark:text-indigo-400">قيد رقم: {journal.journal_no}</td>
+                  <td className="px-6 py-5 text-xs font-bold text-slate-600 dark:text-slate-300">تسوية عهدة مجمعة</td>
+                  <td className="px-6 py-5 text-center text-sm font-black text-indigo-600 dark:text-indigo-400">{journal.total_amount.toLocaleString()} <small className="text-[10px]">ر.س</small></td>
+                  <td className="px-6 py-5 text-center">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black border bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800/50">
+                      <CheckCircle2 size={12} /> مؤرشف
+                    </div>
+                  </td>
+                  <td className="px-6 py-5 text-center">
+                    <button className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all"><Eye size={16} /></button>
                   </td>
                 </tr>
               ))}
@@ -1459,7 +1457,33 @@ export default function ReceiptVouchers({ setActiveView }) {
                       </div>
                     </div>
                   </div>
-                )}
+                {/* Manual Journal Entry Inputs */}
+                <div className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30 rounded-[2.5rem] p-8 grid grid-cols-2 gap-8 shadow-sm">
+                  <div className="col-span-2 flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/20"><FileText size={20} /></div>
+                    <h4 className="text-lg font-black text-indigo-900 dark:text-indigo-100">بيانات القيد المحاسبي (من واقع السجلات)</h4>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-slate-500 mb-3 uppercase tracking-widest mr-1">رقم الدفتر (القيد اليومي) *</label>
+                    <input 
+                      type="text" 
+                      className="w-full h-16 px-6 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black text-xl text-center outline-none focus:border-indigo-500 transition-all text-indigo-600 dark:text-indigo-400 placeholder:text-slate-200"
+                      placeholder="0000"
+                      value={journalForm.journalNo}
+                      onChange={e => setJournalForm({...journalForm, journalNo: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-slate-500 mb-3 uppercase tracking-widest mr-1">إجمالي مبلغ القيد *</label>
+                    <input 
+                      type="number" 
+                      className="w-full h-16 px-6 bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 rounded-2xl font-black text-xl text-center outline-none focus:border-indigo-500 transition-all text-indigo-600 dark:text-indigo-400 placeholder:text-slate-200"
+                      placeholder="0.00"
+                      value={journalForm.totalAmount}
+                      onChange={e => setJournalForm({...journalForm, totalAmount: e.target.value})}
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Action Bar */}
@@ -1527,6 +1551,101 @@ export default function ReceiptVouchers({ setActiveView }) {
                 >
                   نعم، استلمت المبلغ
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ═══ JOURNAL ENTRY DETAIL MODAL ═══ */}
+      <AnimatePresence>
+        {isJournalDetailOpen && selectedJournalEntry && (
+          <div className="fixed inset-0 z-[350] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsJournalDetailOpen(false)} className="absolute inset-0 bg-slate-950/60 backdrop-blur-md" />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl border border-white/20 dark:border-slate-800 overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-indigo-50/30 dark:bg-indigo-900/10 shrink-0">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/20"><FileText size={28} /></div>
+                  <div>
+                    <h2 className="text-2xl font-black text-slate-800 dark:text-white">تفاصيل القيد اليومي</h2>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">قيد رقم: {selectedJournalEntry.journal_no} | التاريخ: {new Date(selectedJournalEntry.created_at).toLocaleDateString('ar-EG')}</p>
+                  </div>
+                </div>
+                <button onClick={() => setIsJournalDetailOpen(false)} className="w-12 h-12 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-all shadow-sm"><X size={24} /></button>
+              </div>
+
+              <div className="p-10 overflow-y-auto custom-scrollbar bg-slate-50/30 dark:bg-slate-900/20 flex-1 space-y-8 text-right" dir="rtl">
+                <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 border border-slate-100 dark:border-slate-700 shadow-sm text-center">
+                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">إجمالي المبلغ المسجل</span>
+                  <div className="text-4xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
+                    {selectedJournalEntry.total_amount.toLocaleString()} <span className="text-sm">ر.س</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-8">
+                  {/* Linked Vouchers */}
+                  <div className="space-y-4 text-right" dir="rtl">
+                    <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 flex items-center gap-2 border-r-4 border-emerald-500 pr-3">سندات القبض المرتبطة</h3>
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
+                      <table className="w-full text-right text-xs" dir="rtl">
+                        <thead className="bg-slate-50/50 dark:bg-slate-900/50">
+                          <tr>
+                            <th className="px-6 py-4 font-black text-slate-400 text-center w-12">م</th>
+                            <th className="px-6 py-4 font-black text-slate-400">التاريخ</th>
+                            <th className="px-6 py-4 font-black text-slate-400">رقم السند</th>
+                            <th className="px-6 py-4 font-black text-slate-400">المندوب</th>
+                            <th className="px-6 py-4 font-black text-slate-400">العميل</th>
+                            <th className="px-6 py-4 font-black text-slate-400 text-left">المبلغ</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                          {receiptVouchers.filter(v => v.settlement_batch_id === selectedJournalEntry.id).map((v, i) => (
+                            <tr key={v.id}>
+                              <td className="px-6 py-4 text-center text-slate-400 font-bold">{i + 1}</td>
+                              <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-300">{formatDateToDisplay(v.date)}</td>
+                              <td className="px-6 py-4 font-black text-slate-800 dark:text-white">{v.voucherNo}</td>
+                              <td className="px-6 py-4 font-bold text-blue-600">{v.repName}</td>
+                              <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-400">{v.customerName}</td>
+                              <td className="px-6 py-4 text-left font-black text-emerald-600 tabular-nums">{v.amount.toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Linked Expenses */}
+                  <div className="space-y-4 text-right" dir="rtl">
+                    <h3 className="text-sm font-black text-slate-700 dark:text-slate-300 flex items-center gap-2 border-r-4 border-rose-500 pr-3">المصروفات المرتبطة</h3>
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
+                      <table className="w-full text-right text-xs" dir="rtl">
+                        <thead className="bg-slate-50/50 dark:bg-slate-900/50">
+                          <tr>
+                            <th className="px-6 py-4 font-black text-slate-400 text-center w-12">م</th>
+                            <th className="px-6 py-4 font-black text-slate-400">التاريخ</th>
+                            <th className="px-6 py-4 font-black text-slate-400">المندوب</th>
+                            <th className="px-6 py-4 font-black text-slate-400">البيان</th>
+                            <th className="px-6 py-4 font-black text-slate-400 text-left">المبلغ</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
+                          {repExpenses.filter(e => e.settlement_batch_id === selectedJournalEntry.id).map((e, i) => (
+                            <tr key={e.id}>
+                              <td className="px-6 py-4 text-center text-slate-400 font-bold">{i + 1}</td>
+                              <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-300">{formatDateToDisplay(e.date)}</td>
+                              <td className="px-6 py-4 font-black text-blue-600">{e.repName}</td>
+                              <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-400">{e.statement}</td>
+                              <td className="px-6 py-4 text-left font-black text-rose-600 tabular-nums">-{e.amount.toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </div>
