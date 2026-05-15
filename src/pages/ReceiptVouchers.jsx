@@ -1384,48 +1384,71 @@ export default function ReceiptVouchers({ setActiveView }) {
                   </div>
                 </div>
 
-                {/* Expenses List */}
-                <div>
-                  <h4 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
-                    <Wallet size={18} className="text-slate-400" />
-                    المصاريف المحددة للتسوية
-                  </h4>
-                  <div className="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-[2rem] overflow-hidden shadow-sm">
-                    {repExpenses.filter(e => selectedExpenseIds.includes(e.id) || !e.is_settled).length === 0 ? (
-                      <div className="py-16 text-center flex flex-col items-center justify-center">
-                        <AlertTriangle size={32} className="text-slate-300 dark:text-slate-600 mb-4" />
-                        <p className="text-sm font-bold text-slate-500">لا توجد مصاريف معلقة أو محددة للتسوية</p>
-                      </div>
-                    ) : (
-                      <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
+                {/* Selected Vouchers Summary */}
+                {selectedVoucherIds.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
+                      <Banknote size={18} className="text-emerald-500" />
+                      السندات المحددة للتسوية
+                    </h4>
+                    <div className="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
+                      <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
                         <table className="w-full text-right">
                           <thead className="sticky top-0 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-md z-10">
                             <tr>
-                              <th className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 w-16"></th>
+                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 w-12 text-center">م</th>
                               <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700">التاريخ</th>
-                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700">المستفيد</th>
-                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 w-1/2">البيان</th>
+                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700">رقم السند</th>
+                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 w-1/3">العميل</th>
                               <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 text-left">المبلغ</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
-                            {repExpenses.filter(e => selectedExpenseIds.includes(e.id) || !e.is_settled).map(exp => (
-                              <tr 
-                                key={exp.id} 
-                                onClick={() => setSelectedExpenseIds(prev => prev.includes(exp.id) ? prev.filter(id => id !== exp.id) : [...prev, exp.id])}
-                                className={`group cursor-pointer transition-colors ${selectedExpenseIds.includes(exp.id) ? 'bg-indigo-50/50 dark:bg-indigo-500/5' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
-                              >
-                                <td className="px-6 py-4">
-                                  <div className="flex items-center justify-center">
-                                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${selectedExpenseIds.includes(exp.id) ? 'bg-indigo-600 border-indigo-600 dark:bg-indigo-500 dark:border-indigo-500' : 'border-slate-300 dark:border-slate-600'}`}>
-                                      {selectedExpenseIds.includes(exp.id) && <CheckCircle2 size={14} className="text-white" />}
-                                    </div>
-                                  </div>
+                            {filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).map((v, i) => (
+                              <tr key={v.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                <td className="px-6 py-3 text-center text-xs font-bold text-slate-400">{i + 1}</td>
+                                <td className="px-6 py-3 text-xs font-bold text-slate-500 dark:text-slate-400">{formatDateToDisplay(v.date)}</td>
+                                <td className="px-6 py-3 text-xs font-black text-slate-600 dark:text-slate-300">{v.voucherNo}</td>
+                                <td className="px-6 py-3 text-sm font-bold text-slate-600 dark:text-slate-400">{v.customerName}</td>
+                                <td className="px-6 py-3 text-left text-sm font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                  {v.amount.toLocaleString()} <span className="text-[10px]">ر.س</span>
                                 </td>
-                                <td className="px-6 py-4 text-xs font-bold text-slate-500 dark:text-slate-400">{formatDateToDisplay(exp.date)}</td>
-                                <td className="px-6 py-4 text-xs font-black text-slate-700 dark:text-slate-200">{exp.repName}</td>
-                                <td className={`px-6 py-4 text-sm font-bold transition-colors ${selectedExpenseIds.includes(exp.id) ? 'text-indigo-900 dark:text-indigo-300' : 'text-slate-600 dark:text-slate-400'}`}>{exp.statement}</td>
-                                <td className={`px-6 py-4 text-left text-sm font-black tabular-nums ${selectedExpenseIds.includes(exp.id) ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Selected Expenses Summary */}
+                {selectedExpenseIds.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-black text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
+                      <Wallet size={18} className="text-rose-500" />
+                      المصاريف المحددة للتسوية
+                    </h4>
+                    <div className="bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 rounded-2xl overflow-hidden shadow-sm">
+                      <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
+                        <table className="w-full text-right">
+                          <thead className="sticky top-0 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-md z-10">
+                            <tr>
+                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 w-12 text-center">م</th>
+                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700">التاريخ</th>
+                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700">المستفيد</th>
+                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 w-1/3">البيان</th>
+                              <th className="px-6 py-4 text-[11px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 dark:border-slate-700 text-left">المبلغ</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                            {repExpenses.filter(e => selectedExpenseIds.includes(e.id)).map((exp, i) => (
+                              <tr key={exp.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                <td className="px-6 py-3 text-center text-xs font-bold text-slate-400">{i + 1}</td>
+                                <td className="px-6 py-3 text-xs font-bold text-slate-500 dark:text-slate-400">{formatDateToDisplay(exp.date)}</td>
+                                <td className="px-6 py-3 text-xs font-black text-slate-700 dark:text-slate-200">{exp.repName}</td>
+                                <td className="px-6 py-3 text-sm font-bold text-slate-600 dark:text-slate-400">{exp.statement}</td>
+                                <td className="px-6 py-3 text-left text-sm font-black text-rose-600 dark:text-rose-400 tabular-nums">
                                   {exp.amount.toLocaleString()} <span className="text-[10px]">ر.س</span>
                                 </td>
                               </tr>
@@ -1433,9 +1456,9 @@ export default function ReceiptVouchers({ setActiveView }) {
                           </tbody>
                         </table>
                       </div>
-                    )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Action Bar */}
