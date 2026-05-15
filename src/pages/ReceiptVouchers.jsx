@@ -1674,7 +1674,7 @@ export default function ReceiptVouchers({ setActiveView }) {
         </div>
 
     {/* ═══ PRINT TEMPLATE (Hidden on screen, visible only on print) ═══ */}
-    <div className="hidden print:block bg-white text-slate-900 font-readex p-8" dir="rtl">
+    <div className="hidden print:flex print:flex-col bg-white text-slate-900 font-readex" dir="rtl" style={{width:'210mm', minHeight:'297mm', padding:'16mm', boxSizing:'border-box'}}>
 
       {/* ─── HEADER: 3 columns ─── */}
       <div className="grid grid-cols-3 items-center border-b-[3px] border-double border-slate-800 pb-6 mb-8">
@@ -1793,15 +1793,17 @@ export default function ReceiptVouchers({ setActiveView }) {
       )}
 
       {/* ─── FOOTER: Total Amount ─── */}
-      {(selectedJournalEntry?.total_amount || journalForm.totalAmount) && (
-        <div className="mt-6 border-t-[3px] border-double border-slate-800 pt-6 flex items-center justify-between">
-          <span className="text-base font-black text-slate-600">إجمالي القيد:</span>
-          <span className="text-3xl font-black text-slate-900 tabular-nums">
-            {Number(selectedJournalEntry?.total_amount || journalForm.totalAmount).toLocaleString()}
-            <span className="text-base font-bold text-slate-500 mr-2">ر.س</span>
-          </span>
-        </div>
-      )}
+      <div className="mt-auto">
+        {(selectedJournalEntry?.total_amount || journalForm.totalAmount) && (
+          <div className="border-t-[3px] border-double border-slate-800 pt-6 flex items-center justify-between">
+            <span className="text-base font-black text-slate-600">إجمالي القيد:</span>
+            <span className="text-3xl font-black text-slate-900 tabular-nums">
+              {Number(selectedJournalEntry?.total_amount || journalForm.totalAmount).toLocaleString()}
+              <span className="text-base font-bold text-slate-500 mr-2">ر.س</span>
+            </span>
+          </div>
+        )}
+      </div>
 
     </div>
   </>
