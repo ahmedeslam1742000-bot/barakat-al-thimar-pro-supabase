@@ -1683,7 +1683,12 @@ export default function ReceiptVouchers({ setActiveView }) {
           </div>
           <div>
             <h1 className="text-3xl font-black text-slate-900">قيد تسوية وتوريد عهدة</h1>
-            <p className="text-sm font-bold text-slate-500 mt-1 uppercase tracking-widest">مؤسسة بركة الثمار التجارية</p>
+            {(journalForm.journalNo || journalForm.totalAmount) && (
+              <p className="text-sm font-bold text-slate-500 mt-2 tracking-widest flex items-center gap-4">
+                {journalForm.journalNo && <span>رقم الدفتر: <strong className="text-slate-800">{journalForm.journalNo}</strong></span>}
+                {journalForm.totalAmount && <span>مجموع القيد: <strong className="text-slate-800">{Number(journalForm.totalAmount).toLocaleString()}</strong> ر.س</span>}
+              </p>
+            )}
           </div>
         </div>
         <div className="text-left">
@@ -1693,23 +1698,23 @@ export default function ReceiptVouchers({ setActiveView }) {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-6 mb-10">
-        <div className="bg-emerald-50 border border-emerald-100 rounded-3xl p-6">
-          <p className="text-xs font-black text-emerald-600 uppercase tracking-widest mb-2">إجمالي التحصيل</p>
-          <div className="text-3xl font-black text-emerald-700 tabular-nums">
-            {filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0).toLocaleString()} <span className="text-sm font-readex text-emerald-500/80">ر.س</span>
+      <div className="grid grid-cols-3 gap-6 mb-8">
+        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
+          <p className="text-xs font-black text-emerald-600 uppercase tracking-widest mb-1">إجمالي التحصيل</p>
+          <div className="text-xl font-black text-emerald-700 tabular-nums">
+            {filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0).toLocaleString()} <span className="text-xs font-readex text-emerald-500/80">ر.س</span>
           </div>
         </div>
-        <div className="bg-rose-50 border border-rose-100 rounded-3xl p-6">
-          <p className="text-xs font-black text-rose-600 uppercase tracking-widest mb-2">إجمالي المصروفات</p>
-          <div className="text-3xl font-black text-rose-700 tabular-nums">
-            {repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0).toLocaleString()} <span className="text-sm font-readex text-rose-500/80">ر.س</span>
+        <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4">
+          <p className="text-xs font-black text-rose-600 uppercase tracking-widest mb-1">إجمالي المصروفات</p>
+          <div className="text-xl font-black text-rose-700 tabular-nums">
+            {repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0).toLocaleString()} <span className="text-xs font-readex text-rose-500/80">ر.س</span>
           </div>
         </div>
-        <div className="bg-indigo-50 border border-indigo-100 rounded-3xl p-6">
-          <p className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-2">صافي التوريد</p>
-          <div className="text-3xl font-black text-indigo-700 tabular-nums">
-            {(filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0) - repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0)).toLocaleString()} <span className="text-sm font-readex text-indigo-500/80">ر.س</span>
+        <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
+          <p className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-1">صافي التوريد</p>
+          <div className="text-xl font-black text-indigo-700 tabular-nums">
+            {(filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0) - repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0)).toLocaleString()} <span className="text-xs font-readex text-indigo-500/80">ر.س</span>
           </div>
         </div>
       </div>
@@ -1724,23 +1729,23 @@ export default function ReceiptVouchers({ setActiveView }) {
             <table className="w-full text-right text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-4 font-black text-slate-500 w-12 text-center">م</th>
-                  <th className="px-6 py-4 font-black text-slate-500">التاريخ</th>
-                  <th className="px-6 py-4 font-black text-slate-500">المندوب</th>
-                  <th className="px-6 py-4 font-black text-slate-500 w-1/3">العميل</th>
-                  <th className="px-6 py-4 font-black text-slate-500 text-center">رقم السند</th>
-                  <th className="px-6 py-4 font-black text-slate-500 text-left">المبلغ</th>
+                  <th className="px-4 py-3 font-black text-slate-500 w-12 text-center">م</th>
+                  <th className="px-4 py-3 font-black text-slate-500 whitespace-nowrap">التاريخ</th>
+                  <th className="px-4 py-3 font-black text-slate-500 whitespace-nowrap">المندوب</th>
+                  <th className="px-4 py-3 font-black text-slate-500 w-full whitespace-nowrap">العميل</th>
+                  <th className="px-4 py-3 font-black text-slate-500 text-center whitespace-nowrap">رقم السند</th>
+                  <th className="px-4 py-3 font-black text-slate-500 text-left whitespace-nowrap">المبلغ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).map((v, i) => (
                   <tr key={v.id}>
-                    <td className="px-6 py-4 text-center text-slate-400 font-black">{i + 1}</td>
-                    <td className="px-6 py-4 font-bold text-slate-600">{formatDateToDisplay(v.date)}</td>
-                    <td className="px-6 py-4 font-black text-slate-800">{v.repName}</td>
-                    <td className="px-6 py-4 font-bold text-slate-600">{v.customerName}</td>
-                    <td className="px-6 py-4 text-center font-bold text-slate-500">{v.voucherNo}</td>
-                    <td className="px-6 py-4 text-left font-black text-emerald-600 tabular-nums">{v.amount.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-center text-slate-400 font-black">{i + 1}</td>
+                    <td className="px-4 py-3 font-bold text-slate-600 whitespace-nowrap">{formatDateToDisplay(v.date)}</td>
+                    <td className="px-4 py-3 font-black text-slate-800 whitespace-nowrap">{v.repName}</td>
+                    <td className="px-4 py-3 font-bold text-slate-600 whitespace-nowrap">{v.customerName}</td>
+                    <td className="px-4 py-3 text-center font-bold text-slate-500 whitespace-nowrap">{v.voucherNo}</td>
+                    <td className="px-4 py-3 text-left font-black text-emerald-600 tabular-nums whitespace-nowrap">{v.amount.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1759,19 +1764,21 @@ export default function ReceiptVouchers({ setActiveView }) {
             <table className="w-full text-right text-sm">
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
-                  <th className="px-6 py-4 font-black text-slate-500 w-12 text-center">م</th>
-                  <th className="px-6 py-4 font-black text-slate-500">التاريخ</th>
-                  <th className="px-6 py-4 font-black text-slate-500 w-1/2">بيان المصروف</th>
-                  <th className="px-6 py-4 font-black text-slate-500 text-left">المبلغ</th>
+                  <th className="px-4 py-3 font-black text-slate-500 w-12 text-center">م</th>
+                  <th className="px-4 py-3 font-black text-slate-500 whitespace-nowrap">التاريخ</th>
+                  <th className="px-4 py-3 font-black text-slate-500 whitespace-nowrap">المستفيد</th>
+                  <th className="px-4 py-3 font-black text-slate-500 w-full whitespace-nowrap">بيان المصروف</th>
+                  <th className="px-4 py-3 font-black text-slate-500 text-left whitespace-nowrap">المبلغ</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {repExpenses.filter(e => selectedExpenseIds.includes(e.id)).map((e, i) => (
                   <tr key={e.id}>
-                    <td className="px-6 py-4 text-center text-slate-400 font-black">{i + 1}</td>
-                    <td className="px-6 py-4 font-bold text-slate-600">{formatDateToDisplay(e.date)}</td>
-                    <td className="px-6 py-4 font-black text-slate-800">{e.statement}</td>
-                    <td className="px-6 py-4 text-left font-black text-rose-600 tabular-nums">{e.amount.toLocaleString()}</td>
+                    <td className="px-4 py-3 text-center text-slate-400 font-black">{i + 1}</td>
+                    <td className="px-4 py-3 font-bold text-slate-600 whitespace-nowrap">{formatDateToDisplay(e.date)}</td>
+                    <td className="px-4 py-3 font-black text-slate-800 whitespace-nowrap">{e.repName}</td>
+                    <td className="px-4 py-3 font-bold text-slate-600 whitespace-nowrap">{e.statement}</td>
+                    <td className="px-4 py-3 text-left font-black text-rose-600 tabular-nums whitespace-nowrap">{e.amount.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
