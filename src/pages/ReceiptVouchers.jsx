@@ -83,7 +83,8 @@ const formatDateToDisplay = (dateStr) => {
 };
 
 export default function ReceiptVouchers({ setActiveView }) {
-  const { receiptVouchers, repExpenses, repsList: reps, fetchInitialData } = useData();
+  const { receiptVouchers = [], repExpenses = [], repsList: repsRaw = [], fetchInitialData } = useData();
+  const reps = repsRaw || [];
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
