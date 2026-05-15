@@ -1174,22 +1174,25 @@ export default function ReceiptVouchers({ setActiveView }) {
               <div className="px-8 py-6 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/20"><Wallet size={20} /></div>
-                  <h3 className="text-xl font-black text-amber-900 dark:text-amber-100">تسجيل مصروف مندوب</h3>
+                  <h3 className="text-xl font-black text-amber-900 dark:text-amber-100">تسجيل مصروفات</h3>
                 </div>
                 <button onClick={() => setIsExpenseModalOpen(false)} className="p-2 text-amber-400 hover:text-amber-600 transition-colors"><X size={20} /></button>
               </div>
               <div className="p-8 space-y-6 overflow-y-auto max-h-[60vh] custom-scrollbar">
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 mr-1">المندوب *</label>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 mr-1">المستفيد *</label>
                   <div className="relative">
                     <input 
                       type="text" className="w-full h-12 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl px-4 font-bold text-sm text-center outline-none focus:ring-2 focus:ring-amber-500/20 dark:text-white"
-                      placeholder="ابحث عن المندوب..." value={expRepSearchQuery} onChange={e => setExpRepSearchQuery(e.target.value)}
+                      placeholder="ادخل اسم المستفيد أو ابحث..." 
+                      value={expenseForm.repName} 
+                      onChange={e => setExpenseForm({...expenseForm, repName: e.target.value})}
                     />
-                    {expRepSearchQuery && expenseForm.repName !== expRepSearchQuery && (
+                    {/* Suggestion dropdown from reps list */}
+                    {expenseForm.repName && (
                       <div className="absolute top-full left-0 right-0 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-xl rounded-xl mt-1 z-10 max-h-40 overflow-y-auto">
-                        {reps.filter(r => r.toLowerCase().includes(expRepSearchQuery.toLowerCase())).map(r => (
-                          <button key={r} onClick={() => { setExpenseForm({...expenseForm, repName: r}); setExpRepSearchQuery(r); }} className="w-full px-4 py-2 text-center font-bold text-xs hover:bg-amber-50 dark:hover:bg-amber-900/50 dark:text-white transition-colors">{r}</button>
+                        {reps.filter(r => r.toLowerCase().includes(expenseForm.repName.toLowerCase())).map(r => (
+                          <button key={r} onClick={() => setExpenseForm({...expenseForm, repName: r})} className="w-full px-4 py-2 text-center font-bold text-xs hover:bg-amber-50 dark:hover:bg-amber-900/50 dark:text-white transition-colors">{r}</button>
                         ))}
                       </div>
                     )}
@@ -1206,8 +1209,8 @@ export default function ReceiptVouchers({ setActiveView }) {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 mr-1">بيان المصروف (اشترى إيه؟) *</label>
-                  <textarea className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-amber-500/20 dark:text-white" rows={3} placeholder="مثال: فاتورة بنزين، صيانة إطار، شراء بضاعة..." value={expenseForm.statement} onChange={e => setExpenseForm({...expenseForm, statement: e.target.value})} />
+                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-2 mr-1">بيان المصروف *</label>
+                  <textarea className="w-full p-4 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl font-bold text-sm outline-none focus:ring-2 focus:ring-amber-500/20 dark:text-white" rows={3} placeholder="مثال: فاتورة بنزين، شراء بضاعة، صيانة، مستلزمات مكتب، غيرها..." value={expenseForm.statement} onChange={e => setExpenseForm({...expenseForm, statement: e.target.value})} />
                 </div>
               </div>
               <div className="px-8 py-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 flex items-center gap-3 shrink-0">
