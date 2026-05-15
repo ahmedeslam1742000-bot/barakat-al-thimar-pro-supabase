@@ -4,6 +4,7 @@ import {
   X, AlertTriangle, CheckCircle2, Package, 
   Plus, Save, Pencil, Trash2 
 } from 'lucide-react';
+import { isInvalidCompany, getItemName } from '../../lib/itemFields';
 
 export default function ItemRegistrationModal({
   isOpen,
@@ -322,7 +323,7 @@ export default function ItemRegistrationModal({
                           <tr key={item.id} className={`group hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors ${editingSessionId === item.id ? 'bg-orange-50/50 dark:bg-orange-500/5' : ''}`}>
                             <td className="py-3.5 px-4 text-[11px] font-bold text-slate-400 tabular-nums">{idx + 1}</td>
                             <td className="py-3.5 px-4 font-tajawal font-bold text-xs text-slate-800 dark:text-white">{item.name}</td>
-                            <td className="py-3.5 px-4"><span className="text-[10px] font-bold text-slate-500">{item.company}</span></td>
+                            <td className="py-3.5 px-4"><span className="text-[10px] font-bold text-slate-500">{isInvalidCompany(item.company) ? '—' : item.company}</span></td>
                             <td className="py-3.5 px-4"><span className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-lg text-[10px] font-black">{item.cat}</span></td>
                             <td className="py-3.5 px-4 text-[10px] font-bold text-slate-500">{item.unit}</td>
                             <td className="py-3.5 px-4">

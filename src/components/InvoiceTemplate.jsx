@@ -1,5 +1,5 @@
 import React from 'react';
-import { isInvalidCompany } from '../lib/itemFields';
+import { isInvalidCompany, getItemName } from '../lib/itemFields';
 
 /**
  * InvoiceTemplate — Professional A4 invoice layout.
@@ -104,7 +104,7 @@ const InvoiceTemplate = React.memo(({ data }) => {
                   <td style={{ padding: '24px 12px', textAlign: 'center', fontSize: '13px', fontWeight: 'bold', color: '#94a3b8' }}>{idx + 1}</td>
                   <td style={{ padding: '24px 16px' }}>
                     <span style={{ fontSize: '16px', fontWeight: '900', color: '#1e293b' }}>
-                      {item.name || item.item}
+                      {getItemName(item)}
                       {!isInvalidCompany(item.company) && (
                         <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#94a3b8', marginRight: '6px' }}> - {item.company}</span>
                       )}
