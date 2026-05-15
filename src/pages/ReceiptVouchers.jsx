@@ -1375,16 +1375,16 @@ export default function ReceiptVouchers({ setActiveView }) {
                 <div>
                   <h4 className="text-sm font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                     <Info size={16} className="text-blue-500" />
-                    المصاريف والمشتريات المعلقة للمندوبين المختارين
+                    المصاريف المعلقة والمحددة للتسوية
                   </h4>
                   <div className="grid gap-3">
-                    {repExpenses.filter(e => !e.is_settled && selectedVoucherIds.some(vid => filteredVouchers.find(v => v.id === vid)?.repName === e.repName)).length === 0 ? (
+                    {repExpenses.filter(e => selectedExpenseIds.includes(e.id) || !e.is_settled).length === 0 ? (
                       <div className="py-20 text-center flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-800">
                         <AlertTriangle size={32} className="text-slate-200 mb-3" />
-                        <p className="text-sm font-bold text-slate-400">لا توجد مصاريف معلقة لهذه المجموعة</p>
+                        <p className="text-sm font-bold text-slate-400">لا توجد مصاريف معلقة أو محددة</p>
                       </div>
                     ) : (
-                      repExpenses.filter(e => !e.is_settled && selectedVoucherIds.some(vid => filteredVouchers.find(v => v.id === vid)?.repName === e.repName)).map(exp => (
+                      repExpenses.filter(e => selectedExpenseIds.includes(e.id) || !e.is_settled).map(exp => (
                         <div 
                           key={exp.id} 
                           onClick={() => setSelectedExpenseIds(prev => prev.includes(exp.id) ? prev.filter(id => id !== exp.id) : [...prev, exp.id])}
