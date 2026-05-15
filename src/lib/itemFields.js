@@ -8,12 +8,14 @@ export const getCompany = (i) => i?.company || 'بدون شركة';
 export const getCategory = (i) => i?.category ?? i?.cat ?? 'أخرى';
 export const getUnit = (i) => i?.unit || 'كرتونة';
 
+export const isInvalidCompany = (c) => !c || c === '-' || c === 'بدون شركة' || c === 'بدون' || c === '—' || c.trim() === '';
+
 export const formatItemNameWithCompany = (name, company) => {
-    if (!company || company === '-' || company === 'بدون شركة') return name;
+    if (isInvalidCompany(company)) return name;
     return `${name} - ${company}`;
 };
 
 export const formatItemDisplay = (name, company, separator = '—') => {
-    if (!company || company === '-' || company === 'بدون شركة') return name;
+    if (isInvalidCompany(company)) return name;
     return `${name} ${separator} ${company}`;
 };

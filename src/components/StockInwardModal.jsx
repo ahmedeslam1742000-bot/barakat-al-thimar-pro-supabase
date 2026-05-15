@@ -13,6 +13,7 @@ import { useAudio } from '../contexts/AudioContext';
 import { useData } from '../contexts/DataContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { formatDate } from '../lib/dateUtils';
+import { isInvalidCompany } from '../lib/itemFields';
 import SmartDateInput from './SmartDateInput';
 
 // --- Premium UI Components ---
@@ -609,7 +610,7 @@ export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
                             <td className="py-3 px-4 text-center">
                               <div className="flex items-center justify-center gap-1.5">
                                 <span className="font-bold text-slate-700 text-[12px]">{item.item}</span>
-                                {item.company && item.company !== 'بدون شركة' && (
+                                {!isInvalidCompany(item.company) && (
                                   <span className="text-[11px] text-slate-700 font-medium"> - {item.company}</span>
                                 )}
                               </div>

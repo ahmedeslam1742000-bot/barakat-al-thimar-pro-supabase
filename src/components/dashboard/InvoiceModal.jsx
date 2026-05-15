@@ -2,6 +2,7 @@ import React from 'react';
 import { Search, Plus, Trash2, Pencil, Package } from 'lucide-react';
 import ModalWrapper from '../common/ModalWrapper';
 import SmartDateInput from '../SmartDateInput';
+import { formatItemNameWithCompany, isInvalidCompany } from '../../lib/itemFields';
 
 export default function InvoiceModal({
   isOpen,
@@ -110,7 +111,13 @@ export default function InvoiceModal({
                       e.preventDefault();
                       if (invoiceSearchActiveIndex >= 0 && suggestions[invoiceSearchActiveIndex]) {
                         const invItem = suggestions[invoiceSearchActiveIndex];
-                        setCurrentInvoiceItem({ ...currentInvoiceItem, name: `${invItem.name} - ${invItem.company}`, selectedItem: invItem, cat: invItem.cat || invItem.category || '', unit: invItem.unit || 'كرتونة' });
+                        setCurrentInvoiceItem({ 
+                          ...currentInvoiceItem, 
+                          name: formatItemNameWithCompany(invItem.name, invItem.company), 
+                          selectedItem: invItem, 
+                          cat: invItem.cat || invItem.category || '', 
+                          unit: invItem.unit || 'كرتونة' 
+                        });
                         setInvoiceSearchActiveIndex(-1);
                         setTimeout(() => document.getElementById('invoiceQtyInput')?.focus(), 10);
                       } else if (currentInvoiceItem.selectedItem) {
@@ -127,7 +134,7 @@ export default function InvoiceModal({
                       e.preventDefault();
                       setCurrentInvoiceItem({
                         ...currentInvoiceItem,
-                        name: `${invItem.name} - ${invItem.company}`,
+                        name: formatItemNameWithCompany(invItem.name, invItem.company),
                         selectedItem: invItem,
                         cat: invItem.cat || invItem.category || '',
                         unit: invItem.unit || 'كرتونة'
@@ -212,7 +219,12 @@ export default function InvoiceModal({
                 invoiceForm.items.map((item, idx) => (
                   <tr key={idx} className="hover:bg-indigo-50/30 transition-all group border-b border-slate-50 last:border-0">
                     <td className="px-6 py-4 text-[11px] font-black text-slate-300 text-center tabular-nums">{idx + 1}</td>
-                    <td className="px-6 py-4 text-sm font-black text-slate-700">{item.name && item.company ? item.name : (item.name || item.item || '-')}</td>
+                    <td className="px-6 py-4 text-sm font-black text-slate-700">
+                      {item.name}
+                      {item.company && !isInvalidCompany(item.company) && (
+                        <span className="text-slate-400 font-bold text-[11px] mr-2"> - {item.company}</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-black">{item.cat || 'بدون تصنيف'}</span>
                     </td>

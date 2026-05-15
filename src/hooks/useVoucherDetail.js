@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '../lib/supabaseClient';
 import localforage from 'localforage';
+import { formatItemNameWithCompany } from '../lib/itemFields';
 
 /**
  * useVoucherDetail — State & action handlers for the Voucher Detail Modal.
@@ -117,7 +118,8 @@ export function useVoucherDetail({
         if (!matchedItem) return null;
         return {
           selectedItem: matchedItem,
-          name: `${matchedItem.name} - ${matchedItem.company}`,
+          name: formatItemNameWithCompany(matchedItem.name, matchedItem.company),
+          company: matchedItem.company,
           cat: matchedItem.cat,
           unit: matchedItem.unit,
           qty: Number(line.qty || 0),
