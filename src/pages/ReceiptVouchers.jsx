@@ -293,6 +293,7 @@ export default function ReceiptVouchers({ setActiveView }) {
   };
 
   const confirmSave = async () => {
+    if (loading) return; // Prevent double submission
     const finalRepName = repSearchQuery || form.repName;
     setLoading(true);
     try {
@@ -1104,7 +1105,9 @@ export default function ReceiptVouchers({ setActiveView }) {
               <h3 className="text-lg font-black text-slate-800 dark:text-white mb-2">{isConfirmSaveOpen ? 'تأكيد حفظ السند' : 'إلغاء الإدخال؟'}</h3>
               <p className="text-xs font-bold text-slate-500 dark:text-slate-400 mb-6 leading-relaxed">{isConfirmSaveOpen ? 'هل أنت متأكد من صحة كافة البيانات المدخلة وتريد حفظ السند الآن؟' : 'لقد قمت بتغيير بعض البيانات، هل تريد الخروج دون حفظ التغييرات؟'}</p>
               <div className="flex gap-3">
-                <button type="button" onClick={() => { if (isConfirmSaveOpen) confirmSave(); else confirmExit(); }} className={`flex-1 py-3 rounded-xl font-black text-xs text-white shadow-lg ${isConfirmSaveOpen ? 'bg-emerald-600 shadow-emerald-500/20' : 'bg-rose-600 shadow-rose-500/20'}`}>نعم، {isConfirmSaveOpen ? 'حفظ' : 'خروج'} (Enter)</button>
+                <button type="button" disabled={loading} onClick={() => { if (isConfirmSaveOpen) confirmSave(); else confirmExit(); }} className={`flex-1 py-3 rounded-xl font-black text-xs text-white shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed ${isConfirmSaveOpen ? 'bg-emerald-600 shadow-emerald-500/20' : 'bg-rose-600 shadow-rose-500/20'}`}>
+                  {loading ? <span className="flex items-center justify-center gap-2"><Clock size={14} className="animate-spin" /> جاري الحفظ...</span> : `نعم، ${isConfirmSaveOpen ? 'حفظ' : 'خروج'} (Enter)`}
+                </button>
                 <button type="button" onClick={() => { setIsConfirmCloseOpen(false); setIsConfirmSaveOpen(false); }} className="flex-1 py-3 rounded-xl font-black text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 transition-all">تراجع (Esc)</button>
               </div>
             </motion.div>
