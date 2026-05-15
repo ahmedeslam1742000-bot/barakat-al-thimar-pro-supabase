@@ -1457,6 +1457,8 @@ export default function ReceiptVouchers({ setActiveView }) {
                       </div>
                     </div>
                   </div>
+                )}
+
                 {/* Manual Journal Entry Inputs */}
                 <div className="bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800/30 rounded-[2.5rem] p-8 grid grid-cols-2 gap-8 shadow-sm">
                   <div className="col-span-2 flex items-center gap-3 mb-2">
