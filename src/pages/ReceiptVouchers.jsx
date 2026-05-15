@@ -92,11 +92,13 @@ export default function ReceiptVouchers({ setActiveView }) {
   const [isSettlementWizardOpen, setIsSettlementWizardOpen] = useState(false);
   const [selectedVoucherIds, setSelectedVoucherIds] = useState([]);
   const [selectedExpenseIds, setSelectedExpenseIds] = useState([]);
+  const [activeTable, setActiveTable] = useState('vouchers'); // 'vouchers' or 'expenses'
   const [settlementType, setSettlementType] = useState('pending'); // pending, settled
   const [isConfirmCloseOpen, setIsConfirmCloseOpen] = useState(false);
   const [isConfirmSaveOpen, setIsConfirmSaveOpen] = useState(false);
   const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [deleteTargetType, setDeleteTargetType] = useState('voucher'); // voucher or expense
   const [editId, setEditId] = useState(null);
   const [viewVoucher, setViewVoucher] = useState(null);
   const [repSearchQuery, setRepSearchQuery] = useState('');
@@ -192,8 +194,23 @@ export default function ReceiptVouchers({ setActiveView }) {
     });
   }, [receiptVouchers, debouncedSearchTerm, settlementType]);
 
+  const filteredExpenses = useMemo(() => {
+    return repExpenses.filter(e => {
+      const matchesSearch = (e.repName || '').includes(debouncedSearchTerm) ||
+                            (e.statement || '').includes(debouncedSearchTerm);
+      const matchesStatus = settlementType === 'all' || 
+                            (settlementType === 'pending' && !e.is_settled) || 
+                            (settlementType === 'settled' && e.is_settled);
+      return matchesSearch && matchesStatus;
+    });
+  }, [repExpenses, debouncedSearchTerm, settlementType]);
+
   const toggleVoucherSelection = (id) => {
     setSelectedVoucherIds(prev => prev.includes(id) ? prev.filter(vid => vid !== id) : [...prev, id]);
+  };
+
+  const toggleExpenseSelection = (id) => {
+    setSelectedExpenseIds(prev => prev.includes(id) ? prev.filter(eid => eid !== id) : [...prev, id]);
   };
 
   const handleSaveExpense = async () => {
@@ -254,7 +271,7 @@ export default function ReceiptVouchers({ setActiveView }) {
     }
   };
 
-  rowVirtualizer.options.count = filteredVouchers.length;
+  rowVirtualizer.options.count = activeTable === 'vouchers' ? filteredVouchers.length : filteredExpenses.length;
 
   // Dirty check
   const isDirty = useMemo(() => {
@@ -645,8 +662,9 @@ export default function ReceiptVouchers({ setActiveView }) {
     printWindow.document.close();
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (id, type = 'voucher') => {
     setDeleteTargetId(id);
+    setDeleteTargetType(type);
     setIsConfirmDeleteOpen(true);
   };
 
@@ -654,12 +672,13 @@ export default function ReceiptVouchers({ setActiveView }) {
     if (!deleteTargetId || loading) return;
     setLoading(true);
     try {
-      const { error } = await supabase.from('receipt_vouchers').delete().eq('id', deleteTargetId);
+      const table = deleteTargetType === 'expense' ? 'representative_expenses' : 'receipt_vouchers';
+      const { error } = await supabase.from(table).delete().eq('id', deleteTargetId);
       if (error) throw error;
-      toast.success('✅ تم حذف السند بنجاح');
+      toast.success(deleteTargetType === 'expense' ? '✅ تم حذف المصروف بنجاح' : '✅ تم حذف السند بنجاح');
       await fetchInitialData();
     } catch (err) {
-      console.error('❌ handleDelete error:', err);
+      console.error('❌ confirmDelete error:', err);
       toast.error('خطأ أثناء الحذف');
     } finally {
       setLoading(false);
@@ -770,35 +789,58 @@ export default function ReceiptVouchers({ setActiveView }) {
             <span>إنشاء سند جديد</span>
           </button>
           <button 
-            onClick={selectedVoucherIds.length > 0 ? () => setIsSettlementWizardOpen(true) : handlePrint}
-            className={`p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl transition-all shadow-sm flex items-center gap-2 ${selectedVoucherIds.length > 0 ? 'text-blue-500 border-blue-200 bg-blue-50/50' : 'text-slate-500 hover:text-emerald-500'}`}
+            onClick={(selectedVoucherIds.length > 0 || selectedExpenseIds.length > 0) ? () => setIsSettlementWizardOpen(true) : handlePrint}
+            className={`p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl transition-all shadow-sm flex items-center gap-2 ${(selectedVoucherIds.length > 0 || selectedExpenseIds.length > 0) ? 'text-blue-500 border-blue-200 bg-blue-50/50' : 'text-slate-500 hover:text-emerald-500'}`}
           >
             <Printer size={20} />
-            {selectedVoucherIds.length > 0 && <span className="text-[10px] font-black">طباعة تسوية ({selectedVoucherIds.length})</span>}
+            {(selectedVoucherIds.length > 0 || selectedExpenseIds.length > 0) && <span className="text-[10px] font-black">طباعة وتسوية ({selectedVoucherIds.length + selectedExpenseIds.length})</span>}
           </button>
         </div>
       </div>
 
-      {/* Tabs for settlement status */}
-      <div className="flex items-center gap-1 mb-6 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl w-fit">
-        {[
-          { id: 'pending', label: 'السندات المعلقة', icon: <Clock size={14} /> },
-          { id: 'settled', label: 'سندات موردة', icon: <CheckCircle2 size={14} /> },
-          { id: 'all', label: 'الكل', icon: <Filter size={14} /> }
-        ].map(tab => (
+      {/* Tabs for Table View & Settlement Status */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 w-full">
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
           <button
-            key={tab.id}
-            onClick={() => setSettlementType(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
-              settlementType === tab.id 
-                ? 'bg-white dark:bg-slate-900 text-emerald-600 shadow-sm' 
-                : 'text-slate-500 hover:text-slate-700'
+            onClick={() => setActiveTable('vouchers')}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all ${
+              activeTable === 'vouchers' ? 'bg-white dark:bg-slate-900 text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
             }`}
           >
-            {tab.icon}
-            {tab.label}
+            <Banknote size={16} />
+            سندات القبض
           </button>
-        ))}
+          <button
+            onClick={() => setActiveTable('expenses')}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black transition-all ${
+              activeTable === 'expenses' ? 'bg-white dark:bg-slate-900 text-amber-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <Wallet size={16} />
+            المصروفات
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl">
+          {[
+            { id: 'pending', label: activeTable === 'vouchers' ? 'سندات معلقة' : 'مصاريف معلقة', icon: <Clock size={14} /> },
+            { id: 'settled', label: activeTable === 'vouchers' ? 'سندات موردة' : 'مصاريف تمت تسويتها', icon: <CheckCircle2 size={14} /> },
+            { id: 'all', label: 'الكل', icon: <Filter size={14} /> }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setSettlementType(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                settlementType === tab.id 
+                  ? 'bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-sm' 
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
 
@@ -813,25 +855,46 @@ export default function ReceiptVouchers({ setActiveView }) {
                   <input 
                     type="checkbox" 
                     className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                    checked={filteredVouchers.length > 0 && selectedVoucherIds.length === filteredVouchers.length}
+                    checked={
+                      activeTable === 'vouchers' 
+                        ? (filteredVouchers.length > 0 && selectedVoucherIds.length === filteredVouchers.length)
+                        : (filteredExpenses.length > 0 && selectedExpenseIds.length === filteredExpenses.length)
+                    }
                     onChange={(e) => {
-                      if (e.target.checked) setSelectedVoucherIds(filteredVouchers.map(v => v.id));
-                      else setSelectedVoucherIds([]);
+                      if (activeTable === 'vouchers') {
+                        if (e.target.checked) setSelectedVoucherIds(filteredVouchers.map(v => v.id));
+                        else setSelectedVoucherIds([]);
+                      } else {
+                        if (e.target.checked) setSelectedExpenseIds(filteredExpenses.map(v => v.id));
+                        else setSelectedExpenseIds([]);
+                      }
                     }}
                   />
                 </th>
                 <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 w-16 text-center">م</th>
                 <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">التاريخ</th>
-                <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 min-w-[200px]">اسم المندوب</th>
-                <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 min-w-[200px]">اسم العميل</th>
-                <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 text-center">رقم السند</th>
-                <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 text-center">المبلغ</th>
-                <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 text-center">حالة الإيداع</th>
+                
+                {activeTable === 'vouchers' ? (
+                  <>
+                    <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 min-w-[200px]">اسم المندوب</th>
+                    <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 min-w-[200px]">اسم العميل</th>
+                    <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 text-center">رقم السند</th>
+                    <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 text-center">المبلغ</th>
+                    <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 text-center">حالة الإيداع</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 min-w-[200px]">اسم المستفيد</th>
+                    <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 min-w-[300px]">البيان</th>
+                    <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 text-center">المبلغ</th>
+                    <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 text-center">الحالة</th>
+                  </>
+                )}
                 <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 text-center w-24">الإجراء</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-              {filteredVouchers.map((voucher, idx) => (
+              {activeTable === 'vouchers' ? filteredVouchers.map((voucher, idx) => (
                 <tr style={{ animationDelay: `${idx * 0.05}s`, opacity: 0 }} key={voucher.id} className={`animate-fade-in-up group hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10 transition-colors ${selectedVoucherIds.includes(voucher.id) ? 'bg-emerald-50/50' : ''}`}>
                   <td className="px-6 py-5 text-center">
                     <input 
@@ -875,7 +938,46 @@ export default function ReceiptVouchers({ setActiveView }) {
                       <button onClick={() => openEdit(voucher)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all" title="تعديل">
                         <Pencil size={16} />
                       </button>
-                      <button onClick={() => handleDelete(voucher.id)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all" title="مسح">
+                      <button onClick={() => handleDelete(voucher.id, 'voucher')} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all" title="مسح">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )) : filteredExpenses.map((expense, idx) => (
+                <tr style={{ animationDelay: `${idx * 0.05}s`, opacity: 0 }} key={expense.id} className={`animate-fade-in-up group hover:bg-amber-50/30 dark:hover:bg-amber-900/10 transition-colors ${selectedExpenseIds.includes(expense.id) ? 'bg-amber-50/50' : ''}`}>
+                  <td className="px-6 py-5 text-center">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                      checked={selectedExpenseIds.includes(expense.id)}
+                      onChange={() => toggleExpenseSelection(expense.id)}
+                    />
+                  </td>
+                  <td className="px-6 py-5 text-center text-xs font-black text-slate-400 group-hover:text-amber-500 transition-colors">{idx + 1}</td>
+                  <td className="px-6 py-5 text-xs font-bold text-slate-700 dark:text-white">{formatDateToDisplay(expense.date)}</td>
+                  <td className="px-6 py-5 text-xs font-black text-slate-700 dark:text-white">
+                    {expense.repName}
+                  </td>
+                  <td className="px-6 py-5 text-xs font-bold text-slate-600 dark:text-slate-300">{expense.statement}</td>
+                  <td className="px-6 py-5 text-center text-sm font-black text-rose-600 dark:text-rose-400">-{expense.amount.toLocaleString()} <small className="text-[10px]">ر.س</small></td>
+                  <td className="px-6 py-5 text-center">
+                    <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black border ${
+                        expense.is_settled 
+                          ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800/50' 
+                          : 'bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/50'
+                      }`}
+                    >
+                      {expense.is_settled ? (
+                        <><CheckCircle2 size={12} /> تمت التسوية</>
+                      ) : (
+                        <><Clock size={12} /> معلق</>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-5 text-center">
+                    <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleDelete(expense.id, 'expense')} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all" title="مسح">
                         <Trash2 size={16} />
                       </button>
                     </div>
