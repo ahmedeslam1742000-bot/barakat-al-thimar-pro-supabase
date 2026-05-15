@@ -265,7 +265,7 @@ export default function ReceiptVouchers({ setActiveView }) {
   const filteredReps = useMemo(() => {
     if (!repSearchQuery) return reps;
     const q = repSearchQuery.toLowerCase();
-    return reps.filter(r => r.name.toLowerCase().includes(q));
+    return reps.filter(r => (typeof r === 'string' ? r : r.name || '').toLowerCase().includes(q));
   }, [reps, repSearchQuery]);
 
   // Actions
@@ -283,7 +283,7 @@ export default function ReceiptVouchers({ setActiveView }) {
       }
     }
 
-    const exists = reps.some(r => r.name === finalRepName);
+    const exists = reps.some(r => (typeof r === 'string' ? r : r.name || '') === finalRepName);
     if (!exists) {
       toast.error('يرجى اختيار مندوب صالح من القائمة');
       return;
@@ -972,7 +972,7 @@ export default function ReceiptVouchers({ setActiveView }) {
                         {isRepDropdownOpen && (
                           <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 5 }} className="absolute z-20 top-[calc(100%+8px)] right-0 left-0 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-h-52 overflow-y-auto custom-scrollbar p-1.5">
                             {filteredReps.length > 0 ? filteredReps.map((r, i) => (
-                              <button key={i} type="button" onMouseDown={(e) => { e.preventDefault(); setRepSearchQuery(r.name); setIsRepDropdownOpen(false); }} className="w-full text-right px-4 py-3 text-xs font-black text-slate-600 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl transition-all">{r.name}</button>
+                              <button key={i} type="button" onMouseDown={(e) => { e.preventDefault(); setRepSearchQuery(typeof r === 'string' ? r : r.name); setIsRepDropdownOpen(false); }} className="w-full text-right px-4 py-3 text-xs font-black text-slate-600 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl transition-all">{typeof r === 'string' ? r : r.name}</button>
                             )) : <div className="px-4 py-4 text-xs font-bold text-slate-400 text-center italic">لا توجد نتائج مطابقة</div>}
                           </motion.div>
                         )}
