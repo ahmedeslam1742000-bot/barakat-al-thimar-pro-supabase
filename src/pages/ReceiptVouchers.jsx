@@ -1374,37 +1374,49 @@ export default function ReceiptVouchers({ setActiveView }) {
                 {/* Expenses List */}
                 <div>
                   <h4 className="text-sm font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                    <Info size={16} className="text-blue-500" />
-                    المصاريف المعلقة والمحددة للتسوية
+                    <Wallet size={16} className="text-amber-500" />
+                    المصاريف المحددة والمعلقة للتسوية
                   </h4>
-                  <div className="grid gap-3">
+                  <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
                     {repExpenses.filter(e => selectedExpenseIds.includes(e.id) || !e.is_settled).length === 0 ? (
-                      <div className="py-20 text-center flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-800">
-                        <AlertTriangle size={32} className="text-slate-200 mb-3" />
-                        <p className="text-sm font-bold text-slate-400">لا توجد مصاريف معلقة أو محددة</p>
+                      <div className="py-12 text-center flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/50">
+                        <AlertTriangle size={24} className="text-slate-300 mb-2" />
+                        <p className="text-xs font-bold text-slate-400">لا توجد مصاريف معلقة أو محددة</p>
                       </div>
                     ) : (
-                      repExpenses.filter(e => selectedExpenseIds.includes(e.id) || !e.is_settled).map(exp => (
-                        <div 
-                          key={exp.id} 
-                          onClick={() => setSelectedExpenseIds(prev => prev.includes(exp.id) ? prev.filter(id => id !== exp.id) : [...prev, exp.id])}
-                          className={`p-5 rounded-3xl border-2 transition-all cursor-pointer flex items-center justify-between group ${selectedExpenseIds.includes(exp.id) ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/10 shadow-lg shadow-amber-500/10' : 'border-slate-100 dark:border-slate-800 hover:border-amber-200'}`}
-                        >
-                          <div className="flex items-center gap-5">
-                            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${selectedExpenseIds.includes(exp.id) ? 'bg-amber-500 border-amber-500 scale-110 shadow-sm' : 'border-slate-300 dark:border-slate-600'}`}>
-                              {selectedExpenseIds.includes(exp.id) && <CheckCircle2 size={14} className="text-white" />}
-                            </div>
-                            <div>
-                              <div className="text-sm font-black text-slate-800 dark:text-white group-hover:text-amber-600 transition-colors">{exp.statement}</div>
-                              <div className="flex items-center gap-3 mt-1.5">
-                                <span className="text-[10px] font-black bg-slate-100 dark:bg-slate-800 text-slate-500 px-2.5 py-0.5 rounded-lg border border-slate-200/50 dark:border-slate-700">{formatDateToDisplay(exp.date)}</span>
-                                <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{exp.repName}</span>
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800/50 max-h-[300px] overflow-y-auto custom-scrollbar">
+                        {repExpenses.filter(e => selectedExpenseIds.includes(e.id) || !e.is_settled).map(exp => (
+                          <div 
+                            key={exp.id} 
+                            onClick={() => setSelectedExpenseIds(prev => prev.includes(exp.id) ? prev.filter(id => id !== exp.id) : [...prev, exp.id])}
+                            className={`p-3 transition-all cursor-pointer flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 ${selectedExpenseIds.includes(exp.id) ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''}`}
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center justify-center pl-2">
+                                <input 
+                                  type="checkbox" 
+                                  className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer pointer-events-none"
+                                  checked={selectedExpenseIds.includes(exp.id)}
+                                  readOnly
+                                />
+                              </div>
+                              <div>
+                                <div className={`text-xs font-black transition-colors ${selectedExpenseIds.includes(exp.id) ? 'text-amber-700 dark:text-amber-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                                  {exp.statement}
+                                </div>
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  <span className="text-[10px] font-bold text-slate-400">{formatDateToDisplay(exp.date)}</span>
+                                  <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                                  <span className="text-[10px] font-black text-slate-500 dark:text-slate-400">{exp.repName}</span>
+                                </div>
                               </div>
                             </div>
+                            <div className={`text-sm font-black tabular-nums ${selectedExpenseIds.includes(exp.id) ? 'text-amber-600' : 'text-slate-500 dark:text-slate-400'}`}>
+                              {exp.amount.toLocaleString()} <small className="text-[9px]">ر.س</small>
+                            </div>
                           </div>
-                          <div className="text-xl font-black text-amber-600 tabular-nums">{exp.amount.toLocaleString()} <small className="text-[10px]">ر.س</small></div>
-                        </div>
-                      ))
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>
