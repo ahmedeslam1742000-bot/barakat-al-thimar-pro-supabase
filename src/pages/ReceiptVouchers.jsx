@@ -1675,26 +1675,43 @@ export default function ReceiptVouchers({ setActiveView }) {
 
     {/* ═══ PRINT TEMPLATE (Hidden on screen, visible only on print) ═══ */}
     <div className="hidden print:block bg-white text-slate-900 font-readex p-8" dir="rtl">
-      {/* Elegant Header */}
-      <div className="flex items-center justify-between border-b-[3px] border-slate-800 pb-6 mb-8">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-slate-900 rounded-2xl flex items-center justify-center text-white">
-            <CreditCard size={32} />
+      {/* Premium Print Header */}
+      <div className="mb-10">
+        <div className="flex items-end justify-between border-b-[4px] border-double border-slate-800 pb-8">
+          <div className="flex items-center gap-6">
+            <div className="w-20 h-20 bg-white border-[3px] border-slate-800 rounded-[1.5rem] flex items-center justify-center text-slate-800">
+              <FileText size={40} strokeWidth={2.5} />
+            </div>
+            <div>
+              <h1 className="text-4xl font-black text-slate-900 tracking-tight">قيد تسوية وتوريد عهدة</h1>
+              <div className="mt-2 text-slate-500 font-bold text-sm tracking-wide">
+                مستند مالي معتمد للمراجعة والتدقيق
+              </div>
+            </div>
           </div>
-          <div>
-            <h1 className="text-3xl font-black text-slate-900">قيد تسوية وتوريد عهدة</h1>
+          
+          <div className="flex items-stretch gap-4 text-left">
+            <div className="border-2 border-slate-200 rounded-2xl p-4 min-w-[130px] flex flex-col justify-center">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">تاريخ الاعتماد</p>
+              <p className="text-lg font-black text-slate-800 tabular-nums leading-none">{new Date().toLocaleDateString('en-GB')}</p>
+            </div>
             {(journalForm.journalNo || journalForm.totalAmount) && (
-              <p className="text-sm font-bold text-slate-500 mt-2 tracking-widest flex items-center gap-4">
-                {journalForm.journalNo && <span>رقم الدفتر: <strong className="text-slate-800">{journalForm.journalNo}</strong></span>}
-                {journalForm.totalAmount && <span>مجموع القيد: <strong className="text-slate-800">{Number(journalForm.totalAmount).toLocaleString()}</strong> ر.س</span>}
-              </p>
+              <div className="border-2 border-slate-800 bg-slate-50 rounded-2xl p-4 min-w-[160px] flex flex-col justify-center">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">بيانات السجل</p>
+                <p className="text-lg font-black text-slate-900 tabular-nums leading-none">
+                  {journalForm.journalNo ? `دفتر: ${journalForm.journalNo}` : 'مراجعة الدفتر'}
+                </p>
+              </div>
             )}
           </div>
         </div>
-        <div className="text-left">
-          <p className="text-sm font-bold text-slate-400">تاريخ القيد</p>
-          <p className="text-lg font-black text-slate-800 tabular-nums">{new Date().toLocaleDateString('ar-SA')}</p>
-        </div>
+
+        {journalForm.totalAmount && (
+          <div className="mt-4 flex items-center justify-between border border-slate-200 p-4 rounded-2xl">
+            <span className="text-sm font-bold text-slate-500">إجمالي قيمة القيد المسجل بالدفتر:</span>
+            <span className="text-2xl font-black text-slate-800 tabular-nums">{Number(journalForm.totalAmount).toLocaleString()} <span className="text-sm">ر.س</span></span>
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}
