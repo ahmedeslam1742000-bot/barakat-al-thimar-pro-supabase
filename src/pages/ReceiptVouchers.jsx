@@ -895,13 +895,18 @@ export default function ReceiptVouchers({ setActiveView }) {
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
               {activeTable === 'vouchers' ? filteredVouchers.map((voucher, idx) => (
-                <tr style={{ animationDelay: `${idx * 0.05}s`, opacity: 0 }} key={voucher.id} className={`animate-fade-in-up group hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10 transition-colors ${selectedVoucherIds.includes(voucher.id) ? 'bg-emerald-50/50' : ''}`}>
+                <tr 
+                  style={{ animationDelay: `${idx * 0.05}s`, opacity: 0 }} 
+                  key={voucher.id} 
+                  onClick={() => toggleVoucherSelection(voucher.id)}
+                  className={`animate-fade-in-up group cursor-pointer hover:bg-emerald-50/30 dark:hover:bg-emerald-900/10 transition-colors ${selectedVoucherIds.includes(voucher.id) ? 'bg-emerald-50/50' : ''}`}
+                >
                   <td className="px-6 py-5 text-center">
                     <input 
                       type="checkbox" 
-                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 pointer-events-none"
                       checked={selectedVoucherIds.includes(voucher.id)}
-                      onChange={() => toggleVoucherSelection(voucher.id)}
+                      readOnly
                     />
                   </td>
                   <td className="px-6 py-5 text-center text-xs font-black text-slate-400 group-hover:text-emerald-500 transition-colors">{idx + 1}</td>
@@ -932,26 +937,31 @@ export default function ReceiptVouchers({ setActiveView }) {
                   </td>
                   <td className="px-6 py-5 text-center">
                     <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => setViewVoucher(voucher)} className="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all" title="تفاصيل السند (للإيداع)">
+                      <button onClick={(e) => { e.stopPropagation(); setViewVoucher(voucher); }} className="p-1.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-all" title="تفاصيل السند (للإيداع)">
                         <Eye size={16} />
                       </button>
-                      <button onClick={() => openEdit(voucher)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all" title="تعديل">
+                      <button onClick={(e) => { e.stopPropagation(); openEdit(voucher); }} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all" title="تعديل">
                         <Pencil size={16} />
                       </button>
-                      <button onClick={() => handleDelete(voucher.id, 'voucher')} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all" title="مسح">
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(voucher.id, 'voucher'); }} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all" title="مسح">
                         <Trash2 size={16} />
                       </button>
                     </div>
                   </td>
                 </tr>
               )) : filteredExpenses.map((expense, idx) => (
-                <tr style={{ animationDelay: `${idx * 0.05}s`, opacity: 0 }} key={expense.id} className={`animate-fade-in-up group hover:bg-amber-50/30 dark:hover:bg-amber-900/10 transition-colors ${selectedExpenseIds.includes(expense.id) ? 'bg-amber-50/50' : ''}`}>
+                <tr 
+                  style={{ animationDelay: `${idx * 0.05}s`, opacity: 0 }} 
+                  key={expense.id} 
+                  onClick={() => toggleExpenseSelection(expense.id)}
+                  className={`animate-fade-in-up group cursor-pointer hover:bg-amber-50/30 dark:hover:bg-amber-900/10 transition-colors ${selectedExpenseIds.includes(expense.id) ? 'bg-amber-50/50' : ''}`}
+                >
                   <td className="px-6 py-5 text-center">
                     <input 
                       type="checkbox" 
-                      className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                      className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 pointer-events-none"
                       checked={selectedExpenseIds.includes(expense.id)}
-                      onChange={() => toggleExpenseSelection(expense.id)}
+                      readOnly
                     />
                   </td>
                   <td className="px-6 py-5 text-center text-xs font-black text-slate-400 group-hover:text-amber-500 transition-colors">{idx + 1}</td>
@@ -977,7 +987,7 @@ export default function ReceiptVouchers({ setActiveView }) {
                   </td>
                   <td className="px-6 py-5 text-center">
                     <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleDelete(expense.id, 'expense')} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all" title="مسح">
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(expense.id, 'expense'); }} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-all" title="مسح">
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -1334,85 +1344,82 @@ export default function ReceiptVouchers({ setActiveView }) {
           <div key="settlement-wizard" className="fixed inset-0 z-[250] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsSettlementWizardOpen(false)} className="absolute inset-0 bg-slate-950/60 backdrop-blur-md" />
             <motion.div 
-              initial={{ opacity: 0, y: 100 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 100 }}
-              className="relative w-full max-w-4xl bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col h-[85vh] border border-white/10"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} transition={{ duration: 0.2 }}
+              className="relative w-full max-w-3xl bg-[#f8fafc] dark:bg-[#0f172a] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] border border-slate-200/60 dark:border-slate-800/60"
             >
-              <div className="px-10 py-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
-                <div className="flex items-center gap-5">
-                  <div className="w-14 h-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-xl"><CreditCard size={28} /></div>
+              <div className="px-8 py-6 border-b border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm shrink-0">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 flex items-center justify-center"><CreditCard size={24} /></div>
                   <div>
-                    <h3 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">قيد تسوية العهدة والتحصيل</h3>
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">المرحلة الثانية: تصفية المشتريات والمصاريف</p>
+                    <h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">تسوية العهدة والتحصيل</h3>
+                    <p className="text-xs font-bold text-slate-400 mt-0.5">مراجعة المبالغ المحصلة والمصروفات</p>
                   </div>
                 </div>
-                <button onClick={() => setIsSettlementWizardOpen(false)} className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-all shadow-sm"><X size={24} /></button>
+                <button onClick={() => setIsSettlementWizardOpen(false)} className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors"><X size={20} /></button>
               </div>
               
-              <div className="flex-1 overflow-y-auto p-10 space-y-8 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
                 {/* Stats Summary */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50 rounded-3xl p-6 flex items-center justify-between shadow-sm">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-6 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
                     <div>
-                      <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">إجمالي السندات المختارة</span>
-                      <div className="text-2xl font-black text-emerald-700 dark:text-emerald-400 mt-1">
-                        {filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0).toLocaleString()} <small className="text-xs">ر.س</small>
+                      <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">إجمالي السندات</span>
+                      <div className="text-2xl font-black text-slate-800 dark:text-white mt-1 tabular-nums">
+                        {filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0).toLocaleString()} <span className="text-xs text-slate-400 font-readex">ر.س</span>
                       </div>
                     </div>
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20"><Banknote size={24} /></div>
+                    <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 text-indigo-500 flex items-center justify-center"><Banknote size={24} /></div>
                   </div>
-                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/50 rounded-3xl p-6 flex items-center justify-between shadow-sm">
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-3xl p-6 flex items-center justify-between shadow-sm hover:shadow-md transition-shadow">
                     <div>
-                      <span className="text-[10px] font-black text-amber-500 uppercase tracking-widest">مصروفات مختارة للخصم</span>
-                      <div className="text-2xl font-black text-amber-700 dark:text-amber-400 mt-1">
-                        {repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0).toLocaleString()} <small className="text-xs">ر.س</small>
+                      <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">إجمالي المصروفات</span>
+                      <div className="text-2xl font-black text-slate-800 dark:text-white mt-1 tabular-nums">
+                        {repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0).toLocaleString()} <span className="text-xs text-slate-400 font-readex">ر.س</span>
                       </div>
                     </div>
-                    <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-500/20"><Wallet size={24} /></div>
+                    <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-800 text-rose-500 flex items-center justify-center"><Wallet size={24} /></div>
                   </div>
                 </div>
 
                 {/* Expenses List */}
                 <div>
-                  <h4 className="text-sm font-black text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                    <Wallet size={16} className="text-amber-500" />
-                    المصاريف المحددة والمعلقة للتسوية
+                  <h4 className="text-sm font-black text-slate-600 dark:text-slate-300 mb-4 flex items-center gap-2">
+                    <Wallet size={16} className="text-slate-400" />
+                    المصاريف المحددة للتسوية
                   </h4>
-                  <div className="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+                  <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-3xl overflow-hidden shadow-sm">
                     {repExpenses.filter(e => selectedExpenseIds.includes(e.id) || !e.is_settled).length === 0 ? (
-                      <div className="py-12 text-center flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/50">
-                        <AlertTriangle size={24} className="text-slate-300 mb-2" />
-                        <p className="text-xs font-bold text-slate-400">لا توجد مصاريف معلقة أو محددة</p>
+                      <div className="py-12 text-center flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/50">
+                        <AlertTriangle size={24} className="text-slate-300 dark:text-slate-700 mb-3" />
+                        <p className="text-sm font-bold text-slate-400">لا توجد مصاريف معلقة أو محددة</p>
                       </div>
                     ) : (
-                      <div className="divide-y divide-slate-100 dark:divide-slate-800/50 max-h-[300px] overflow-y-auto custom-scrollbar">
+                      <div className="divide-y divide-slate-100 dark:divide-slate-800/50 max-h-[250px] overflow-y-auto custom-scrollbar p-2">
                         {repExpenses.filter(e => selectedExpenseIds.includes(e.id) || !e.is_settled).map(exp => (
                           <div 
                             key={exp.id} 
                             onClick={() => setSelectedExpenseIds(prev => prev.includes(exp.id) ? prev.filter(id => id !== exp.id) : [...prev, exp.id])}
-                            className={`p-3 transition-all cursor-pointer flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 ${selectedExpenseIds.includes(exp.id) ? 'bg-amber-50/50 dark:bg-amber-900/10' : ''}`}
+                            className={`p-4 rounded-2xl transition-all cursor-pointer flex items-center justify-between mb-1 last:mb-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 ${selectedExpenseIds.includes(exp.id) ? 'bg-slate-50 dark:bg-slate-800' : ''}`}
                           >
                             <div className="flex items-center gap-4">
-                              <div className="flex items-center justify-center pl-2">
-                                <input 
-                                  type="checkbox" 
-                                  className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer pointer-events-none"
-                                  checked={selectedExpenseIds.includes(exp.id)}
-                                  readOnly
-                                />
+                              <div className="flex items-center justify-center">
+                                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${selectedExpenseIds.includes(exp.id) ? 'bg-slate-800 border-slate-800 dark:bg-slate-200 dark:border-slate-200' : 'border-slate-300 dark:border-slate-600'}`}>
+                                  {selectedExpenseIds.includes(exp.id) && <CheckCircle2 size={14} className="text-white dark:text-slate-900" />}
+                                </div>
                               </div>
                               <div>
-                                <div className={`text-xs font-black transition-colors ${selectedExpenseIds.includes(exp.id) ? 'text-amber-700 dark:text-amber-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                                <div className={`text-sm font-black transition-colors ${selectedExpenseIds.includes(exp.id) ? 'text-slate-800 dark:text-white' : 'text-slate-600 dark:text-slate-400'}`}>
                                   {exp.statement}
                                 </div>
-                                <div className="flex items-center gap-2 mt-1.5">
+                                <div className="flex items-center gap-2 mt-1">
                                   <span className="text-[10px] font-bold text-slate-400">{formatDateToDisplay(exp.date)}</span>
-                                  <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
-                                  <span className="text-[10px] font-black text-slate-500 dark:text-slate-400">{exp.repName}</span>
+                                  <span className="w-1 h-1 rounded-full bg-slate-200 dark:bg-slate-700"></span>
+                                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{exp.repName}</span>
                                 </div>
                               </div>
                             </div>
-                            <div className={`text-sm font-black tabular-nums ${selectedExpenseIds.includes(exp.id) ? 'text-amber-600' : 'text-slate-500 dark:text-slate-400'}`}>
-                              {exp.amount.toLocaleString()} <small className="text-[9px]">ر.س</small>
+                            <div className={`text-sm font-black tabular-nums ${selectedExpenseIds.includes(exp.id) ? 'text-rose-500' : 'text-slate-400 dark:text-slate-500'}`}>
+                              {exp.amount.toLocaleString()} <span className="text-[10px]">ر.س</span>
                             </div>
                           </div>
                         ))}
@@ -1423,17 +1430,19 @@ export default function ReceiptVouchers({ setActiveView }) {
               </div>
 
               {/* Action Bar */}
-              <div className="p-10 bg-slate-900 dark:bg-black border-t border-white/5 flex items-center justify-between shrink-0">
-                <div className="text-right">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">صافي التوريد (التحصيل - المصاريف)</span>
-                  <div className="text-3xl font-black text-white mt-1 tabular-nums">
-                    {(filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0) - 
-                      repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0)).toLocaleString()} 
-                    <small className="text-sm mr-1 text-slate-400 font-readex">ر.س</small>
+              <div className="px-8 py-6 bg-white dark:bg-slate-900 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-6">
+                  <div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">صافي التوريد للدرج</span>
+                    <div className="text-3xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums leading-none">
+                      {(filteredVouchers.filter(v => selectedVoucherIds.includes(v.id)).reduce((s, v) => s + v.amount, 0) - 
+                        repExpenses.filter(e => selectedExpenseIds.includes(e.id)).reduce((s, e) => s + e.amount, 0)).toLocaleString()} 
+                      <span className="text-sm mr-1.5 text-slate-400 font-readex">ر.س</span>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <button onClick={() => setIsSettlementWizardOpen(false)} className="px-8 py-4 rounded-2xl font-bold text-slate-400 hover:text-white transition-colors">إلغاء</button>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setIsSettlementWizardOpen(false)} className="px-6 py-3.5 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">إلغاء</button>
                   <button 
                     disabled={loading}
                     onClick={async () => {
@@ -1443,10 +1452,10 @@ export default function ReceiptVouchers({ setActiveView }) {
                         if (confirmed) handleFinalSettlement();
                       }, 1000);
                     }} 
-                    className="px-10 py-4 rounded-2xl font-black text-slate-900 bg-white hover:bg-emerald-50 hover:scale-105 active:scale-95 shadow-2xl shadow-white/10 transition-all flex items-center gap-3 disabled:opacity-50"
+                    className="px-8 py-3.5 rounded-2xl font-black text-white bg-slate-900 dark:bg-indigo-600 hover:opacity-90 active:scale-95 transition-all flex items-center gap-2 disabled:opacity-50 shadow-md"
                   >
-                    {loading ? <Clock size={20} className="animate-spin" /> : <Printer size={20} />}
-                    طباعة واعتماد التسوية النهائية
+                    {loading ? <Clock size={18} className="animate-spin" /> : <Printer size={18} />}
+                    اعتماد وطباعة
                   </button>
                 </div>
               </div>
