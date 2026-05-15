@@ -1065,7 +1065,7 @@ export default function ReceiptVouchers({ setActiveView }) {
                   <div className="lg:col-span-6 space-y-8">
                     <div className="grid grid-cols-2 gap-6">
                       <div className="col-span-1">
-                        <label className="block text-[11px] font-black text-slate-500 mb-2.5 mr-1 flex items-center gap-2">
+                        <label className="flex text-[11px] font-black text-slate-500 mb-2.5 mr-1 items-center gap-2">
                           <Calendar size={14} className="text-slate-400" /> تاريخ السند
                         </label>
                         <SmartDateInput 
@@ -1076,7 +1076,7 @@ export default function ReceiptVouchers({ setActiveView }) {
                         />
                       </div>
                       <div className="col-span-1">
-                        <label className="block text-[11px] font-black text-slate-500 mb-2.5 mr-1 flex items-center gap-2">
+                        <label className="flex text-[11px] font-black text-slate-500 mb-2.5 mr-1 items-center gap-2">
                           <Hash size={14} className="text-slate-400" /> رقم السند
                         </label>
                         <input type="text" required className="w-full h-14 px-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all text-slate-700 dark:text-white shadow-sm" placeholder="1001" value={form.voucherNo} onChange={(e) => setForm({...form, voucherNo: e.target.value})} />
@@ -1084,14 +1084,14 @@ export default function ReceiptVouchers({ setActiveView }) {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-black text-slate-500 mb-2.5 mr-1 flex items-center gap-2">
+                      <label className="flex text-[11px] font-black text-slate-500 mb-2.5 mr-1 items-center gap-2">
                         <Users size={14} className="text-slate-400" /> اسم العميل المستلم منه
                       </label>
                       <input type="text" required className="w-full h-14 px-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-slate-700 dark:text-white shadow-sm" placeholder="أدخل اسم العميل بالكامل..." value={form.customerName} onChange={(e) => setForm({...form, customerName: e.target.value})} />
                     </div>
 
                     <div className="relative">
-                      <label className="block text-[11px] font-black text-slate-500 mb-2.5 mr-1 flex items-center gap-2">
+                      <label className="flex text-[11px] font-black text-slate-500 mb-2.5 mr-1 items-center gap-2">
                         <UserCircle size={14} className="text-slate-400" /> المندوب المحصل
                       </label>
                       <input type="text" required autoComplete="off" className="w-full h-14 px-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl font-bold text-sm outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-slate-700 dark:text-white shadow-sm" placeholder="ابحث عن المندوب..." value={repSearchQuery} onFocus={() => setIsRepDropdownOpen(true)} onBlur={() => setTimeout(() => setIsRepDropdownOpen(false), 200)} onChange={(e) => { setRepSearchQuery(e.target.value); setIsRepDropdownOpen(true); }} />
