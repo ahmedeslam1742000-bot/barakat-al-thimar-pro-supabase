@@ -322,27 +322,29 @@ export default function VoucherWorkspace({ kind }) {
         }
       }
 
-      // ─── 1. Clean up old lines if editing ───
-      if (editingGroupId && editingLineIds.length > 0) {
-        const { error: delError } = await supabase.from('transactions').delete().in('id', editingLineIds);
-        if (delError) throw delError;
-      }
-
-      // ─── 2. Insert new lines ───
-      const rows = modalDrafts.map(d => ({
+      // ─── 1. Single Network Request via RPC (Transaction) ───
+      const rpcPayload = {
+        mode: kind, // 'outward' or 'in'
         type: cfg.txType,
-        item_id: d.itemId,
-        qty: d.qty,
+        batch_id: batchId,
+        reference_number: refNo,
         date: session.date,
         supplier: kind === 'in' ? session.supplier : null,
         rep: kind === 'outward' ? session.rep : null,
         notes: finalNote,
-        batch_id: batchId,
-        reference_number: refNo
-      }));
+        delete_line_ids: editingGroupId && editingLineIds.length > 0 ? editingLineIds : [],
+        lines: modalDrafts.map(d => ({
+          item_id: d.itemId,
+          qty: d.qty
+        }))
+      };
 
-      const { error: insError } = await supabase.from('transactions').insert(rows);
-      if (insError) throw insError;
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('process_voucher_transaction', {
+        payload: rpcPayload
+      });
+
+      if (rpcError) throw rpcError;
+      if (!rpcResult?.ok) throw new Error(rpcResult?.error_message || 'حدث خطأ غير معروف في المعاملة');
 
       toast.success(editingGroupId ? 'تم تحديث السند بنجاح ✅' : 'تم حفظ السند بنجاح ✅');
       closeAddModal();
