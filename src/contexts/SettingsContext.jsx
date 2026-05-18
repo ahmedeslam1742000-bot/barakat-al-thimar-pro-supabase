@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import api from '../lib/api';
+import { supabase } from '../lib/supabaseClient';
 
 export const DEFAULT_SETTINGS = {
   // ─── 1. Default Values
@@ -54,37 +54,67 @@ export function SettingsProvider({ children }) {
 
   useEffect(() => {
     const fetchSettings = async () => {
-      try {
-        const { data } = await api.get('/settings');
-        if (data) {
-          setSettings({ ...DEFAULT_SETTINGS, ...data });
-        } else {
-          setSettings(DEFAULT_SETTINGS);
-        }
-      } catch (error) {
-        if (error.response?.status !== 401) {
-          console.error("error fetching settings:", error);
-        }
-      } finally {
-        setLoading(false);
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('id, settings')
+        .eq('id', '00000000-0000-0000-0000-000000000001')
+        .maybeSingle();
+
+      if (error) {
+        console.error("error fetching settings:", error);
       }
+
+      if (data && data.settings) {
+        setSettings({ ...DEFAULT_SETTINGS, ...data.settings });
+      } else {
+        setSettings(DEFAULT_SETTINGS);
+      }
+      setLoading(false);
     };
 
     fetchSettings();
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('settings-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'system_settings',
+          filter: 'id=eq.00000000-0000-0000-0000-000000000001',
+        },
+        (payload) => {
+          setSettings({ ...DEFAULT_SETTINGS, ...payload.new.settings });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // ─── Memoized to prevent re-renders in all consuming components ──────
   const updateSettings = useCallback(async (patch) => {
     setSettings(prev => {
       const newSettings = { ...prev, ...patch };
-      api.post('/settings', { settings: newSettings });
+      // Fire-and-forget DB sync (optimistic update pattern)
+      supabase
+        .from('system_settings')
+        .update({ settings: newSettings, updated_at: new Date().toISOString() })
+        .eq('id', '00000000-0000-0000-0000-000000000001');
       return newSettings;
     });
   }, []);
 
   const resetSettings = useCallback(async () => {
     setSettings(DEFAULT_SETTINGS);
-    await api.post('/settings', { settings: DEFAULT_SETTINGS });
+    await supabase
+      .from('system_settings')
+      .update({ settings: DEFAULT_SETTINGS, updated_at: new Date().toISOString() })
+      .eq('id', '00000000-0000-0000-0000-000000000001');
   }, []);
 
   // ─── Memoize context value so Provider doesn't re-render consumers ───

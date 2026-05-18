@@ -98,7 +98,7 @@ export const VoucherGroupRow = React.memo(function VoucherGroupRow({
                   <button 
                     onClick={() => openDeleteGroup(group)}
                     className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-all"
-                    title="أرشفة السند"
+                    title="حذف السند"
                   >
                     <Trash2 size={14} strokeWidth={2.5} />
                   </button>
@@ -501,7 +501,7 @@ export default function VoucherSidePanel({
                     {!isViewer && !group.lines.some(l => l.status === 'مفوتر') && (
                       <>
                         <button onClick={() => openEditGroup(group)} className={`${actionBtnBase} px-3 py-2 border-blue-200 text-blue-600 ${glowEdit}`}><Pencil size={14} className="ml-1" /> تعديل</button>
-                        <button onClick={() => openDeleteGroup(group)} className={`${actionBtnBase} px-3 py-2 border-rose-200 text-rose-600 ${glowDel}`}><Trash2 size={14} className="ml-1" /> أرشفة</button>
+                        <button onClick={() => openDeleteGroup(group)} className={`${actionBtnBase} px-3 py-2 border-rose-200 text-rose-600 ${glowDel}`}><Trash2 size={14} className="ml-1" /> حذف</button>
                       </>
                     )}
                   </div>

@@ -8,7 +8,7 @@ import {
   Shield, Info, Save
 } from 'lucide-react';
 import { useSettings } from '../contexts/SettingsContext';
-import api from '../lib/api';
+import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 
 const Spinner = () => <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />;
@@ -53,19 +53,15 @@ function S6Permissions({ users = [] }) {
 
   const fetchPerms = async (user) => {
     setSelectedUser(user);
-    try {
-      const { data } = await api.get(`/users/${user.id}/permissions`);
-      setUserPerms(data || []);
-    } catch {
-      setUserPerms([]);
-    }
+    const { data } = await supabase.from('user_permissions').select('page_id, is_allowed').eq('user_id', user.id);
+    setUserPerms(data || []);
   };
 
   const toggle = async (pageId, current) => {
     if (saving) return;
     setSaving(true);
     try {
-      await api.post(`/users/${selectedUser.id}/permissions`, { page_id: pageId, is_allowed: !current });
+      await supabase.from('user_permissions').upsert({ user_id: selectedUser.id, page_id: pageId, is_allowed: !current }, { onConflict: 'user_id, page_id' });
       setUserPerms(prev => {
         const exists = prev.find(p => p.page_id === pageId);
         if (exists) return prev.map(p => p.page_id === pageId ? { ...p, is_allowed: !current } : p);
@@ -125,21 +121,22 @@ function S9Users({ users = [], onRefresh }) {
     if (loading) return;
     setLoading(true);
     try {
-      await api.post('/users', { email, password: pass, username });
-      toast.success('✅ تمت إضافة المستخدم بنجاح');
-      setEmail(''); setPass(''); setUsername('');
-      onRefresh();
-    } catch (err) { toast.error(err?.response?.data?.message || err.message); } finally { setLoading(false); }
+      const { data, error: authError } = await supabase.auth.signUp({ email, password: pass, options: { data: { username } } });
+      if (authError) throw authError;
+      if (data?.user) {
+        await supabase.from('users').insert([{ id: data.user.id, email, username, role: 'User' }]);
+        toast.success('✅ تمت إضافة المستخدم بنجاح');
+        setEmail(''); setPass(''); setUsername('');
+        onRefresh();
+      }
+    } catch (err) { toast.error(err.message); } finally { setLoading(false); }
   };
 
   const handleDelete = async (id, userEmail) => {
     if (userEmail === 'ahmed_eslam288@yahoo.com') return;
     if (!window.confirm('هل أنت متأكد من حذف هذا الحساب؟')) return;
-    try {
-      await api.delete(`/users/${id}`);
-      toast.success('تم الحذف بنجاح'); 
-      onRefresh();
-    } catch (err) { toast.error(err?.response?.data?.message || err.message); }
+    const { error } = await supabase.from('users').delete().eq('id', id);
+    if (!error) { toast.success('تم الحذف بنجاح'); onRefresh(); }
   };
 
   return (
@@ -176,12 +173,8 @@ export default function SettingsPage() {
   const [usersList, setUsersList] = useState([]);
 
   const fetchUsers = async () => {
-    try {
-      const { data } = await api.get('/users');
-      setUsersList(data.map(u => ({ ...u, username: u.name })) || []);
-    } catch (e) {
-      console.error(e);
-    }
+    const { data } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+    if (data) setUsersList(data);
   };
 
   useEffect(() => { fetchUsers(); }, []);

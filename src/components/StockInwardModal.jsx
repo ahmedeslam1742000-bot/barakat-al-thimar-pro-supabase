@@ -7,7 +7,7 @@ import {
   CheckCircle2, Save, Pencil, Trash2, Calendar,
   LayoutGrid, Warehouse, FileText, Camera, Upload
 } from 'lucide-react';
-import api from '../lib/api';
+import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { useAudio } from '../contexts/AudioContext';
 import { useData } from '../contexts/DataContext';
@@ -217,19 +217,41 @@ export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
 
       }
 
-      const { data } = await api.post('/vouchers', {
-        type: 'سند إدخال',
-        status: 'مكتمل', // Inbound usually completes immediately
-        date: dateStr,
-        client_name: locationName,
-        notes: stockForm.receiptType !== 'بدون' ? `رقم السند: ${stockForm.receiptNumber.trim()}` : null,
-        attachment_url: imageUrl,
-        items: stockForm.items.map(item => ({
-          product_id: item.itemId,
-          qty: item.qty,
-          unit: item.unit,
-        }))
+      // 2. استدعاء RPC الذري — يتولى فحص التكرار + قفل الصفوف + تحديث المخزون + إدراج transactions
+
+      const { data, error } = await supabase.rpc('inventory_commit_inbound', {
+        payload: {
+          request_id: `inbound-${Date.now()}`,
+          batch_id: batchId,
+          header: {
+            location_name:    locationName,
+            supplier_name:    locationName,
+            date:             dateStr,
+            receipt_type:     stockForm.receiptType,
+            receipt_number:   stockForm.receiptNumber.trim(),
+            receipt_image_url: imageUrl,
+          },
+          lines: stockForm.items.map(item => ({
+            item_id:   item.itemId,
+            item_name: item.item,
+            company:   item.company,
+            cat:       item.cat,
+            unit:      item.unit,
+            qty:       item.qty,
+          })),
+          actor_user_id:   'ui-stock-inward',
+          actor_user_name: 'Stock Inward Modal',
+        },
       });
+
+      if (error) throw error;
+      if (!data?.ok) {
+        // ترجمة رسائل الخطأ المعروفة
+        if (data?.error_code === 'P0001' && data?.error_message === 'DUPLICATE_RECEIPT_NUMBER') {
+          throw new Error(`رقم السند (${stockForm.receiptNumber}) مسجل مسبقاً! يرجى التأكد من الرقم.`);
+        }
+        throw new Error(data?.error_message || 'فشل الحفظ عبر RPC');
+      }
 
 
       toast.success('تم الحفظ والترحيل بنجاح ✅');

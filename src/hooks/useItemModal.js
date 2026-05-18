@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import api from '../lib/api';
+import { supabase } from '../lib/supabaseClient';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 
 /**
@@ -309,16 +309,19 @@ export function useItemModal({
     setShowSaveConfirm(false);
     if (setLoading) setLoading(true);
     try {
+      // Prepare bulk data
       const insertData = sessionItems.map(item => ({
         name: item.name,
         company: item.company,
-        category: item.cat,
+        cat: item.cat,
         unit: item.unit,
         stock_qty: 0,
         search_key: `${item.name} ${item.company}`.toLowerCase(),
       }));
 
-      await Promise.all(insertData.map((payload) => api.post('/products', payload)));
+      const { error } = await supabase.from('products').insert(insertData);
+      
+      if (error) throw error;
 
       toast.success('تم التسجيل واعتماد القائمة بنجاح! ✅');
       setSessionItems([]);

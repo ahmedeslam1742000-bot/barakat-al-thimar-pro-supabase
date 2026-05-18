@@ -3,12 +3,12 @@ import {
   ClipboardList, Search, Snowflake, Thermometer, Package, PackageX,
   Printer, LogOut, LayoutGrid, Box, FileDown
 } from 'lucide-react';
-
+import { supabase } from '../lib/supabaseClient';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../contexts/DataContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { useDebounce } from '../hooks/useDebounce';
-import { useInfiniteProducts } from '../hooks/useInfiniteProducts';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { toast } from 'sonner';
 import { isInvalidCompany, getItemName } from '../lib/itemFields';
@@ -50,46 +50,38 @@ const InventoryItemRow = React.memo(({ item, idx, lowStockThreshold }) => {
 });
 
 export default function StockInventory({ setActiveView }) {
+  const { items } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [catFilter, setCatFilter] = useState('الكل');
   const { isViewer } = useAuth();
   const { settings } = useSettings();
 
+  // Client-side sort (avoids compound index)
+  const sortedItems = useMemo(() => {
+    return [...items].sort((a, b) => {
+      // Prioritize "مجمدات"
+      if (a.cat === 'مجمدات' && b.cat !== 'مجمدات') return -1;
+      if (a.cat !== 'مجمدات' && b.cat === 'مجمدات') return 1;
+      
+      const catOrder = (a.cat || '').localeCompare(b.cat || '', 'ar');
+      if (catOrder !== 0) return catOrder;
+      return (a.name || '').localeCompare(b.name || '', 'ar');
+    });
+  }, [items]);
+
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    isError,
-  } = useInfiniteProducts({
-    search: debouncedSearchTerm,
-    category: catFilter,
-  });
-
-  const flatItems = useMemo(() => {
-    return data?.pages.flatMap((page) => page.data.map(product => ({
-      ...product,
-      cat: product.category,
-      stockQty: Number(product.stock_qty) || 0,
-      damagedQty: Number(product.damaged_qty) || 0,
-    }))) || [];
-  }, [data]);
-
-  const groupedItems = useMemo(() => {
-    const groups = {};
-    flatItems.forEach(item => {
-      const cat = item.cat || 'أخرى';
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(item);
+  const filteredItems = useMemo(() => {
+    const q = normalizeArabic(debouncedSearchTerm);
+    let result = sortedItems.filter(i => {
+      // searchKey is usually normalized. We can also fallback to normName + normCompany
+      const searchData = i.searchKey || `${i.normName || ''} ${i.normCompany || ''} ${i.cat || ''}`;
+      const matchesSearch = q === '' || searchData.includes(q);
+      const matchesCat = catFilter === 'الكل' || i.cat === catFilter;
+      return matchesSearch && matchesCat;
     });
-    return groups;
-  }, [flatItems]);
-
-  const summaryStats = data?.pages[0]?.summary_stats || { itemCount: 0, goodQty: 0, damagedQty: 0 };
-
+    return result;
+  }, [sortedItems, debouncedSearchTerm, catFilter]);
   const getCategoryIcon = (cat) => {
     if (!cat) return <Box size={16} />;
     if (cat.includes('مجمدات')) return <Snowflake size={16} />;
@@ -98,76 +90,42 @@ export default function StockInventory({ setActiveView }) {
     return <Box size={16} />;
   };
 
-  const totals = {
-    itemCount: summaryStats.itemCount,
-    goodQty: summaryStats.goodQty,
-    damagedQty: summaryStats.damagedQty,
-  };
+  // --- GROUPING ---
+  const groupedItems = useMemo(() => {
+    const groups = {};
+    filteredItems.forEach(item => {
+      const cat = item.cat || 'أخرى';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(item);
+    });
+    return groups;
+  }, [filteredItems]);
+
+  const totals = useMemo(() => ({
+    itemCount: filteredItems.length,
+    goodQty: filteredItems.reduce((sum, item) => sum + Number(item.stockQty || 0), 0),
+    damagedQty: filteredItems.reduce((sum, item) => sum + Number(item.damagedQty || 0), 0),
+  }), [filteredItems]);
 
   const lowStockThreshold = Number(settings?.lowStockThreshold ?? 50);
+  const lowStockItemsCount = useMemo(
+    () => filteredItems.filter((item) => Number(item.stockQty || 0) <= lowStockThreshold).length,
+    [filteredItems, lowStockThreshold]
+  );
 
   const parentRef = useRef(null);
 
   const rowVirtualizer = useVirtualizer({
-    count: hasNextPage ? flatItems.length + 1 : flatItems.length,
+    count: filteredItems.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 64, // Approximate row height
     overscan: 5,
   });
 
-  useEffect(() => {
-    const [lastItem] = [...rowVirtualizer.getVirtualItems()].reverse();
-    if (!lastItem) return;
-
-    if (
-      lastItem.index >= flatItems.length - 1 &&
-      hasNextPage &&
-      !isFetchingNextPage
-    ) {
-      fetchNextPage();
-    }
-  }, [
-    hasNextPage,
-    fetchNextPage,
-    flatItems.length,
-    isFetchingNextPage,
-    rowVirtualizer.getVirtualItems(),
-  ]);
-
-  const fetchAllItemsForExport = async () => {
-    toast.loading('جاري تحضير البيانات...', { id: 'export-loading' });
-    try {
-      const { data } = await api.get('/products', {
-        params: { per_page: 100000, search: debouncedSearchTerm, category: catFilter === 'الكل' ? '' : catFilter }
-      });
-      toast.dismiss('export-loading');
-      return data.data.map(p => ({
-        ...p,
-        cat: p.category,
-        stockQty: Number(p.stock_qty) || 0,
-        damagedQty: Number(p.damaged_qty) || 0,
-      }));
-    } catch (e) {
-      toast.dismiss('export-loading');
-      toast.error('حدث خطأ أثناء جلب البيانات للطباعة/التصدير');
-      return [];
-    }
-  };
-
-  const handlePrintPDF = async () => {
-    const allItems = await fetchAllItemsForExport();
-    if (!allItems.length) return;
-    
-    const groups = {};
-    allItems.forEach(item => {
-      const cat = item.cat || 'أخرى';
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(item);
-    });
-
+  const handlePrintPDF = () => {
     const date = new Date().toLocaleDateString('ar-SA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-    const sortedCats = Object.keys(groups).sort((a, b) => {
+    const sortedCats = Object.keys(groupedItems).sort((a, b) => {
       if (a === '\u0645\u062c\u0645\u062f\u0627\u062a') return -1;
       if (b === '\u0645\u062c\u0645\u062f\u0627\u062a') return 1;
       return a.localeCompare(b, 'ar');
@@ -176,7 +134,7 @@ export default function StockInventory({ setActiveView }) {
     let tablesHtml = '';
     sortedCats.forEach(cat => {
       let rows = '';
-      groups[cat].forEach((item, idx) => {
+      groupedItems[cat].forEach((item, idx) => {
         const bg = idx % 2 === 0 ? '#ffffff' : '#f0faf9';
         const cleanName = getItemName(item);
         const itemDisplayName = cleanName + (isInvalidCompany(item.company) ? '' : ` <span style="color:#64748b;font-weight:700;"> - ${item.company}</span>`);
@@ -267,16 +225,6 @@ export default function StockInventory({ setActiveView }) {
   };
 
   const handleExportExcel = async () => {
-    const allItems = await fetchAllItemsForExport();
-    if (!allItems.length) return;
-
-    const groups = {};
-    allItems.forEach(item => {
-      const cat = item.cat || 'أخرى';
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(item);
-    });
-
     const [ExcelJS, { saveAs }] = await Promise.all([
       import('exceljs'),
       import('file-saver')
@@ -285,7 +233,7 @@ export default function StockInventory({ setActiveView }) {
     const dateStr = new Date().toLocaleDateString('ar-SA', { day: 'numeric', month: 'long', year: 'numeric' });
 
     // ─── 1. PROCESS CATEGORIES INTO SEPARATE SHEETS ───
-    const sortedCats = Object.keys(groups).sort((a, b) => {
+    const sortedCats = Object.keys(groupedItems).sort((a, b) => {
       if (a === 'مجمدات') return -1;
       if (b === 'مجمدات') return 1;
       return a.localeCompare(b, 'ar');
@@ -323,7 +271,7 @@ export default function StockInventory({ setActiveView }) {
       });
 
       // Data Rows
-      groups[cat].forEach((item, idx) => {
+      groupedItems[cat].forEach((item, idx) => {
         const row = catSheet.addRow({
           index: idx + 1,
           name: item.name,
@@ -370,7 +318,7 @@ export default function StockInventory({ setActiveView }) {
 
 
 
-  if (isLoading) {
+  if (!items || items.length === 0) {
     return (
       <div className="h-full flex items-center justify-center font-readex">
         <div className="flex flex-col items-center gap-4">
@@ -423,7 +371,7 @@ export default function StockInventory({ setActiveView }) {
             <LayoutGrid size={16} strokeWidth={catFilter === 'الكل' ? 2.5 : 2} />
             <span className="font-tajawal font-bold text-xs pt-0.5">كل الأقسام</span>
           </button>
-          {['مجمدات', 'بلاستيك', 'تبريد', 'أخرى'].map(cat => (
+          {[...new Set(items.map(i => i.cat).filter(Boolean))].map(cat => (
             <button key={cat} onClick={() => setCatFilter(cat)} className={`flex-shrink-0 px-4 py-2 rounded-xl border-2 transition-all duration-300 flex items-center gap-2.5 ${catFilter === cat ? 'bg-[#279489] border-[#279489] shadow-lg shadow-teal-600/20 text-white' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 hover:bg-slate-50 hover:border-slate-200'}`}>
               <div className="opacity-80">{getCategoryIcon(cat)}</div>
               <span className="font-tajawal font-bold text-xs pt-0.5">{cat}</span>
@@ -465,17 +413,7 @@ export default function StockInventory({ setActiveView }) {
                   <tr><td style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} colSpan={6} /></tr>
                 )}
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                  const isLoaderRow = virtualRow.index > flatItems.length - 1;
-                  const item = flatItems[virtualRow.index];
-
-                  if (isLoaderRow) {
-                    return (
-                      <tr key="loader">
-                        <td colSpan="6" className="py-8 text-center text-slate-400 font-bold">جاري تحميل المزيد...</td>
-                      </tr>
-                    );
-                  }
-
+                  const item = filteredItems[virtualRow.index];
                   return (
                     <InventoryItemRow 
                       key={item.id} 
@@ -488,7 +426,7 @@ export default function StockInventory({ setActiveView }) {
                 {rowVirtualizer.getVirtualItems().length > 0 && (
                   <tr><td style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} colSpan={6} /></tr>
                 )}
-                {flatItems.length === 0 && !isLoading && (
+                {filteredItems.length === 0 && (
                   <tr>
                     <td colSpan="6" className="px-4 py-12 text-center bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl">
                       <div className="flex flex-col items-center justify-center text-slate-400"><PackageX size={48} className="mb-4 opacity-50" strokeWidth={1.5} /><p className="text-lg font-bold">لا توجد أصناف مطابقة للبحث</p></div>

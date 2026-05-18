@@ -6,15 +6,13 @@ import {
   ChevronDown, Layers, Box, Snowflake, Archive,
   LogOut, FileDown, X, Printer, Thermometer, LayoutGrid
 } from 'lucide-react';
-
+import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { useAnimationConfig } from '../hooks/useAnimationConfig';
 import { useDebounce } from '../hooks/useDebounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../lib/api';
-import echo from '../lib/echo';
 
 const InboundItemRow = React.memo(({ it, idx, getCatIcon }) => (
   <tr className="group hover:bg-slate-50 transition-colors border-b border-slate-100 h-[52px]">
@@ -73,21 +71,23 @@ export default function InboundItems({ setActiveView }) {
     overscan: 10,
   });
 
+  // ─── Phase 2: استخدام RPC بدلاً من جلب كل السجلات وحسابها في المتصفح ───
   const fetchInboundItems = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/products?per_page=1000');
-      
-      const itemsData = Array.isArray(data) ? data : data.data || [];
+      const { data, error } = await supabase.rpc('get_inventory_summary');
 
-      setTransactions(itemsData.map((row) => ({
-        id:        row.id,
-        item_id:   row.id,
-        item:      row.name,
+      if (error) throw error;
+
+      // الـ RPC ترجع البيانات المجمعة جاهزة — لا حسابات في المتصفح
+      setTransactions((data || []).map((row) => ({
+        id:        row.item_id,
+        item_id:   row.item_id,
+        item:      row.item_name,
         company:   row.company || 'بدون شركة',
         cat:       row.cat,
         unit:      row.unit,
-        qty:       Number(row.stock_qty || 0),
+        qty:       Number(row.total_in || 0),
         productSnapshot: {
           stockQty:   Number(row.stock_qty   || 0),
           damagedQty: Number(row.damaged_qty || 0),
@@ -95,24 +95,24 @@ export default function InboundItems({ setActiveView }) {
         is_summary: false,
       })));
     } catch (err) {
-      console.error('Error fetching inbound items:', err);
+      console.error('Error fetching inbound items (RPC):', err);
       toast.error('حدث خطأ أثناء تحميل بيانات المخزون');
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // ─── Subscribe via direct Supabase channel (triggers unique RPC, not covered by DataContext) ───
   useEffect(() => {
-    fetchInboundItems();
+    void fetchInboundItems();
 
-    if (!echo) return;
+    const channel = supabase
+      .channel('inbound-items-refresh')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => void fetchInboundItems())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, () => void fetchInboundItems())
+      .subscribe();
 
-    const channel = echo.channel('products')
-      .listen('ProductUpdated', () => {
-        fetchInboundItems();
-      });
-
-    return () => echo.leaveChannel('products');
+    return () => supabase.removeChannel(channel);
   }, [fetchInboundItems]);
 
   const filteredItems = useMemo(() => {

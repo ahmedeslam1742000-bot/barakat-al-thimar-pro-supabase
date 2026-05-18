@@ -115,26 +115,6 @@ export default function ReturnModal({
                 }}
               />
             </div>
-            {returnForm.query && !returnForm.selectedItem && (
-              <div className="hidden group-focus-within/ret:block absolute top-[110%] right-0 w-full max-h-64 overflow-y-auto bg-white rounded-xl shadow-xl border border-slate-100 z-50 p-1.5 backdrop-blur-xl custom-scrollbar">
-                {items.filter(i => i.name.includes(returnForm.query) || (i.company && i.company.includes(returnForm.query))).map((invItem, idx) => (
-                  <button key={invItem.id} type="button" className={`w-full text-right px-3 py-2 rounded-lg transition-all ${returnSearchActiveIndex === idx ? 'bg-amber-50 text-amber-700' : 'hover:bg-slate-50 text-slate-700'}`} onMouseDown={(e) => {
-                    e.preventDefault();
-                    setReturnForm({...returnForm, query: `${invItem.name} - ${invItem.company}`, selectedItem: invItem, cat: invItem.cat || invItem.category || '', unit: invItem.unit || 'كرتونة', returnStatus: returnForm.returnStatus || 'سليم' });
-                    setReturnSearchActiveIndex(-1);
-                    setTimeout(() => { document.getElementById('returnQtyInput')?.focus(); }, 10);
-                  }}>
-                    <div className="flex justify-between items-center w-full">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-black">{invItem.name}</span>
-                        <span className="text-[9px] font-bold opacity-60">{invItem.company}</span>
-                      </div>
-                      <span className="text-[9px] font-black bg-amber-50 text-amber-600 px-2 py-0.5 rounded-md">رصيد: {invItem.stockQty}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           <div className="w-[85px]">

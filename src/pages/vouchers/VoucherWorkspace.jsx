@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload } from 'lucide-react';
-import api from '../../lib/api';
+import { supabase } from '../../lib/supabaseClient';
 import { getItemName, getCompany, getCategory, getUnit, formatItemDisplay } from '../../lib/itemFields';
 import { toast } from 'sonner';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,7 +11,6 @@ import { normalizeArabic } from '../../lib/arabicTextUtils';
 import { useDebounce } from '../../hooks/useDebounce';
 import localforage from 'localforage';
 import { useAudio } from '../../contexts/AudioContext';
-import { useVoucherMutations } from '../../hooks/useVoucherMutations';
 import SmartDateInput from '../../components/SmartDateInput';
 import ModalWrapper from '../../components/common/ModalWrapper';
 
@@ -75,6 +74,27 @@ function emptySession(kind) {
   return { ...base, rep: '', line_note: '', outwardType: 'sale' };
 }
 
+async function allocateVoucherCode(kind) {
+  try {
+    const cfg = KIND_CONFIG[kind];
+    if (!cfg) return `${Math.floor(Math.random() * 900) + 100}`;
+    
+    const year = new Date().getFullYear();
+    const key = `${cfg.counterKey}${year}`;
+    
+    const { data, error } = await supabase.rpc('allocate_voucher_code', {
+      p_prefix: cfg.codePrefix || '',
+      p_key: key
+    });
+    
+    if (error) throw error;
+    return data || '';
+  } catch (err) {
+    console.error('Voucher code allocation error:', err);
+    return '';
+  }
+}
+
 const uploadToCloudinary = async (blob, voucherCode) => {
   try {
     const formData = new FormData();
@@ -105,7 +125,6 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
   const { currentUser, isViewer } = useAuth();
   const { settings } = useSettings();
   const { items, dbTransactionsList: transactions, fetchInitialData } = useData();
-  const { createVoucher, updateVoucher, deleteVoucher, updateVoucherStatus } = useVoucherMutations();
 
   // --- STATE ---
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -272,57 +291,11 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
 
   const triggerSave = (e) => { e.preventDefault(); setIsConfirmSaveOpen(true); };
 
-  const buildVoucherPayload = useCallback((drafts = modalDrafts, overrides = {}) => {
-    let finalStatus = overrides.status || 'قيد الانتظار';
-    let finalNotes = overrides.notes ?? session.line_note;
-    
-    const clientName = overrides.clientName || session.rep || session.supplier || 'غير محدد';
-    const isAutoTransfer = clientName.includes('الرياض') || clientName.includes('مستودع') || clientName.includes('المركز الرئيسي');
-    
-    if (kind === 'outward' && (session.outwardType === 'transfer' || isAutoTransfer)) {
-      if (!overrides.status) finalStatus = 'مكتمل';
-      if (!(finalNotes || '').includes('[نوع: تحويل مخزني]')) {
-        finalNotes = `[نوع: تحويل مخزني]\n${finalNotes || ''}`;
-      }
-    }
-
-    return {
-      voucher_code: overrides.voucherCode || session.voucher_no || undefined,
-      type: cfg.txType,
-      status: finalStatus,
-      date: overrides.date || session.date,
-      client_name: overrides.clientName || session.rep || session.supplier || 'غير محدد',
-      notes: finalNotes,
-      attachment_url: overrides.attachmentUrl || session.attachment || null,
-      items: drafts.map((draft) => ({
-        product_id: draft.itemId,
-        qty: Number(draft.qty),
-        unit: draft.unit || 'كرتونة',
-        notes: draft.lineNote || draft.notes || '',
-      })),
-    };
-  }, [cfg.txType, modalDrafts, session, kind]);
-
-  const buildPayloadFromGroup = useCallback((group, lines, overrides = {}) => buildVoucherPayload(
-    lines.map((line) => ({
-      itemId: line.item_id,
-      qty: line.qty,
-      unit: line.unit,
-      lineNote: line.notes,
-    })),
-    {
-      date: overrides.date || group.date,
-      clientName: group.rep,
-      notes: overrides.notes ?? cleanNote(group.line_note),
-      status: overrides.status || group.lines?.[0]?.status || 'قيد الانتظار',
-      attachmentUrl: group.attachment || null,
-    },
-  ), [buildVoucherPayload]);
-
   const executeSave = async () => {
     setIsConfirmSaveOpen(false);
     setLoading(true);
     try {
+      const batchId = editingGroupId || crypto.randomUUID();
       const refNo = preservedVoucherCode || session.voucher_no;
 
       // ─── 0. Create History Tag if Editing ───
@@ -350,14 +323,27 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
         }
       }
 
-      const payload = buildVoucherPayload(modalDrafts, { notes: finalNote });
-      const response = editingGroupId
-        ? await updateVoucher.mutateAsync({ id: editingGroupId, payload })
-        : await createVoucher.mutateAsync(payload);
+      // ─── 1. Clean up old lines if editing ───
+      if (editingGroupId && editingLineIds.length > 0) {
+        const { error: delError } = await supabase.from('transactions').delete().in('id', editingLineIds);
+        if (delError) throw delError;
+      }
 
-      const savedVoucher = response?.voucher || response;
-      const savedVoucherId = savedVoucher?.id || editingGroupId;
-      const savedVoucherCode = savedVoucher?.voucher_code || refNo;
+      // ─── 2. Insert new lines ───
+      const rows = modalDrafts.map(d => ({
+        type: cfg.txType,
+        item_id: d.itemId,
+        qty: d.qty,
+        date: session.date,
+        supplier: kind === 'in' ? session.supplier : null,
+        rep: kind === 'outward' ? session.rep : null,
+        notes: finalNote,
+        batch_id: batchId,
+        reference_number: refNo
+      }));
+
+      const { error: insError } = await supabase.from('transactions').insert(rows);
+      if (insError) throw insError;
 
       // ─── 3. Image Capture (Non-blocking for UI success) ───
       // We do this in the background and don't let it stop the success flow
@@ -381,9 +367,9 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
             const html2canvas = html2canvasModule.default || html2canvasModule;
             const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
             const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-            const imageUrl = await uploadToCloudinary(blob, savedVoucherCode);
-            if (imageUrl && savedVoucherId) {
-              await updateVoucherStatus.mutateAsync({ id: savedVoucherId, payload: { attachment_url: imageUrl } });
+            const imageUrl = await uploadToCloudinary(blob, refNo);
+            if (imageUrl) {
+              await supabase.from('transactions').update({ attachment: imageUrl }).eq('batch_id', batchId);
             }
           }
         } catch (capErr) {
@@ -407,10 +393,7 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
       }
     } catch (err) {
       console.error('executeSave error:', err);
-      const errorMsg = err.response?.data?.errors 
-        ? Object.values(err.response.data.errors).flat().join(' | ') 
-        : (err.response?.data?.message || err.message || 'خطأ غير معروف');
-      toast.error('فشل في حفظ السند: ' + errorMsg);
+      toast.error('فشل في حفظ السند: ' + (err.message || 'خطأ غير معروف'));
     } finally {
       setLoading(false);
     }
@@ -424,8 +407,7 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
       rep: group.rep || '',
       date: group.date,
       voucher_no: group.voucherCode,
-      line_note: cleanNote(group.line_note),
-      outwardType: group.isTransfer ? 'transfer' : 'sale'
+      line_note: cleanNote(group.line_note)
     });
     // Extract and preserve existing history tags
     const tagsMatch = (group.line_note || '').match(/<!--HIST:.*?-->/g);
@@ -446,16 +428,11 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
 
   const handleDeleteGroupSubmit = async () => {
     setLoading(true);
-    try {
-      await deleteVoucher.mutateAsync(groupToDelete.groupId);
-      toast.success('تمت أرشفة السند بنجاح');
-      setIsDeleteGroupOpen(false);
-      fetchInitialData?.();
-    } catch (error) {
-      toast.error(error?.response?.data?.message || error.message);
-    } finally {
-      setLoading(false);
-    }
+    const { error } = await supabase.from('transactions').delete().eq('batch_id', groupToDelete.groupId);
+    if (error) toast.error(error.message);
+    else toast.success('تم حذف السند بنجاح');
+    setIsDeleteGroupOpen(false);
+    setLoading(false);
   };
 
   const onResetStatus = (group) => { setGroupToReset(group); setIsResetConfirmOpen(true); };
@@ -464,9 +441,13 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
     if (!groupToReset) return;
     setLoading(true);
     try {
-      await updateVoucherStatus.mutateAsync({ id: groupToReset.groupId, payload: { status: 'قيد الانتظار' } });
+      const { error } = await supabase
+        .from('transactions')
+        .update({ status: 'قيد الانتظار' })
+        .eq('batch_id', groupToReset.groupId);
+        
+      if (error) throw error;
       toast.success('تم فك قفل السند بنجاح ✅');
-      fetchInitialData?.();
     } catch (err) {
       toast.error('حدث خطأ أثناء فك القفل: ' + err.message);
     } finally {
@@ -479,54 +460,21 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    try {
-      const group = voucherGroups.find((voucherGroup) => voucherGroup.groupId === selectedTx.batch_id);
-      if (!group) throw new Error('تعذر العثور على السند');
-
-      const lines = group.lines
-        .filter((line) => !line.is_summary && line.item_id)
-        .map((line) => line.id === selectedTx.id ? { ...line, qty: Number(editForm.qty), notes: editForm.lineNote } : line);
-
-      await updateVoucher.mutateAsync({
-        id: group.groupId,
-        payload: buildPayloadFromGroup(group, lines, { date: editForm.date })
-      });
-      toast.success('تم التحديث');
-      setIsEditOpen(false);
-      fetchInitialData?.();
-    } catch (error) {
-      toast.error(error?.response?.data?.message || error.message);
-    } finally {
-      setLoading(false);
-    }
+    const { error } = await supabase.from('transactions').update({ qty: editForm.qty, notes: editForm.lineNote }).eq('id', selectedTx.id);
+    if (error) toast.error(error.message);
+    else toast.success('تم التحديث');
+    setIsEditOpen(false);
+    setLoading(false);
   };
 
   const openDelete = (line) => { setSelectedTx(line); setIsDeleteOpen(true); };
   const handleDeleteSubmit = async () => {
     setLoading(true);
-    try {
-      const group = voucherGroups.find((voucherGroup) => voucherGroup.groupId === selectedTx.batch_id);
-      if (!group) throw new Error('تعذر العثور على السند');
-
-      const lines = group.lines.filter((line) => !line.is_summary && line.item_id && line.id !== selectedTx.id);
-
-      if (lines.length === 0) {
-        await deleteVoucher.mutateAsync(group.groupId);
-      } else {
-        await updateVoucher.mutateAsync({
-          id: group.groupId,
-          payload: buildPayloadFromGroup(group, lines)
-        });
-      }
-
-      toast.success('تم الحذف');
-      setIsDeleteOpen(false);
-      fetchInitialData?.();
-    } catch (error) {
-      toast.error(error?.response?.data?.message || error.message);
-    } finally {
-      setLoading(false);
-    }
+    const { error } = await supabase.from('transactions').delete().eq('id', selectedTx.id);
+    if (error) toast.error(error.message);
+    else toast.success('تم الحذف');
+    setIsDeleteOpen(false);
+    setLoading(false);
   };
 
   const triggerCloseAddModal = () => (modalDrafts.length > 0 ? setIsConfirmCloseOpen(true) : closeAddModal());

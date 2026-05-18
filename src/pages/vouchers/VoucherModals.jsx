@@ -23,13 +23,13 @@ export default function VoucherModals({
     <>
       {/* ── Confirm Delete Line ── */}
       <ModalWrapper
-        title="تأكيد أرشفة السطر"
+        title="تأكيد حذف السطر"
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
         onSubmit={handleDeleteSubmit}
         maxWidth="max-w-md"
         height="h-auto"
-        submitLabel="نعم، أرشف السطر"
+        submitLabel="نعم، احذف السطر"
         loading={loading}
         accent="rose"
       >
@@ -38,13 +38,13 @@ export default function VoucherModals({
             <AlertTriangle size={40} />
           </div>
           <h4 className="text-xl font-black text-slate-800 dark:text-white mb-2">هل أنت متأكد؟</h4>
-          <p className="text-slate-500 dark:text-slate-400 font-bold">سيتم أرشفة هذا الصنف من السند. لا يمكن التراجع بسهولة عن هذا الإجراء.</p>
+          <p className="text-slate-500 dark:text-slate-400 font-bold">سيتم حذف هذا الصنف من السند نهائياً. لا يمكن التراجع عن هذا الإجراء.</p>
         </div>
       </ModalWrapper>
 
       {/* ── Confirm Delete Group (Voucher) ── */}
       <ModalWrapper
-        title="أرشفة السند بالكامل"
+        title="حذف السند بالكامل"
         isOpen={isDeleteGroupOpen}
         onClose={() => {
           setIsDeleteGroupOpen(false);
@@ -53,7 +53,7 @@ export default function VoucherModals({
         onSubmit={handleDeleteGroupSubmit}
         maxWidth="max-w-md"
         height="h-auto"
-        submitLabel="نعم، أرشف السند كاملاً"
+        submitLabel="نعم، احذف السند كاملاً"
         loading={loading}
         accent="rose"
       >
@@ -62,7 +62,7 @@ export default function VoucherModals({
             <Trash2 size={40} />
           </div>
           <div>
-            <h4 className="text-xl font-black text-slate-800 dark:text-white mb-2">أرشفة السند رقم {groupToDelete?.voucherCode}</h4>
+            <h4 className="text-xl font-black text-slate-800 dark:text-white mb-2">حذف السند رقم {groupToDelete?.voucherCode}</h4>
             <p className="text-slate-500 dark:text-slate-400 font-bold">
               سيتم إلغاء السند وجميع أسطره الملحقة به ({groupToDelete?.lineCount} أصناف). سيتم إرجاع كافة الكميات للمخزن تلقائياً وسيبقى السند في السجلات كـ "ملغي".
             </p>
@@ -88,7 +88,7 @@ export default function VoucherModals({
           </div>
           <h3 className="text-lg font-black text-slate-800 mb-2">هل تريد إلغاء فوترة هذا السند؟</h3>
           <p className="text-sm font-bold text-slate-500 leading-relaxed">
-            هذا السند تم إصدار فاتورة له مسبقاً. إلغاء الفوترة سيقوم بفتحه للتعديل أو الأرشفة، وسيحذف سجل التاريخ الخاص بالفاتورة المرتبطة به.
+            هذا السند تم إصدار فاتورة له مسبقاً. إلغاء الفوترة سيقوم بفتحه للتعديل أو الحذف، وسيحذف سجل التاريخ الخاص بالفاتورة المرتبطة به.
           </p>
           <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-100 text-[11px] font-bold text-slate-400">
              * فك القفل نفسه لا يغير المخزن، ولكن أي تعديل تجريه على السند لاحقاً سيحدث المخزن تلقائياً.
