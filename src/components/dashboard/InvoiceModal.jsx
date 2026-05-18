@@ -1,36 +1,109 @@
-import React from 'react';
-import { Search, Plus, Trash2, Pencil, Package } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Plus, Trash2, Pencil, Package, AlertCircle } from 'lucide-react';
 import ModalWrapper from '../common/ModalWrapper';
 import SmartDateInput from '../SmartDateInput';
 import { formatItemNameWithCompany, isInvalidCompany } from '../../lib/itemFields';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { toast } from 'sonner';
+
+const invoiceSchema = z.object({
+  rep: z.string().min(1, 'يجب اختيار المندوب المسجل'),
+  date: z.string().min(1, 'تاريخ الفاتورة مطلوب'),
+  notes: z.string().optional(),
+  items: z.array(
+    z.object({
+      name: z.string(),
+      selectedItem: z.any(),
+      cat: z.string().optional(),
+      unit: z.string().optional(),
+      qty: z.coerce.number().positive('الكمية يجب أن تكون موجبة وأكبر من الصفر'),
+    })
+  ).min(1, 'يجب إضافة صنف واحد على الأقل للفاتورة'),
+});
 
 export default function InvoiceModal({
   isOpen,
   onClose,
   onSubmit,
   isVoucherInvoice,
-  invoiceForm,
-  setInvoiceForm,
-  currentInvoiceItem,
-  setCurrentInvoiceItem,
-  invoiceErrors,
-  setInvoiceErrors,
+  invoiceForm: initialForm,
+  setInvoiceForm, // to sync back if closed without saving
   repsList,
   items,
-  invoiceSearchInputRef,
-  invoiceSearchActiveIndex,
-  setInvoiceSearchActiveIndex,
-  handleAddInvoiceItemToTable,
-  handleEditInvoiceItem,
   loading
 }) {
+  const { register, control, handleSubmit, setValue, watch, formState: { errors, isValid } } = useForm({
+    resolver: zodResolver(invoiceSchema),
+    defaultValues: {
+      rep: initialForm?.rep || '',
+      date: initialForm?.date || new Date().toISOString().split('T')[0],
+      notes: initialForm?.notes || '',
+      items: initialForm?.items || [],
+    },
+    mode: 'onChange',
+  });
+
+  const { fields, append, remove, update, replace } = useFieldArray({ control, name: 'items' });
+
+  // Sync initialForm when modal opens or changes
+  useEffect(() => {
+    if (isOpen) {
+      setValue('rep', initialForm?.rep || '');
+      setValue('date', initialForm?.date || new Date().toISOString().split('T')[0]);
+      setValue('notes', initialForm?.notes || '');
+      replace(initialForm?.items || []);
+    }
+  }, [isOpen, initialForm, setValue, replace]);
+
+  // Sync back to parent (for unsaved changes warning)
+  useEffect(() => {
+    const subscription = watch((value) => {
+      if (setInvoiceForm) {
+        setInvoiceForm(prev => ({ ...prev, ...value }));
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, setInvoiceForm]);
+
+  const [currentInvoiceItem, setCurrentInvoiceItem] = useState({ name: '', selectedItem: null, cat: '', unit: '', qty: '' });
+  const [invoiceSearchActiveIndex, setInvoiceSearchActiveIndex] = useState(-1);
+  const invoiceSearchInputRef = React.useRef(null);
+
+  const handleAddInvoiceItemToTable = () => {
+    if (!currentInvoiceItem.selectedItem) return toast.error('حدد الصنف أولاً!');
+    if (!currentInvoiceItem.qty || currentInvoiceItem.qty <= 0) return toast.error('أدخل كمية صحيحة!');
+
+    // Validation against stock could be added here similar to before
+    append({ ...currentInvoiceItem, qty: Number(currentInvoiceItem.qty) });
+    setCurrentInvoiceItem({ name: '', selectedItem: null, cat: '', unit: '', qty: '' });
+    setTimeout(() => invoiceSearchInputRef.current?.focus(), 50);
+  };
+
+  const handleEditInvoiceItem = (idx) => {
+    const item = fields[idx];
+    setCurrentInvoiceItem({
+      name: item.name,
+      selectedItem: item.selectedItem,
+      cat: item.cat,
+      unit: item.unit,
+      qty: item.qty
+    });
+    remove(idx);
+    setTimeout(() => invoiceSearchInputRef.current?.focus(), 50);
+  };
+
+  const onFormSubmit = (data) => {
+    onSubmit(data);
+  };
   return (
     <ModalWrapper 
       title={isVoucherInvoice ? "مراجعة فاتورة صادر" : "إنشاء فاتورة صادر (نظام بريميوم)"} 
       maxWidth="max-w-6xl" 
       isOpen={isOpen} 
       onClose={onClose} 
-      onSubmit={onSubmit} 
+      onSubmit={handleSubmit(onFormSubmit)} 
       compact
       loading={loading}
     >
@@ -42,28 +115,32 @@ export default function InvoiceModal({
             <input
               type="text"
               list="reps-datalist"
-              className={`w-full h-[38px] bg-white border ${!invoiceForm.rep.trim() && invoiceErrors.rep ? 'border-red-200 ring-2 ring-red-500/5' : 'border-slate-200'} text-slate-800 text-[13px] font-black rounded-xl px-4 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/20 transition-all font-tajawal`}
-              value={invoiceForm.rep}
-              onChange={(e) => {
-                setInvoiceForm({...invoiceForm, rep: e.target.value});
-                if (e.target.value.trim()) setInvoiceErrors(prev => ({...prev, rep: false}));
-              }}
+              {...register('rep')}
+              className={`w-full h-[38px] bg-white border ${errors.rep ? 'border-red-300 ring-2 ring-red-500/10' : 'border-slate-200'} text-slate-800 text-[13px] font-black rounded-xl px-4 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/20 transition-all font-tajawal`}
               autoComplete="off" id="invoiceRepInput" placeholder="اسم مندوب المبيعات"
             />
             <datalist id="reps-datalist">
               {repsList.map(rep => <option key={rep} value={rep} />)}
             </datalist>
+            {errors.rep && <span className="text-xs text-red-500 font-bold mt-1 flex items-center gap-1"><AlertCircle size={12}/>{errors.rep.message}</span>}
           </div>
         )}
 
         <div className={`flex flex-col ${isVoucherInvoice ? 'md:col-span-2' : ''}`}>
           <label className="text-[10px] font-black text-slate-400 mb-1 mr-1 uppercase">تاريخ الفاتورة</label>
           <div className="relative">
-            <SmartDateInput 
-              value={invoiceForm.date} 
-              onChange={(val) => setInvoiceForm({...invoiceForm, date: val})} 
-              className="w-full h-[38px] bg-white border border-slate-200 text-slate-800 text-[13px] font-black rounded-xl px-4 pr-10 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/20 transition-all font-readex text-center" 
+            <Controller
+              control={control}
+              name="date"
+              render={({ field }) => (
+                <SmartDateInput 
+                  value={field.value} 
+                  onChange={field.onChange} 
+                  className={`w-full h-[38px] bg-white border ${errors.date ? 'border-red-300' : 'border-slate-200'} text-slate-800 text-[13px] font-black rounded-xl px-4 pr-10 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/20 transition-all font-readex text-center`} 
+                />
+              )}
             />
+            {errors.date && <span className="text-xs text-red-500 font-bold mt-1 flex items-center gap-1"><AlertCircle size={12}/>{errors.date.message}</span>}
           </div>
         </div>
 
@@ -71,10 +148,9 @@ export default function InvoiceModal({
           <div className="flex flex-col md:col-span-2 mt-1">
             <label className="text-[10px] font-black text-slate-400 mb-1 mr-1 uppercase">ملاحظات إضافية (اختياري)</label>
             <textarea
+              {...register('notes')}
               placeholder="اكتب أي ملاحظات هنا..."
               className="w-full h-[60px] bg-white border border-slate-200 text-slate-800 text-[12px] font-bold rounded-xl px-4 py-2 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/20 transition-all font-tajawal resize-none"
-              value={invoiceForm.notes || ''}
-              onChange={(e) => setInvoiceForm({...invoiceForm, notes: e.target.value})}
             />
           </div>
         )}
@@ -204,7 +280,7 @@ export default function InvoiceModal({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {invoiceForm.items.length === 0 ? (
+              {fields.length === 0 ? (
                 <tr>
                   <td colSpan={isVoucherInvoice ? 5 : 6} className="text-center py-20">
                     <div className="flex flex-col items-center justify-center">
@@ -212,17 +288,18 @@ export default function InvoiceModal({
                         <Package size={32} className="text-slate-300" />
                       </div>
                       <p className="text-sm font-bold text-slate-400 font-tajawal">{isVoucherInvoice ? 'لا توجد أصناف منقولة من السند' : 'ابدأ بإضافة الأصناف للفاتورة من الأعلى'}</p>
+                      {errors.items && <span className="text-sm text-red-500 font-bold mt-2 flex items-center gap-1"><AlertCircle size={14}/>{errors.items.message}</span>}
                     </div>
                   </td>
                 </tr>
               ) : (
-                invoiceForm.items.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-indigo-50/30 transition-all group border-b border-slate-50 last:border-0">
+                fields.map((item, idx) => (
+                  <tr key={item.id} className="hover:bg-indigo-50/30 transition-all group border-b border-slate-50 last:border-0">
                     <td className="px-6 py-4 text-[11px] font-black text-slate-300 text-center tabular-nums">{idx + 1}</td>
                     <td className="px-6 py-4 text-sm font-black text-slate-700">
                       {item.name}
-                      {item.company && !isInvalidCompany(item.company) && (
-                        <span className="text-slate-400 font-bold text-[11px] mr-2"> - {item.company}</span>
+                      {item.selectedItem?.company && !isInvalidCompany(item.selectedItem.company) && (
+                        <span className="text-slate-400 font-bold text-[11px] mr-2"> - {item.selectedItem.company}</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -240,7 +317,7 @@ export default function InvoiceModal({
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100">
                           <button type="button" onClick={() => handleEditInvoiceItem(idx)} className="p-2 text-blue-500 hover:bg-blue-50 rounded-xl"><Pencil size={18} /></button>
-                          <button type="button" onClick={() => setInvoiceForm({...invoiceForm, items: invoiceForm.items.filter((_, i) => i !== idx)})} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl"><Trash2 size={18} /></button>
+                          <button type="button" onClick={() => remove(idx)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl"><Trash2 size={18} /></button>
                         </div>
                       </td>
                     )}
