@@ -215,16 +215,10 @@ export default function Dashboard({ setActiveView, activeView }) {
     repsList, setRepsList,
     fetchInitialData,
     voucherTransactionsMemo,
-    canonicalVoucherTransactions,
     functionalVoucherGroups,
     pendingVouchers,
     completedVouchers,
     cancelledVouchers,
-    stockInCount,
-    salesCount,
-    returnsCount,
-    damageCount,
-    shiftStartTime,
     morningBriefData,
   } = useData();
 
@@ -430,15 +424,12 @@ export default function Dashboard({ setActiveView, activeView }) {
       {/* ─── PHASE 1: STATS & HEADER ─── */}
       <DashboardStats
         itemsCount={items.length}
-        stockInCount={stockInCount}
-        salesCount={salesCount}
-        returnsCount={returnsCount}
-        damageCount={damageCount}
         onAddItem={() => setIsItemModalOpen(true)}
         onAddStock={() => setIsStockInModalOpen(true)}
         onAddInvoice={openInvoiceModal}
         onAddReturn={openReturnModal}
         onOpenMorningBrief={() => setIsMorningBriefOpen(true)}
+        setActiveView={setActiveView}
       />
 
       {/* ─── PHASE 2: MOVEMENT COLUMNS ─── */}

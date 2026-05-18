@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('vouchers', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->string('voucher_code')->unique();
+            $table->string('type')->index();
+            $table->string('status')->default('قيد الانتظار')->index();
+            $table->date('date')->index();
+            $table->string('client_name')->nullable()->index();
+            $table->text('notes')->nullable();
+            $table->string('attachment_url')->nullable();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('vouchers');
+    }
+};

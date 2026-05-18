@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '../lib/supabaseClient';
+import api from '../lib/api';
 import localforage from 'localforage';
 import { formatItemNameWithCompany } from '../lib/itemFields';
 
@@ -86,17 +86,7 @@ export function useVoucherDetail({
   // ─── Finalize an inbound voucher → inventory_finalize_voucher RPC ────
   const finalizeInboundVoucher = useCallback(async (voucher) => {
     try {
-      const { data, error } = await supabase.rpc('inventory_finalize_voucher', {
-        payload: {
-          request_id: `finalize-voucher-${Date.now()}`,
-          batch_id: voucher.id,
-          action: 'mark_invoiced',
-          actor_user_id: 'ui-voucher-detail',
-          actor_user_name: 'Voucher Detail',
-        },
-      });
-      if (error) throw error;
-      if (!data?.ok) throw new Error(data?.error_message || 'فشل اعتماد سند الإدخال عبر RPC');
+      const { data } = await api.patch(`/vouchers/${voucher.id}/status`, { status: 'مكتمل' });
       setIsVoucherModalOpen(false);
       setSelectedVoucher(null);
       toast.success('تم اعتماد سند الإدخال بنجاح ✅');
@@ -156,20 +146,7 @@ export function useVoucherDetail({
   const handleDeleteVoucher = useCallback(async (voucher) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا السند نهائياً؟ سيتم استرجاع الكميات للمخزن.')) return;
     try {
-      if (setLoading) setLoading(true);
-      const { data, error } = await supabase.rpc('inventory_cancel_voucher', {
-        payload: {
-          request_id: `cancel-voucher-${Date.now()}`,
-          batch_id: voucher.id,
-          voucher_kind: voucher.kind === 'in' ? 'in' : 'out',
-          cancel_reason: 'إلغاء من نافذة تفاصيل السند',
-          actor_user_id: 'ui-voucher-detail',
-          actor_user_name: 'Voucher Detail',
-        },
-      });
-      if (error) throw error;
-      if (!data?.ok) throw new Error(data?.error_message || 'فشل إلغاء السند عبر RPC');
-
+      await api.delete(`/vouchers/${voucher.id}`);
       toast.success('تم حذف السند وإرجاع الكميات للمخزن بنجاح ✅');
       if (playSuccess) playSuccess();
       closeVoucherDetail();
@@ -199,19 +176,9 @@ export function useVoucherDetail({
     if (!v) return;
 
     if (v.kind === 'in') {
+      // Inbound: approve/finalize directly
       try {
-        if (setLoading) setLoading(true);
-        const { data, error } = await supabase.rpc('inventory_finalize_voucher', {
-          payload: {
-            request_id: `mark-invoiced-${Date.now()}`,
-            batch_id: v.id,
-            action: 'mark_invoiced',
-            actor_user_id: 'ui-voucher-detail',
-            actor_user_name: 'Voucher Detail',
-          },
-        });
-        if (error) throw error;
-        if (!data?.ok) throw new Error(data?.error_message || 'فشل اعتماد السند عبر RPC');
+        await api.patch(`/vouchers/${v.id}/status`, { status: 'مكتمل' });
 
         const invoiceTimestamp = new Date().toLocaleDateString('ar-SA', {
           year: 'numeric', month: 'long', day: 'numeric',
@@ -242,7 +209,9 @@ export function useVoucherDetail({
       return;
     }
 
-    // For outbound: open the invoice modal pre-filled
+    // Outbound: open the invoice modal to issue a proper invoice
+    // This will PATCH status to 'مفوتر' on save, correctly moving it out of pendingVouchers
+    closeVoucherDetail();
     handleExportInvoiceToInvoice(v);
   }, [
     selectedVoucher, setLoading, playSuccess, playWarning,
@@ -273,19 +242,19 @@ export function useVoucherDetail({
     // ─── New Helper Actions ──────────────────────────────────────────
     updateVoucherNote: async (voucher, newNote) => {
       try {
-        if (!voucher?.id) return;
-        const { data, error } = await supabase.rpc('inventory_finalize_voucher', {
-          payload: {
-            request_id: `update-note-${Date.now()}`,
-            batch_id: voucher.id,
-            action: 'update_note',
-            note: newNote,
-            actor_user_id: 'ui-voucher-detail',
-            actor_user_name: 'Voucher Detail',
-          },
+        const current = detailVoucher || selectedVoucher;
+        await api.put(`/vouchers/${voucher.id}`, {
+          type: current.type || (current.kind === 'in' ? 'سند إدخال' : 'سند إخراج'),
+          status: current.status || 'مكتمل',
+          date: current.timestamp ? new Date(current.timestamp).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          client_name: current.clientName,
+          notes: newNote,
+          items: current.lines.map(l => ({
+            product_id: l.item_id || l.itemId,
+            qty: l.qty,
+            unit: l.unit
+          }))
         });
-        if (error) throw error;
-        if (!data?.ok) throw new Error(data?.error_message || 'فشل تحديث الملاحظات عبر RPC');
         toast.success('تم تحديث الملاحظات ✅');
         if (fetchInitialData) fetchInitialData();
       } catch {
@@ -296,19 +265,27 @@ export function useVoucherDetail({
     handleDeleteTransaction: async (txId) => {
       if (!window.confirm('هل أنت متأكد من حذف هذا الصنف من السند؟')) return;
       try {
-        if (setLoading) setLoading(true);
         const targetVoucher = detailVoucher || selectedVoucher;
-        const { data, error } = await supabase.rpc('inventory_delete_voucher_line', {
-          payload: {
-            request_id: `delete-voucher-line-${Date.now()}`,
-            transaction_id: txId,
-            voucher_kind: targetVoucher?.kind === 'in' ? 'in' : 'out',
-            actor_user_id: 'ui-voucher-detail',
-            actor_user_name: 'Voucher Detail',
-          },
+        if (!targetVoucher) return;
+        
+        const remainingItems = targetVoucher.lines.filter(l => l.id !== txId);
+        if (remainingItems.length === 0) {
+          toast.error('لا يمكن حذف الصنف الوحيد في السند. يمكنك حذف السند بالكامل بدلاً من ذلك.');
+          return;
+        }
+
+        await api.put(`/vouchers/${targetVoucher.id}`, {
+          type: targetVoucher.type || (targetVoucher.kind === 'in' ? 'سند إدخال' : 'سند إخراج'),
+          status: targetVoucher.status || 'مكتمل',
+          date: targetVoucher.timestamp ? new Date(targetVoucher.timestamp).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          client_name: targetVoucher.clientName,
+          notes: targetVoucher.notes,
+          items: remainingItems.map(l => ({
+            product_id: l.item_id || l.itemId,
+            qty: l.qty,
+            unit: l.unit
+          }))
         });
-        if (error) throw error;
-        if (!data?.ok) throw new Error(data?.error_message || 'فشل حذف سطر السند عبر RPC');
         
         toast.success('تم حذف الصنف بنجاح ✅');
         if (fetchInitialData) fetchInitialData();

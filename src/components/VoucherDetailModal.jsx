@@ -11,7 +11,8 @@ import { normalizeArabic } from '../lib/arabicTextUtils';
 // Format YYYY-MM-DD to DD/MM/YYYY
 const formatVoucherDate = (dateStr) => {
   if (!dateStr) return '—';
-  const parts = dateStr.split('-');
+  const cleanDate = dateStr.split('T')[0];
+  const parts = cleanDate.split('-');
   if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
   return dateStr;
 };
@@ -57,21 +58,38 @@ export function VoucherDetailModal({
   const isEdited = historyEntries.length > 0;
 
   // Render Table Row
-  const TableHeader = ({ isMain }) => (
-    <thead className="bg-slate-100/80 dark:bg-slate-800/80 sticky top-0 z-10 backdrop-blur-sm">
-      <tr className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
-        <th className="px-4 py-3 text-center w-10">م</th>
-        <th className="px-4 py-3 text-right border-x border-slate-200/50 dark:border-slate-700/50">اسم الصنف</th>
-        <th className="px-4 py-3 text-center w-28">الشركة</th>
-        <th className="px-4 py-3 text-center w-24 border-x border-slate-200/50 dark:border-slate-700/50">الكمية</th>
-        <th className="px-4 py-3 text-center w-24">الوحدة</th>
-        <th className="px-4 py-3 text-center w-28 border-x border-slate-200/50 dark:border-slate-700/50">القسم</th>
-        <th className="px-4 py-3 text-center w-16">
-          {isMain && !isCompleted ? 'إجراء' : ''}
-        </th>
-      </tr>
-    </thead>
-  );
+  const TableHeader = ({ isMain }) => {
+    const showActionCol = !isMain || !isCompleted;
+    
+    if (showActionCol) {
+      return (
+        <thead className="bg-slate-100/80 dark:bg-slate-800/80 sticky top-0 z-10 backdrop-blur-sm">
+          <tr className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
+            <th className="px-4 py-3 text-center w-[6%]">م</th>
+            <th className="px-4 py-3 text-right border-x border-slate-200/50 dark:border-slate-700/50 w-[40%]">اسم الصنف</th>
+            <th className="px-4 py-3 text-center w-[14%]">الشركة</th>
+            <th className="px-4 py-3 text-center w-[10%] border-x border-slate-200/50 dark:border-slate-700/50">الكمية</th>
+            <th className="px-4 py-3 text-center w-[10%]">الوحدة</th>
+            <th className="px-4 py-3 text-center w-[14%] border-x border-slate-200/50 dark:border-slate-700/50">القسم</th>
+            <th className="px-4 py-3 text-center w-[6%]">إجراء</th>
+          </tr>
+        </thead>
+      );
+    } else {
+      return (
+        <thead className="bg-slate-100/80 dark:bg-slate-800/80 sticky top-0 z-10 backdrop-blur-sm">
+          <tr className="text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
+            <th className="px-4 py-3 text-center w-[6%]">م</th>
+            <th className="px-4 py-3 text-right border-x border-slate-200/50 dark:border-slate-700/50 w-[43%]">اسم الصنف</th>
+            <th className="px-4 py-3 text-center w-[15%]">الشركة</th>
+            <th className="px-4 py-3 text-center w-[10%] border-x border-slate-200/50 dark:border-slate-700/50">الكمية</th>
+            <th className="px-4 py-3 text-center w-[10%]">الوحدة</th>
+            <th className="px-4 py-3 text-center w-[16%] border-r border-slate-200/50 dark:border-slate-700/50">القسم</th>
+          </tr>
+        </thead>
+      );
+    }
+  };
 
   return (
     <AnimatePresence mode="wait">
@@ -103,15 +121,16 @@ export function VoucherDetailModal({
                                 {voucher.isTransfer ? 'سند تحويل مخزني' : (isIn ? 'سند إدخال بضاعة' : 'سند إخراج بضاعة')}
                             </h3>
                             <div className="flex gap-1.5">
-                                <span className={`text-[10px] font-black px-2 py-1 rounded shadow-sm ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-slate-900'}`}>
-                                    {isCompleted ? 'مكتمل ومفوتـر' : 'قيد الانتظار'}
-                                </span>
+                                {!isCompleted && (
+                                    <span className="text-[10px] font-black px-2 py-1 rounded shadow-sm bg-amber-400 text-slate-900">
+                                        قيد الانتظار
+                                    </span>
+                                )}
                                 {isEdited && <span className="text-[10px] font-black px-2 py-1 rounded bg-indigo-500 text-white shadow-sm">معدّل</span>}
                             </div>
                         </div>
                     </div>
                 </div>
-                
                 {!showVoucherHistory && (
                   <div className="flex items-center gap-5 bg-white dark:bg-slate-800 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex-1 max-w-3xl mx-6">
                       <div className="flex-1 min-w-0">
@@ -151,6 +170,18 @@ export function VoucherDetailModal({
                   </span>
               </div>
 
+              {isCompleted && (
+                <div className="mb-4 px-4 py-3 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-2xl flex items-center justify-between shadow-sm">
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                    <CheckCircle2 size={18} />
+                    <span className="text-xs font-black bg-emerald-500 text-white px-2 py-0.5 rounded shadow-sm">مكتمل ومفوتر</span>
+                  </div>
+                  <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-readex">
+                    تم إصدار الفاتورة بتاريخ: {voucher.invoiceDate || formatVoucherDate(voucher.date)}
+                  </span>
+                </div>
+              )}
+
               {showVoucherHistory && (
                   <div className="flex gap-4 mb-6 bg-slate-50/80 dark:bg-slate-800/80 p-4 rounded-xl border border-slate-100 dark:border-slate-700 h-[72px] items-center">
                       <div className="flex-1 min-w-0">
@@ -172,26 +203,26 @@ export function VoucherDetailModal({
               
               <div className="flex-1 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden flex flex-col shadow-sm">
                   <div className="flex-1 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900">
-                      <table className="w-full text-right border-collapse text-sm">
+                      <table className="w-full text-right border-collapse text-sm table-fixed">
                         <TableHeader isMain={true} />
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                           {lines.map((line, idx) => (
                             <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-50 dark:border-slate-800/50 last:border-0">
-                              <td className="px-4 py-2.5 text-center text-slate-400 font-black">{idx + 1}</td>
-                              <td className="px-4 py-2.5 font-black text-slate-800 dark:text-slate-200 border-x border-slate-100 dark:border-slate-800/50 text-[13px]">{(line.item || '').replace(/\s*-\s*-$/, '').trim()}</td>
-                              <td className="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500">{line.company || '—'}</td>
-                              <td className="px-4 py-2.5 text-center font-black tabular-nums border-x border-slate-100 dark:border-slate-800/50 text-[14px]">{line.qty}</td>
-                              <td className="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500">{line.unit || '—'}</td>
-                              <td className="px-4 py-2.5 text-center border-x border-slate-100 dark:border-slate-800/50 text-[11px] font-bold text-slate-500 w-24">
-                                <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded border border-indigo-100">{line.cat || '-'}</span>
+                              <td className="px-4 py-2.5 text-center text-slate-400 font-black w-[6%]">{idx + 1}</td>
+                              <td className={`px-4 py-2.5 font-black text-slate-800 dark:text-slate-200 border-x border-slate-100 dark:border-slate-800/50 text-[13px] truncate ${isCompleted ? 'w-[43%]' : 'w-[40%]'}`}>{(line.item || '').replace(/\s*-\s*-$/, '').trim()}</td>
+                              <td className={`px-4 py-2.5 text-center text-[11px] font-bold text-slate-500 truncate ${isCompleted ? 'w-[15%]' : 'w-[14%]'}`}>{line.company || '—'}</td>
+                              <td className="px-4 py-2.5 text-center font-black tabular-nums border-x border-slate-100 dark:border-slate-800/50 text-[14px] w-[10%]">{line.qty}</td>
+                              <td className="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500 w-[10%] truncate">{line.unit || '—'}</td>
+                              <td className={`px-4 py-2.5 text-center text-[11px] font-bold text-slate-500 ${isCompleted ? 'border-r border-slate-100 dark:border-slate-800/50 w-[16%]' : 'border-x border-slate-100 dark:border-slate-800/50 w-[14%]'}`}>
+                                <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded border border-indigo-100 block truncate">{line.cat || '-'}</span>
                               </td>
-                              <td className="px-4 py-2.5 text-center w-16">
-                                {!isCompleted && (
-                                    <button onClick={() => handleDeleteTransaction(line.id)} className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all">
-                                      <Trash2 size={16} />
-                                    </button>
-                                )}
-                              </td>
+                              {!isCompleted && (
+                                <td className="px-4 py-2.5 text-center w-[6%]">
+                                  <button onClick={() => handleDeleteTransaction(line.id)} className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all">
+                                    <Trash2 size={16} />
+                                  </button>
+                                </td>
+                              )}
                             </tr>
                           ))}
                         </tbody>
@@ -244,129 +275,126 @@ export function VoucherDetailModal({
                         </span>
                     </div>
 
-                    <div className="flex-1 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden flex flex-col shadow-sm bg-white dark:bg-slate-900 relative">
-                        {historyEntries.length > 0 ? (
-                            <div className="flex-1 overflow-y-auto custom-scrollbar">
-                                {historyEntries.map((entry, idx) => {
-                                  // Determine if meta data changed in this history entry
-                                  const oldClient = entry.clientName || entry.recipient || entry.client;
-                                  const oldCode = entry.voucherCode || entry.code;
-                                  const oldNotes = entry.notes || entry.line_note;
-                                  
-                                  const currentClient = voucher.clientName || voucher.recipient;
-                                  const currentCode = voucher.voucherCode;
-                                  const currentNotes = cleanNote(voucher.line_note);
+                    {historyEntries.length > 0 ? (
+                      (() => {
+                        const entry = historyEntries[0];
+                        const oldClient = entry.clientName || entry.recipient || entry.client;
+                        const oldCode = entry.voucherCode || entry.code;
+                        const oldNotes = entry.notes || entry.line_note;
+                        
+                        const currentClient = voucher.clientName || voucher.recipient;
+                        const currentCode = voucher.voucherCode;
+                        const currentNotes = cleanNote(voucher.line_note);
 
-                                  const hasOldClient = oldClient && normalizeArabic(oldClient) !== normalizeArabic(currentClient);
-                                  const hasOldCode = oldCode && normalizeArabic(oldCode) !== normalizeArabic(currentCode);
-                                  const hasOldNotes = oldNotes && normalizeArabic(cleanNote(oldNotes)) !== normalizeArabic(currentNotes);
-                                  
-                                  const hasMetaChanges = hasOldClient || hasOldCode || hasOldNotes;
+                        const hasOldClient = oldClient && normalizeArabic(oldClient) !== normalizeArabic(currentClient);
+                        const hasOldCode = oldCode && normalizeArabic(oldCode) !== normalizeArabic(currentCode);
+                        const hasOldNotes = oldNotes && normalizeArabic(cleanNote(oldNotes)) !== normalizeArabic(currentNotes);
+                        
+                        const hasMetaChanges = hasOldClient || hasOldCode || hasOldNotes;
 
-                                  // Only display the first entry (most recent archive) as full view to mimic side-by-side
-                                  if (idx !== 0) return null;
+                        return (
+                          <>
+                            {hasMetaChanges && (
+                              <div className="flex gap-4 mb-6 bg-slate-50/80 dark:bg-slate-800/80 p-4 rounded-xl border border-slate-100 dark:border-slate-700 h-[72px] items-center">
+                                  <div className="flex-1 min-w-0">
+                                      <span className="text-[8px] font-black text-slate-400 block mb-1 uppercase tracking-widest">المستلم القديم</span>
+                                      <p className={`text-[13px] font-black truncate ${hasOldClient ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>{oldClient || '—'}</p>
+                                  </div>
+                                  <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
+                                  <div className="flex-1 min-w-0 text-center">
+                                      <span className="text-[8px] font-black text-slate-400 block mb-1 uppercase tracking-widest">رقم السند القديم</span>
+                                      <p className={`text-[13px] font-black tabular-nums ${hasOldCode ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>{oldCode || '—'}</p>
+                                  </div>
+                                  <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
+                                  <div className="flex-[2] min-w-0">
+                                      <span className="text-[8px] font-black text-slate-400 block mb-1 uppercase tracking-widest">الملاحظات القديمة</span>
+                                      <p className={`text-[13px] font-bold truncate ${hasOldNotes ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>{cleanNote(oldNotes)}</p>
+                                  </div>
+                              </div>
+                            )}
 
-                                  return (
-                                    <div key={idx} className="flex flex-col h-full">
-                                      {hasMetaChanges && (
-                                        <div className="flex gap-4 mb-6 bg-slate-50/80 dark:bg-slate-800/80 p-4 rounded-xl border border-slate-100 dark:border-slate-700 h-[72px] items-center">
-                                            <div className="flex-1 min-w-0">
-                                                <span className="text-[8px] font-black text-slate-400 block mb-1 uppercase tracking-widest">المستلم القديم</span>
-                                                <p className={`text-[13px] font-black truncate ${hasOldClient ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>{oldClient || '—'}</p>
-                                            </div>
-                                            <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
-                                            <div className="flex-1 min-w-0 text-center">
-                                                <span className="text-[8px] font-black text-slate-400 block mb-1 uppercase tracking-widest">رقم السند القديم</span>
-                                                <p className={`text-[13px] font-black tabular-nums ${hasOldCode ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>{oldCode || '—'}</p>
-                                            </div>
-                                            <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
-                                            <div className="flex-[2] min-w-0">
-                                                <span className="text-[8px] font-black text-slate-400 block mb-1 uppercase tracking-widest">الملاحظات القديمة</span>
-                                                <p className={`text-[13px] font-bold truncate ${hasOldNotes ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>{cleanNote(oldNotes)}</p>
-                                            </div>
-                                        </div>
-                                      )}
+                            <div className="flex-1 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden flex flex-col shadow-sm">
+                              <div className="flex-1 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900">
+                                <table className="w-full text-right border-collapse text-sm table-fixed">
+                                  <TableHeader isMain={false} />
+                                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {(entry.lines || []).map((ol, oIdx) => {
+                                      // Normalize the base item name (ignore company suffix after ' - ') for flexible matching
+                                      const olBaseName = normalizeArabic(ol.item.split(' - ')[0].trim());
+                                      const olCompany = ol.item.split(' - ')[1] ? ol.item.split(' - ')[1].trim() : '';
 
-                                      <table className="w-full text-right border-collapse text-sm">
-                                        <TableHeader isMain={false} />
-                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                          {(entry.lines || []).map((ol, oIdx) => {
-                                            // Normalize the base item name (ignore company suffix after ' - ') for flexible matching
-                                            const olBaseName = normalizeArabic(ol.item.split(' - ')[0].trim());
-                                            
-                                            // Match current line by base name only (flexible match)
-                                            const currentMatch = lines.find(cl => {
-                                              const clBase = normalizeArabic((cl.item || '').split(' - ')[0].trim());
-                                              return clBase === olBaseName;
-                                            });
-                                            
-                                            const isRemoved = !currentMatch;
-                                            const isChanged = !isRemoved && Number(currentMatch.qty) !== Number(ol.qty);
-                                            const isUnchanged = !isRemoved && !isChanged;
-                                            
-                                            // Extract display name & company from archived item string
-                                            const parts = ol.item.split(' - ');
-                                            const rawName = parts[0];
-                                            const rawCompany = parts.length > 1 ? parts[1] : '—';
+                                      // Look for a match in current voucher lines
+                                      const currentMatch = (voucher.lines || []).find(cl => {
+                                        const clBaseName = normalizeArabic(cl.item.split(' - ')[0].trim());
+                                        const clCompany = cl.item.split(' - ')[1] ? cl.item.split(' - ')[1].trim() : '';
+                                        return clBaseName === olBaseName && normalizeArabic(clCompany) === normalizeArabic(olCompany);
+                                      });
 
-                                            return (
-                                              <tr key={oIdx} className={`group transition-all duration-200 border-b border-slate-50 dark:border-slate-800/50 last:border-0 ${
-                                                isRemoved ? 'bg-rose-50/80 hover:bg-rose-100/80 dark:bg-rose-500/10' : 
-                                                isChanged ? 'bg-amber-50/80 hover:bg-amber-100/80 dark:bg-amber-500/10' : 
-                                                'bg-white hover:bg-slate-50/50 dark:bg-slate-900 dark:hover:bg-slate-800/50'
-                                              }`}>
-                                                <td className="px-4 py-2.5 text-center text-slate-400 font-black">{oIdx + 1}</td>
-                                                <td className={`px-4 py-2.5 font-black border-x border-slate-100 dark:border-slate-800/50 text-[13px] ${
-                                                  isRemoved ? 'text-rose-700 dark:text-rose-400 line-through decoration-rose-300/60' : 
-                                                  isChanged ? 'text-amber-700 dark:text-amber-500' : 
-                                                  'text-slate-700 dark:text-slate-200'
-                                                }`}>
-                                                    {rawName}
-                                                    {isRemoved && (
-                                                      <span className="mr-3 text-[9px] font-black text-rose-600 bg-rose-100 dark:bg-rose-500/20 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-500/30 no-underline inline-block">
-                                                        🗑 محذوف
-                                                      </span>
-                                                    )}
-                                                    {isChanged && (
-                                                      <span className="mr-3 text-[9px] font-black text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-500/30 no-underline inline-block">
-                                                        ✏️ تعديل كمية
-                                                      </span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500">{rawCompany}</td>
-                                                <td className={`px-4 py-2.5 text-center font-black tabular-nums border-x border-slate-100 dark:border-slate-800/50 text-[14px] ${
-                                                  isChanged ? 'text-amber-600 dark:text-amber-400 line-through decoration-amber-300/60' : 
-                                                  isRemoved ? 'text-rose-400' : 
-                                                  'text-slate-700 dark:text-slate-300'
-                                                }`}>
-                                                    {ol.qty}
-                                                    {isChanged && (
-                                                      <span className="text-emerald-600 dark:text-emerald-400 no-underline mr-2 text-[13px]">← {currentMatch.qty}</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500 w-24">—</td>
-                                                <td className="px-4 py-2.5 text-center border-x border-slate-100 dark:border-slate-800/50 text-[11px] text-slate-400 w-28">—</td>
-                                                <td className="px-4 py-2.5 text-center w-16">
-                                                  {isRemoved && <span className="text-[9px] font-black text-rose-600 bg-rose-50 dark:bg-rose-500/10 px-2 py-0.5 rounded border border-rose-200">حذف</span>}
-                                                  {isChanged && <span className="text-[9px] font-black text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded border border-amber-200">تعديل</span>}
-                                                  {isUnchanged && <span className="text-[9px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">كما هو</span>}
-                                                </td>
-                                              </tr>
-                                            );
-                                          })}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  );
-                                })}
+                                      const isRemoved = !currentMatch;
+                                      const isChanged = currentMatch && currentMatch.qty !== ol.qty;
+                                      const isUnchanged = currentMatch && currentMatch.qty === ol.qty;
+
+                                      const rawName = ol.item.split(' - ')[0].trim();
+                                      const rawCompany = ol.item.split(' - ')[1] ? ol.item.split(' - ')[1].trim() : '—';
+
+                                      return (
+                                        <tr key={oIdx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-50 dark:border-slate-800/50 last:border-0">
+                                          <td className="px-4 py-2.5 text-center text-slate-400 font-black w-[6%]">{oIdx + 1}</td>
+                                          <td className={`px-4 py-2.5 font-black border-x border-slate-100 dark:border-slate-800/50 text-[13px] w-[40%] truncate ${
+                                            isRemoved ? 'text-rose-700 dark:text-rose-400 line-through decoration-rose-300/60' : 
+                                            isChanged ? 'text-amber-700 dark:text-amber-500' : 
+                                            'text-slate-700 dark:text-slate-200'
+                                          }`}>
+                                              {rawName}
+                                              {isRemoved && (
+                                                <span className="mr-3 text-[9px] font-black text-rose-600 bg-rose-100 dark:bg-rose-500/20 px-2 py-0.5 rounded border border-rose-200 dark:border-rose-500/30 no-underline inline-block">
+                                                  🗑 محذوف
+                                                </span>
+                                              )}
+                                              {isChanged && (
+                                                <span className="mr-3 text-[9px] font-black text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-500/30 no-underline inline-block">
+                                                  ✏️ تعديل كمية
+                                                </span>
+                                              )}
+                                          </td>
+                                          <td className="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500 w-[14%] truncate">{rawCompany}</td>
+                                          <td className={`px-4 py-2.5 text-center font-black tabular-nums border-x border-slate-100 dark:border-slate-800/50 text-[14px] w-[10%] ${
+                                            isRemoved ? 'text-rose-700 dark:text-rose-400' : 
+                                            isChanged ? 'text-amber-700 dark:text-amber-500' : 
+                                            'text-slate-700 dark:text-slate-200'
+                                          }`}>
+                                              {ol.qty}
+                                              {isChanged && (
+                                                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mr-1.5 inline-flex items-center gap-0.5">
+                                                  ← {currentMatch.qty}
+                                                </span>
+                                              )}
+                                          </td>
+                                          <td className="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500 w-[10%] truncate">—</td>
+                                          <td className="px-4 py-2.5 text-center border-x border-slate-100 dark:border-slate-800/50 text-[11px] text-slate-400 w-[14%] truncate">—</td>
+                                          <td className="px-4 py-2.5 text-center w-[6%]">
+                                            {isRemoved && <span className="text-[9px] font-black text-rose-600 bg-rose-50 dark:bg-rose-500/10 px-2 py-0.5 rounded border border-rose-200">حذف</span>}
+                                            {isChanged && <span className="text-[9px] font-black text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 rounded border border-amber-200">تعديل</span>}
+                                            {isUnchanged && <span className="text-[9px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">كما هو</span>}
+                                          </td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
                             </div>
-                        ) : (
+                          </>
+                        );
+                      })()
+                    ) : (
+                        <div className="flex-1 border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden flex flex-col shadow-sm bg-white dark:bg-slate-900 relative">
                             <div className="flex-1 flex flex-col items-center justify-center opacity-40">
                                 <History size={64} strokeWidth={1} className="mb-4 text-slate-400" />
                                 <p className="text-sm font-black text-slate-500 uppercase">لا توجد تغييرات مؤرشفة</p>
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                   </div>
                 </motion.aside>
               )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { 
+import {
   Banknote, Search, Plus, Printer, Filter, 
   Download, Calendar, User, Hash, Info, Save,
   ArrowUpRight, Clock, CheckCircle2, ChevronRight,
@@ -8,7 +8,7 @@ import {
   LogOut, Landmark, Eye, CalendarCheck, UserCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '../lib/supabaseClient';
+import api from '../lib/api';
 import { toast } from 'sonner';
 import { useData } from '../contexts/DataContext';
 import { useDebounce } from '../hooks/useDebounce';
@@ -130,29 +130,26 @@ export default function ReceiptVouchers({ setActiveView }) {
   };
   const [form, setForm] = useState(emptyForm);
 
-  // Table Data — loaded from Supabase
+  // Table Data — loaded from Laravel API
   const [vouchers, setVouchers] = useState([]);
 
-  // Fetch vouchers from Supabase
   const fetchVouchers = async () => {
-    const { data, error } = await supabase
-      .from('receipt_vouchers')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (error) {
-      console.error('❌ fetchVouchers error:', error);
-    } else {
-        setVouchers((data || []).map(r => ({
+    try {
+      const { data } = await api.get('/receipt-vouchers', { params: { per_page: 1500 } });
+      setVouchers((data?.data || []).map(r => ({
           id: r.id,
           date: r.date,
           repName: r.rep_name,
           customerName: r.customer_name,
           voucherNo: r.voucher_no,
+          invoiceNo: r.invoice_no || '',
           amount: Number(r.amount),
           type: r.type,
           is_deposited: r.is_deposited || false,
           deposited_at: r.deposited_at || null,
-        })));
+      })));
+    } catch (error) {
+      console.error('fetchVouchers error:', error);
     }
   };
 
@@ -163,11 +160,7 @@ export default function ReceiptVouchers({ setActiveView }) {
         deposited_at: !currentStatus ? new Date().toISOString() : null
       };
 
-      const { error } = await supabase
-        .from('receipt_vouchers')
-        .update(updateData)
-        .eq('id', id);
-      if (error) throw error;
+      await api.patch(`/receipt-vouchers/${id}`, updateData);
       
       toast.success(!currentStatus ? 'تم تسجيل الإيداع بالبنك ✅' : 'تم استرجاع السند للخزينة ↩️');
       await fetchVouchers();
@@ -206,8 +199,12 @@ export default function ReceiptVouchers({ setActiveView }) {
   }, [repExpenses, debouncedSearchTerm]);
 
   const fetchJournalEntries = async () => {
-    const { data, error } = await supabase.from('journal_entries').select('*').order('created_at', { ascending: false });
-    if (!error && data) setJournalEntries(data);
+    try {
+      const { data } = await api.get('/journal-entries', { params: { per_page: 100 } });
+      setJournalEntries(data?.data || []);
+    } catch (error) {
+      console.error('fetchJournalEntries error:', error);
+    }
   };
 
   useEffect(() => {
@@ -229,17 +226,17 @@ export default function ReceiptVouchers({ setActiveView }) {
     }
     setLoading(true);
     try {
-      const { error } = await supabase.from('representative_expenses').insert([{
+      await api.post('/representative-expenses', {
         rep_name: expenseForm.repName,
         amount: Number(expenseForm.amount),
         statement: expenseForm.statement,
         date: expenseForm.date
-      }]);
-      if (error) throw error;
+      });
       toast.success('تم تسجيل المصروف بنجاح');
       setIsExpenseModalOpen(false);
       setExpenseForm({ date: new Date().toISOString().split('T')[0], repName: '', amount: '', statement: '' });
       setExpRepSearchQuery('');
+      await fetchInitialData();
     } catch (err) {
       console.error('SaveExpense error:', err);
       toast.error('خطأ أثناء حفظ المصروف');
@@ -255,31 +252,12 @@ export default function ReceiptVouchers({ setActiveView }) {
     }
     setLoading(true);
     try {
-      const batchId = crypto.randomUUID();
-      
-      // Create Journal Entry Record
-      const { error: jError } = await supabase.from('journal_entries').insert([{
-        id: batchId,
+      await api.post('/settlements', {
         journal_no: journalForm.journalNo,
-        total_amount: Number(journalForm.totalAmount)
-      }]);
-      if (jError) throw jError;
-
-      // Update Vouchers
-      const { error: vError } = await supabase
-        .from('receipt_vouchers')
-        .update({ is_settled: true, settlement_batch_id: batchId })
-        .in('id', selectedVoucherIds);
-      if (vError) throw vError;
-
-      // Update Expenses
-      if (selectedExpenseIds.length > 0) {
-        const { error: eError } = await supabase
-          .from('representative_expenses')
-          .update({ is_settled: true, settlement_batch_id: batchId })
-          .in('id', selectedExpenseIds);
-        if (eError) throw eError;
-      }
+        total_amount: Number(journalForm.totalAmount),
+        receipt_voucher_ids: selectedVoucherIds,
+        representative_expense_ids: selectedExpenseIds,
+      });
 
       toast.success('تم ترحيل القيد بنجاح ✅');
       setIsSettlementWizardOpen(false);
@@ -353,12 +331,10 @@ export default function ReceiptVouchers({ setActiveView }) {
       };
 
       if (editId) {
-        const { error } = await supabase.from('receipt_vouchers').update(payload).eq('id', editId);
-        if (error) throw error;
+        await api.patch(`/receipt-vouchers/${editId}`, payload);
         toast.success('✅ تم التعديل بنجاح');
       } else {
-        const { error } = await supabase.from('receipt_vouchers').insert([payload]);
-        if (error) throw error;
+        await api.post('/receipt-vouchers', payload);
         toast.success('✅ تم حفظ السند بنجاح');
       }
 
@@ -697,10 +673,9 @@ export default function ReceiptVouchers({ setActiveView }) {
     if (!deleteTargetId || loading) return;
     setLoading(true);
     try {
-      const table = deleteTargetType === 'expense' ? 'representative_expenses' : 'receipt_vouchers';
-      const { error } = await supabase.from(table).delete().eq('id', deleteTargetId);
-      if (error) throw error;
-      toast.success(deleteTargetType === 'expense' ? '✅ تم حذف المصروف بنجاح' : '✅ تم حذف السند بنجاح');
+      const endpoint = deleteTargetType === 'expense' ? 'representative-expenses' : 'receipt-vouchers';
+      await api.delete(`/${endpoint}/${deleteTargetId}`);
+      toast.success(deleteTargetType === 'expense' ? '✅ تمت أرشفة المصروف بنجاح' : '✅ تمت أرشفة السند بنجاح');
       await fetchInitialData();
     } catch (err) {
       console.error('❌ confirmDelete error:', err);

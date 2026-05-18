@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '../lib/supabaseClient';
+import api from '../lib/api';
 
 const EMPTY_INVOICE_FORM = () => ({
   client: 'سحب مندوب',
@@ -224,55 +224,41 @@ export function useInvoiceModal({
     setShowInvoiceSaveConfirm(false);
     try {
       setLoading(true);
-      const rpcPayload = {
-        request_id: `invoice-${Date.now()}`,
-        mode: sourceVoucher ? 'from_voucher' : 'direct',
-        actor_user_id: 'ui-invoice-modal',
-        actor_user_name: 'Invoice Modal',
-        client_timestamp: new Date().toISOString(),
-        invoice_header: {
+      let rpcResult = null;
+      let finalBatchId = null;
+
+      if (isVoucherInvoice && sourceVoucher) {
+        // Just update the existing voucher
+        rpcResult = sourceVoucher;
+        finalBatchId = sourceVoucher.batch_id || sourceVoucher.id;
+        
+        if (setInvoiceTimestamps) {
+          const invoiceTimestamp = new Date().toISOString();
+          setInvoiceTimestamps(prev => ({ ...prev, [sourceVoucher.id]: invoiceTimestamp }));
+        }
+        await api.patch(`/vouchers/${sourceVoucher.id}/status`, { status: 'مفوتر' });
+      } else {
+        // Create a new direct sales invoice
+        const payload = {
+          type: 'فاتورة مبيعات',
           date: invoiceForm.date,
           client_name: invoiceForm.client,
-          rep_name: invoiceForm.rep,
-          notes: invoiceForm.notes?.trim?.() || '',
-        },
-        lines: invoiceForm.items.map((line) => ({
-          item_id: line.selectedItem?.id || line.selectedItemId,
-          display_name: line.name || line.selectedItem?.name || '',
-          company: line.company || line.selectedItem?.company || 'بدون شركة',
-          cat: line.cat || line.selectedItem?.cat || '',
-          unit: line.unit || line.selectedItem?.unit || '',
-          qty: Number(line.qty || 0),
-        })),
-      };
-
-      if (sourceVoucher) {
-        rpcPayload.source_voucher = {
-          batch_id: sourceVoucher.voucherGroupId || sourceVoucher.id,
-          voucher_group_id: sourceVoucher.voucherGroupId || sourceVoucher.id,
-          voucher_code: sourceVoucher.voucherCode || sourceVoucher.reference_number || '',
-          voucher_type: sourceVoucher.type || (sourceVoucher.kind === 'in' ? 'سند إدخال' : 'سند إخراج'),
-          client_name: sourceVoucher.clientName || sourceVoucher.beneficiary || sourceVoucher.recipient || '',
-          rep: sourceVoucher.rep || '',
+          status: 'مفوتر',
+          notes: (invoiceForm.rep ? `المندوب: ${invoiceForm.rep}\n` : '') + (invoiceForm.notes?.trim?.() || ''),
+          items: invoiceForm.items.map((line) => ({
+            product_id: line.selectedItem?.id || line.selectedItemId,
+            qty: Number(line.qty || 0),
+            unit: line.unit || line.selectedItem?.unit || '',
+          })),
         };
-      }
 
-      const { data: rpcResult, error: rpcError } = await supabase.rpc('inventory_commit_invoice', {
-        payload: rpcPayload,
-      });
-
-      if (rpcError) throw rpcError;
-      if (!rpcResult?.ok) throw new Error(rpcResult?.error_message || 'فشل تنفيذ عملية الفاتورة عبر RPC');
-
-      const invoiceTimestamp = rpcResult?.ui_snapshot?.invoice_timestamp;
-
-      if (sourceVoucher && invoiceTimestamp && setInvoiceTimestamps) {
-        setInvoiceTimestamps(prev => ({ ...prev, [sourceVoucher.id]: invoiceTimestamp }));
+        const { data } = await api.post('/vouchers', payload);
+        rpcResult = data.voucher;
+        finalBatchId = rpcResult?.batch_id || rpcResult?.id;
       }
 
       // ─── Invoice image capture + Cloudinary upload ─────────────────
       try {
-        const finalBatchId = rpcResult?.batch_id;
 
         const invData = {
           type: sourceVoucher ? 'voucher' : 'sale',
@@ -318,9 +304,8 @@ export function useInvoiceModal({
           const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
           const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
           const imageUrl = await uploadToCloudinary(blob, invData);
-          if (imageUrl && finalBatchId) {
-            rpcPayload.invoice_header.receipt_image_url = imageUrl;
-            await supabase.from('transactions').update({ receipt_image: imageUrl }).eq('batch_id', finalBatchId);
+          if (imageUrl && rpcResult?.id) {
+            await api.patch(`/vouchers/${rpcResult.id}/status`, { attachment_url: imageUrl });
           }
         }
         if (setInvoiceDataForCapture) setInvoiceDataForCapture(null);
@@ -328,7 +313,7 @@ export function useInvoiceModal({
         if (import.meta.env.DEV) console.error('Invoice image generation failed:', genErr);
       }
 
-      toast.success(`تم تأكيد الفاتورة بنجاح ✅${rpcResult?.reference_number ? ` (${rpcResult.reference_number})` : ''}`);
+      toast.success(`تم تأكيد الفاتورة بنجاح ✅`);
       if (playSuccess) playSuccess();
       performInvoiceReset();
       if (fetchInitialData) fetchInitialData();
@@ -344,12 +329,7 @@ export function useInvoiceModal({
     playSuccess, performInvoiceReset, fetchInitialData, setLoading,
   ]);
 
-  // Bypass the unrendered confirmation modal
-  useEffect(() => {
-    if (showInvoiceSaveConfirm) {
-      performInvoiceSave();
-    }
-  }, [showInvoiceSaveConfirm, performInvoiceSave]);
+
 
   // ─── Public API ───────────────────────────────────────────────────────
   return {

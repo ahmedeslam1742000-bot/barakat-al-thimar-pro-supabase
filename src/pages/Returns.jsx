@@ -5,7 +5,7 @@ import {
   Download, ChevronDown, CheckCircle, RotateCcw, Flame, User, ShieldCheck, ShieldX, Thermometer,
   Calendar, Home, Layers, Printer, LogOut
 } from 'lucide-react';
-import { supabase } from '../lib/supabaseClient';
+import api from '../lib/api';
 import { toast } from 'sonner';
 import { useAudio } from '../contexts/AudioContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -357,28 +357,21 @@ export default function Returns({ setActiveView }) {
     }
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('inventory_commit_return', {
-        payload: {
-          request_id: `returns-page-${Date.now()}`,
-          header: {
-            date: bulkDate || new Date().toISOString().split('T')[0],
-            returnee_name: bulkRep.trim(),
-            rep_name: bulkRep.trim(),
-          },
-          lines: modalDrafts.map((d) => ({
-            item_id: d.itemId,
-            item_name: d.item,
-            company: d.company || 'بدون شركة',
-            qty: Number(d.qty),
-            unit: d.unit,
-            cat: d.cat,
-            status: d.status,
-            transaction_status: d.status,
-          })),
-        },
-      });
-      if (error) throw error;
-      if (!data?.ok) throw new Error(data?.error_message || 'فشل تأكيد المرتجع عبر RPC');
+      const payload = {
+        type: 'مرتجع',
+        date: bulkDate || new Date().toISOString().split('T')[0],
+        client_name: bulkRep.trim(),
+        status: 'مكتمل',
+        notes: 'تم استلام المرتجع بواسطة ' + bulkRep.trim(),
+        items: modalDrafts.map((d) => ({
+          product_id: d.itemId,
+          qty: Number(d.qty),
+          unit: d.unit || 'كرتونة',
+          notes: d.status,
+        })),
+      };
+      
+      const { data } = await api.post('/vouchers', payload);
 
       toast.success(`✅ تم تأكيد استلام المرتجع وتسجيل ${modalDrafts.length} أصناف وتحديث المخزن`);
       playSuccess();
@@ -411,27 +404,18 @@ export default function Returns({ setActiveView }) {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('inventory_update_return', {
-        payload: {
-          request_id: `returns-edit-${Date.now()}`,
-          transaction_id: selectedTx.id,
-          old_state: {
-            item_id: selectedTx.itemId,
-            qty: Number(selectedTx.qty),
-            status: selectedTx.status,
-          },
-          new_state: {
-            item_id: selectedTx.itemId,
-            qty: Number(editForm.qty),
-            status: editForm.status,
-            date: editForm.date,
-            rep_name: editForm.rep,
-            returnee_name: editForm.rep,
-          },
-        },
+      const { data } = await api.put(`/vouchers/${selectedTx.batchId || selectedTx.id}`, {
+        type: 'مرتجع',
+        date: editForm.date,
+        client_name: editForm.rep,
+        status: 'مكتمل',
+        items: [{
+          product_id: selectedTx.itemId,
+          qty: Number(editForm.qty),
+          unit: selectedTx.unit || 'كرتونة',
+          notes: editForm.status
+        }]
       });
-      if (error) throw error;
-      if (!data?.ok) throw new Error(data?.error_message || 'فشل تعديل المرتجع عبر RPC');
       
       toast.success('تم تعديل سند المرتجع ✅');
       playSuccess();
@@ -454,14 +438,7 @@ export default function Returns({ setActiveView }) {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('inventory_delete_return', {
-        payload: {
-          request_id: `returns-delete-${Date.now()}`,
-          transaction_id: selectedTx.id,
-        },
-      });
-      if (error) throw error;
-      if (!data?.ok) throw new Error(data?.error_message || 'فشل حذف المرتجع عبر RPC');
+      await api.delete(`/vouchers/${selectedTx.batchId || selectedTx.id}`);
       
       toast.success('تم حذف سند المرتجع وعكس الأثر على المخزن 🗑️');
       playSuccess();

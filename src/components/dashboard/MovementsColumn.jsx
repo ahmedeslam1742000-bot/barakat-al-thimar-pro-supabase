@@ -29,11 +29,11 @@ export const MovementsColumn = React.memo(function MovementsColumn({
        if (movementTypeFilter !== 'الكل') {
          const type = tx.type || '';
          if (movementTypeFilter === 'وارد') matches = type === 'Restock' || type === 'وارد' || type === 'in' || type === FUNCTIONAL_INBOUND_TYPE;
-         else if (movementTypeFilter === 'صادر') matches = (type === 'Issue' || type === 'out' || type === 'صادر' || type === FUNCTIONAL_OUTBOUND_TYPE);
-         else if (movementTypeFilter === 'فاتورة') matches = tx.isInvoice === true;
+         else if (movementTypeFilter === 'صادر') matches = (type === 'Issue' || type === 'out' || type === 'صادر' || type === FUNCTIONAL_OUTBOUND_TYPE || type === 'فاتورة مبيعات');
+         else if (movementTypeFilter === 'فاتورة') matches = tx.invoiced === true || type === 'فاتورة مبيعات';
          else if (movementTypeFilter === 'مرتجع') matches = type === 'Return' || type === 'مرتجع' || type === 'return' || tx.status === 'مرتجع تالف';
-         else if (movementTypeFilter === 'سند إدخال') matches = (type === FUNCTIONAL_INBOUND_TYPE || type === 'adjust_in') && !tx.isInvoice;
-         else if (movementTypeFilter === 'سند إخراج') matches = (type === FUNCTIONAL_OUTBOUND_TYPE || type === 'adjust_out') && !tx.isInvoice;
+         else if (movementTypeFilter === 'سند إدخال') matches = (type === FUNCTIONAL_INBOUND_TYPE || type === 'adjust_in') && !tx.invoiced && type !== 'فاتورة مبيعات';
+         else if (movementTypeFilter === 'سند إخراج') matches = (type === FUNCTIONAL_OUTBOUND_TYPE || type === 'adjust_out') && !tx.invoiced && type !== 'فاتورة مبيعات';
        }
        
        if (matches) movements.push(tx);
@@ -91,7 +91,8 @@ export const MovementsColumn = React.memo(function MovementsColumn({
               const isFunctionalOut = tx.type === FUNCTIONAL_OUTBOUND_TYPE;
               const isReturn = type === 'return' || type === 'مرتجع' || tx.status === 'مرتجع تالف';
               const isInbound = type === 'in' || type === 'وارد' || type === 'restock' || type === 'adjust_in';
-              const isOutbound = (type === 'issue' || type === 'out' || type === 'صادر');
+              const isDirectInvoice = tx.type === 'فاتورة مبيعات';
+              const isOutbound = (type === 'issue' || type === 'out' || type === 'صادر' || isDirectInvoice);
               const isCancelled = tx.status === 'cancelled';
 
               if (isCancelled) {
@@ -100,8 +101,13 @@ export const MovementsColumn = React.memo(function MovementsColumn({
                 actionColor = 'text-slate-400';
                 actionBg = 'bg-slate-50';
                 actionIcon = <AlertTriangle size={14} className="text-rose-500 animate-pulse" />;
+              } else if (isDirectInvoice) {
+                actionTitle = 'فاتورة مبيعات';
+                actionColor = 'text-blue-600';
+                actionBg = 'bg-blue-50';
+                actionIcon = <FileText size={14} />;
               } else if (isFunctionalOut) {
-                if (tx.isInvoice) {
+                if (tx.invoiced) {
                   actionTitle = 'فاتورة سند';
                   actionColor = 'text-blue-600';
                   actionBg = 'bg-blue-50';
@@ -134,7 +140,7 @@ export const MovementsColumn = React.memo(function MovementsColumn({
                 actionBg = 'bg-amber-50';
                 actionIcon = <RotateCcw size={14} />;
               } else if (isOutbound) {
-                actionTitle = tx.isInvoice ? 'صادر - فاتورة' : 'صادر';
+                actionTitle = tx.invoiced ? 'صادر - فاتورة' : 'صادر';
                 actionColor = 'text-blue-600';
                 actionBg = 'bg-blue-50';
                 actionIcon = <ArrowUpRight size={14} />;
@@ -148,7 +154,11 @@ export const MovementsColumn = React.memo(function MovementsColumn({
               const primaryName = (isInbound || isFunctionalIn) 
                 ? (tx.supplier || tx.beneficiary || tx.recipient || tx.location || 'مورد غير محدد') 
                 : (tx.beneficiary || tx.recipient || tx.supplier || tx.location || 'جهة غير محددة');
-              const secondaryName = (isOutbound || isReturn || isFunctionalOut) ? (tx.rep || '') : '';
+              let secondaryName = (isOutbound || isReturn || isFunctionalOut) ? (tx.rep || '') : '';
+              
+              if (secondaryName.trim() === primaryName.trim()) {
+                secondaryName = '';
+              }
 
               const txDate = tx.timestamp ? new Date(tx.timestamp) : new Date();
               const formattedDate = txDate.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric', year: 'numeric' });

@@ -2,6 +2,29 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, FileText, AlertTriangle, CheckCircle2 } from 'lucide-react';
 
+
+// Clean date formatter helper
+const formatDateClean = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    const clean = dateStr.split('T')[0];
+    const parts = clean.split('-');
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+    if (typeof dateStr === 'string' && dateStr.includes('/') && dateStr.length <= 10) {
+      return dateStr;
+    }
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch (e) {
+    return dateStr;
+  }
+};
+
 /**
  * VoucherStatusColumn - Displays the status of pending, completed, and cancelled vouchers.
  */
@@ -69,8 +92,9 @@ export const VoucherStatusColumn = React.memo(function VoucherStatusColumn({
                         {voucher.isTransfer ? 'تحويل مخزني' : (voucher.kind === 'in' ? 'سند إدخال' : 'سند إخراج')} - {voucher.clientName}
                       </h4>
                       {isCompleted && invoiceDate ? (
-                        <p className="text-[8px] text-emerald-600 font-readex mt-0.5 truncate font-medium">
-                          تم إصدار الفاتورة بتاريخ: {invoiceDate}
+                        <p className="text-[11px] text-emerald-600 font-readex mt-1 font-bold flex items-center gap-1.5 bg-emerald-50/50 px-2 py-0.5 rounded border border-emerald-100/50 w-fit">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          تم إصدار الفاتورة بتاريخ: {formatDateClean(invoiceDate)}
                         </p>
                       ) : (
                         <div className="flex flex-col gap-1">
@@ -126,8 +150,9 @@ export const VoucherStatusColumn = React.memo(function VoucherStatusColumn({
                             {voucher.isTransfer ? 'تحويل مخزني' : (voucher.kind === 'in' ? 'سند إدخال' : 'سند إخراج')} - {voucher.clientName}
                           </h4>
                           {invoiceDate ? (
-                            <p className="text-[8px] text-emerald-600 font-readex mt-0.5 truncate font-medium">
-                              تم إصدار الفاتورة بتاريخ: {invoiceDate}
+                            <p className="text-[11px] text-emerald-600 font-readex mt-1 font-bold flex items-center gap-1.5 bg-emerald-50/50 px-2 py-0.5 rounded border border-emerald-100/50 w-fit">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              تم إصدار الفاتورة بتاريخ: {formatDateClean(invoiceDate)}
                             </p>
                           ) : (
                             <p className="text-[9px] text-slate-400 font-readex mt-0.5 truncate">

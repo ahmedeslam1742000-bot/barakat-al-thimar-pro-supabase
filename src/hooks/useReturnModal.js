@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '../lib/supabaseClient';
+import api from '../lib/api';
 
 const EMPTY_RETURN_FORM = () => ({
   rep: '',
@@ -156,32 +156,20 @@ export function useReturnModal({
     setShowReturnSaveConfirm(false);
     setLoading(true);
     try {
-      const rpcPayload = {
-        request_id: `return-modal-${Date.now()}`,
-        header: {
-          date: returnForm.date || new Date().toISOString().split('T')[0],
-          returnee_name: returnForm.returnee,
-          rep_name: returnForm.rep,
-        },
-        lines: returnItems.map((it) => ({
-          item_id: it.selectedItem?.id,
-          item_name: it.name,
-          company: it.selectedItem?.company || 'بدون شركة',
-          cat: it.cat,
-          unit: it.unit,
+      const { data } = await api.post('/vouchers', {
+        type: 'مرتجع',
+        date: returnForm.date || new Date().toISOString().split('T')[0],
+        client_name: returnForm.returnee,
+        notes: `مستلم: ${returnForm.rep}`,
+        items: returnItems.map(it => ({
+          product_id: it.selectedItem?.id,
           qty: Number(it.qty),
-          return_status: it.returnStatus,
-          transaction_status: it.returnStatus === 'سليم' ? 'مكتمل' : 'مرتجع تالف',
-        })),
-      };
-
-      const { data, error } = await supabase.rpc('inventory_commit_return', {
-        payload: rpcPayload,
+          unit: it.unit,
+          notes: it.returnStatus === 'سليم' ? 'مكتمل' : 'تالف',
+        }))
       });
-      if (error) throw error;
-      if (!data?.ok) throw new Error(data?.error_message || 'فشل حفظ المرتجع عبر RPC');
 
-      const damagedCount = data?.discrepancy_ids?.length || 0;
+      const damagedCount = returnItems.filter(it => it.returnStatus !== 'سليم').length;
       if (damagedCount > 0) {
         toast.warning(`تم تسجيل ${damagedCount} صنف في قسم التوالف ❤️`);
       }
@@ -198,12 +186,7 @@ export function useReturnModal({
     }
   }, [returnForm, returnItems, playSuccess, performReturnReset, fetchInitialData, setLoading]);
 
-  // Bypass the unrendered confirmation modal
-  useEffect(() => {
-    if (showReturnSaveConfirm) {
-      performReturnSave();
-    }
-  }, [showReturnSaveConfirm, performReturnSave]);
+
 
   // ─── Public API ───────────────────────────────────────────────────────
   return {

@@ -5,7 +5,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, LogOut,
   AlertCircle, LayoutGrid, Snowflake, Box, Thermometer, Package
 } from 'lucide-react';
-import { supabase } from '../lib/supabaseClient';
+import api from '../lib/api';
 import { toast } from 'sonner';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { useAuth } from '../contexts/AuthContext';
@@ -134,18 +134,10 @@ export default function PriceList({ setActiveView }) {
     }
 
     try {
-      const { error } = await supabase
-        .from('products')
-        .update({ 
-          old_price: selectedItem.price || 0, 
-          price: Number(newPrice) 
-        })
-        .eq('id', selectedItem.id);
-
-      if (error) {
-        toast.error(`خطأ من قاعدة البيانات: ${error.message}`);
-        return;
-      }
+      await api.patch(`/products/${selectedItem.id}`, {
+        old_price: selectedItem.price || 0,
+        price: Number(newPrice),
+      });
       
       toast.success(`تم تحديث سعر "${selectedItem.name}" بنجاح`);
       setIsSaveConfirmOpen(false);

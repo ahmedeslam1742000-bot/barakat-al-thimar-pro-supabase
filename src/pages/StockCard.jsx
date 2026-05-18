@@ -23,7 +23,8 @@ const categoryIcons = {
 const getCatIcon = (cat) => categoryIcons[cat] || <Package size={16} className="text-slate-400" />;
 
 export default function StockCard({ setActiveView }) {
-  const { items, isLoading: loading } = useData();
+  const { items } = useData();
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('الكل');
   
@@ -31,6 +32,11 @@ export default function StockCard({ setActiveView }) {
   const [itemHistory, setItemHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // إيقاف حالة التحميل بمجرد وصول بيانات المنتجات
+  useEffect(() => {
+    if (items.length > 0) setLoading(false);
+  }, [items]);
 
   useEffect(() => {
     const handleEsc = (e) => {

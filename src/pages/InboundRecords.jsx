@@ -85,7 +85,8 @@ export default function InboundRecords({ setActiveView }) {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isImageZoomed, setIsImageZoomed] = useState(false);
-  const { dbTransactionsList, items: globalItems, isLoading: isDataLoading } = useData();
+  const { dbTransactionsList, items: globalItems } = useData();
+  const isDataLoading = dbTransactionsList.length === 0;
 
   const parentRef = React.useRef(null);
   const rowVirtualizer = useVirtualizer({
@@ -176,7 +177,7 @@ export default function InboundRecords({ setActiveView }) {
       
       return matchesSearch && matchesCat && matchesDate;
     });
-  }, [records, searchQuery, categoryFilter, dateRange]);
+  }, [computedRecords, searchQuery, categoryFilter, dateRange]);
 
   rowVirtualizer.options.count = filteredRecords.length;
 
@@ -314,7 +315,7 @@ export default function InboundRecords({ setActiveView }) {
                  </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                 {loading ? (
+                  {isDataLoading ? (
                     <tr>
                        <td colSpan="6" className="py-24 text-center">
                           <div className="flex flex-col items-center gap-4">

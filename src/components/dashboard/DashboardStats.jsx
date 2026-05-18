@@ -5,21 +5,18 @@ import { motion } from 'framer-motion';
 
 const DashboardStats = ({
   itemsCount,
-  stockInCount,
-  salesCount,
-  returnsCount,
-  damageCount,
   onAddItem,
   onAddStock,
   onAddInvoice,
   onAddReturn,
-  onOpenMorningBrief
+  onOpenMorningBrief,
+  setActiveView,
 }) => {
-  const today = new Date().toLocaleDateString('ar-SA', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+  const today = new Date().toLocaleDateString('ar-SA', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   });
 
   return (
@@ -48,7 +45,7 @@ const DashboardStats = ({
             <Timer size={18} />
             الموجز الصباحي
           </motion.button>
-          
+
           <div className="hidden lg:flex items-center gap-3 px-5 py-2.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-sm">
             <Clock size={16} className="text-indigo-500" />
             <span className="text-[11px] font-black text-slate-500 dark:text-slate-400 tabular-nums">
@@ -61,14 +58,11 @@ const DashboardStats = ({
       {/* --- STAT CARDS GRID --- */}
       <StatsCards
         itemsCount={itemsCount}
-        stockInCount={stockInCount}
-        salesCount={salesCount}
-        returnsCount={returnsCount}
-        damageCount={damageCount}
         onAddItem={onAddItem}
         onAddStock={onAddStock}
         onAddInvoice={onAddInvoice}
         onAddReturn={onAddReturn}
+        setActiveView={setActiveView}
       />
     </div>
   );

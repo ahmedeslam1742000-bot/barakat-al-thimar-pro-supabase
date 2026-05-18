@@ -21,7 +21,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAudio } from '../contexts/AudioContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { supabase } from '../lib/supabaseClient';
+import { useData } from '../contexts/DataContext';
 import Sidebar from './Sidebar';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 
@@ -44,58 +44,13 @@ export default function MainLayout({ children, activeView, setActiveView }) {
 
   // Removed unused currentTime interval to prevent unnecessary re-renders
 
-  // Fetch critical items for the bell notification
+  const { items } = useData();
+
   useEffect(() => {
-    const fetchItems = async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, company, cat, unit, stock_qty, created_at')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching items:', error);
-        return;
-      }
-
-      const threshold = settings?.lowStockThreshold ?? 50;
-      setCriticalItems(data.filter(i => i.stock_qty < threshold));
-      setAllItems(data);
-    };
-
-    fetchItems();
-
-    // Subscribe to real-time changes
-    const channel = supabase
-      .channel('products-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'products',
-        },
-        (payload) => {
-          setAllItems(prev => {
-            let updated;
-            if (payload.eventType === 'INSERT') {
-              updated = [payload.new, ...prev];
-            } else if (payload.eventType === 'DELETE') {
-              updated = prev.filter(i => i.id !== payload.old.id);
-            } else {
-              updated = prev.map(i => i.id === payload.new.id ? { ...i, ...payload.new } : i);
-            }
-            const newThreshold = settings?.lowStockThreshold ?? 50;
-            setCriticalItems(updated.filter(i => i.stock_qty < newThreshold));
-            return updated;
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [settings?.lowStockThreshold]);
+    const threshold = settings?.lowStockThreshold ?? 50;
+    setCriticalItems((items || []).filter(i => (i.stock_qty || i.stockQty) < threshold));
+    setAllItems(items || []);
+  }, [items, settings?.lowStockThreshold]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -200,7 +155,7 @@ export default function MainLayout({ children, activeView, setActiveView }) {
                             <div className="flex-1">
                               <p className="text-sm font-black text-slate-800 group-hover/alert:text-rose-600 transition-colors">{item.name}</p>
                               <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                                المخزون الحالي: <span className="font-black text-rose-600 bg-rose-50 px-1.5 rounded">{item.stock_qty} {item.unit}</span>
+                                المخزون الحالي: <span className="font-black text-rose-600 bg-rose-50 px-1.5 rounded">{item.stock_qty || item.stockQty} {item.unit}</span>
                               </p>
                             </div>
                           </div>

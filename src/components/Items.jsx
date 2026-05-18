@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Plus, X, Pencil, Trash2, FileText, 
@@ -6,7 +6,7 @@ import {
   Thermometer, LayoutGrid, Trash, 
   FileDown, Printer, LogOut, CheckCircle, CheckCircle2
 } from 'lucide-react';
-import { supabase } from '../lib/supabaseClient';
+import api from '../lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
@@ -18,7 +18,7 @@ const UNITS = ['كرتونة', 'قطعة', 'كيلو', 'لتر', 'طرد', 'عل
 export default function Items({ setActiveView }) {
   const { isViewer } = useAuth();
   // ─── Items from global DataContext (no independent fetch or Realtime channel needed) ───
-  const { items } = useData();
+  const { items, fetchInitialData } = useData();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('الكل');
   const [dynamicCats] = useState(CATS);
@@ -69,16 +69,16 @@ export default function Items({ setActiveView }) {
       return toast.error("يرجى إكمال البيانات المطلوبة (الاسم والشركة)");
     }
     try {
-      const { error } = await supabase.from('products').update({
+      await api.patch(`/products/${selectedItem.id}`, {
         name: formState.name.trim(),
         company: formState.company.trim(),
-        cat: formState.cat,
+        category: formState.cat,
         unit: formState.unit,
         search_key: normalizeArabic(`${formState.name} ${formState.company}`),
-      }).eq('id', selectedItem.id);
-      if (error) throw error;
+      });
       toast.success("تم التعديل بنجاح ✅");
       setIsEditModalOpen(false);
+      fetchInitialData?.();
     } catch (err) {
       toast.error("حدث خطأ أثناء التعديل.");
     }
@@ -96,12 +96,12 @@ export default function Items({ setActiveView }) {
   const handleDeleteSubmit = async (e) => {
     e.preventDefault();
     try {
-      const { error } = await supabase.from('products').delete().eq('id', selectedItem.id);
-      if (error) throw error;
-      toast.success("تم الحذف بنجاح 🗑️");
+      await api.delete(`/products/${selectedItem.id}`);
+      toast.success("تمت الأرشفة بنجاح");
       setIsDeleteModalOpen(false);
+      fetchInitialData?.();
     } catch (err) {
-      toast.error("حدث خطأ أثناء الحذف.");
+      toast.error("حدث خطأ أثناء الأرشفة.");
     }
   };
 
@@ -298,8 +298,8 @@ export default function Items({ setActiveView }) {
       </ModalWrapper>
 
       {/* ═══ DELETE MODAL ═══ */}
-      <ModalWrapper title="حذف صنف" isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onSubmit={handleDeleteSubmit} submitLabel="حذف الصنف" submitDisabled={false}>
-        <div className="text-center py-4"><div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle size={32} /></div><p className="text-sm font-bold text-slate-600 mb-2">هل أنت متأكد من حذف الصنف؟</p><p className="text-lg font-black text-slate-900">{selectedItem?.name}</p><p className="text-xs text-slate-400 mt-2">لا يمكن التراجع عن هذه العملية.</p></div>
+      <ModalWrapper title="أرشفة صنف" isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onSubmit={handleDeleteSubmit} submitLabel="أرشفة الصنف" submitDisabled={false}>
+        <div className="text-center py-4"><div className="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle size={32} /></div><p className="text-sm font-bold text-slate-600 mb-2">هل أنت متأكد من أرشفة الصنف؟</p><p className="text-lg font-black text-slate-900">{selectedItem?.name}</p><p className="text-xs text-slate-400 mt-2">يمكن استعادته لاحقاً من قاعدة البيانات عند الحاجة.</p></div>
       </ModalWrapper>
 
       {/* ═══ PREVIEW MODAL ═══ */}

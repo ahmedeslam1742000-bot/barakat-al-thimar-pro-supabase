@@ -6,7 +6,7 @@ import {
   ChevronDown, Phone, MapPin, Package, ArrowUpRight,
   Calendar, Activity, Star, LogOut
 } from 'lucide-react';
-import { supabase } from '../lib/supabaseClient';
+import api from '../lib/api';
 import { toast } from 'sonner';
 import { useAudio } from '../contexts/AudioContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -104,33 +104,19 @@ export default function Reps({ setActiveView }) {
 
   const [form, setForm] = useState({ ...emptyForm });
 
-  /* live Supabase sync */
+  /* Fetch data */
+  const fetchInitialData = async () => {
+    try {
+      const { data: repsData } = await api.get('/reps');
+      setReps(repsData || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
-    const fetchInitialData = async () => {
-      const { data: repsData } = await supabase.from('reps').select('id, name, phone, zone, created_at').order('created_at', { ascending: false });
-      if (repsData) setReps(repsData.map(d => ({ ...d, createdAt: d.created_at })));
-
-      const { data: transData } = await supabase.from('transactions').select('id, type, timestamp, rep, qty, date, item_id, item, balance_after').order('timestamp', { ascending: false }).limit(400);
-      if (transData) setTransactions(transData);
-    };
-
     window._refreshReps = fetchInitialData; // Expose for manual refresh
     fetchInitialData();
-
-    const channels = [
-      supabase.channel('public:reps').on('postgres_changes', { event: '*', schema: 'public', table: 'reps' }, fetchInitialData).subscribe(),
-      supabase.channel('public:transactions:reps').on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          setTransactions((prev) => [payload.new, ...prev].slice(0, 400));
-        } else if (payload.eventType === 'UPDATE') {
-          setTransactions((prev) => prev.map(t => t.id === payload.new.id ? payload.new : t));
-        } else if (payload.eventType === 'DELETE') {
-          setTransactions((prev) => prev.filter(t => t.id !== payload.old.id));
-        }
-      }).subscribe()
-    ];
-
-    return () => { channels.forEach(c => supabase.removeChannel(c)); };
   }, []);
 
 
@@ -161,9 +147,7 @@ export default function Reps({ setActiveView }) {
       if (form.phone?.trim()) payload.phone = form.phone.trim();
       if (form.zone?.trim()) payload.zone = form.zone.trim();
       
-      const { data, error } = await supabase.from('reps').insert([payload]).select();
-
-      if (error) throw error;
+      const { data } = await api.post('/reps', payload);
       
       toast.success('✅ تم إضافة المندوب بنجاح');
       try { playSuccess?.(); } catch(_) {}
@@ -171,7 +155,7 @@ export default function Reps({ setActiveView }) {
       setForm({ ...emptyForm });
       if (window._refreshReps) window._refreshReps();
     } catch (err) {
-      console.error('❌ Supabase insert error:', err);
+      console.error('❌ API insert error:', err);
       toast.error(`خطأ: ${err?.message || 'حدث خطأ غير متوقع'}`);
       try { playWarning?.(); } catch(_) {}
     }
@@ -189,8 +173,7 @@ export default function Reps({ setActiveView }) {
     if (!form.name.trim()) { toast.error('يرجى إدخال اسم المندوب'); playWarning(); return; }
     setLoading(true);
     try {
-      const { error } = await supabase.from('reps').update({ ...form, name: form.name.trim() }).eq('id', selectedRep.id);
-      if (error) throw error;
+      await api.put(`/reps/${selectedRep.id}`, { ...form, name: form.name.trim() });
       toast.success('✅ تم تعديل بيانات المندوب');
       playSuccess();
       setIsEditOpen(false);
@@ -209,8 +192,7 @@ export default function Reps({ setActiveView }) {
     e.preventDefault();
     setLoading(true);
     try {
-      const { error } = await supabase.from('reps').delete().eq('id', selectedRep.id);
-      if (error) throw error;
+      await api.delete(`/reps/${selectedRep.id}`);
       toast.success('تم حذف المندوب 🗑️');
       playSuccess();
       setIsDeleteOpen(false);

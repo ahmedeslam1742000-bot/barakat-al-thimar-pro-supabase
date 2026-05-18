@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Lock, Loader2, Mail, User, Warehouse } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabaseClient';
 
 const TYPING_TEXT = 'بركة الثمار... دقة، سرعة، أمان.';
 
@@ -145,41 +144,10 @@ export default function Login() {
 
     try {
       if (mode === 'login') {
-        let loginEmail = email;
-
-        // If input doesn't contain @, treat it as username and look up email
-        if (!email.includes('@')) {
-          const { data, error } = await supabase
-            .from('users')
-            .select('email')
-            .eq('username', email)
-            .single();
-
-          if (error || !data) {
-            throw new Error('المستخدم غير موجود');
-          }
-
-          loginEmail = data.email;
-        }
-
-        await login(loginEmail, password);
+        await login(email, password);
         sessionStorage.setItem('auth_token', 'active');
       } else {
-        const { user } = await signup(email, password);
-
-        // Insert user record into Supabase
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert({
-            id: user.id,
-            email,
-            username: email.split('@')[0],
-            full_name: fullName,
-            role: 'User',
-          });
-
-        if (insertError) throw insertError;
-        sessionStorage.setItem('auth_token', 'active');
+        await signup(email, password, fullName);
       }
     } catch (err) {
       console.error(err);

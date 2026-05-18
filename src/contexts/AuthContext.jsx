@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import api, { getCsrfCookie } from '../lib/api';
 import { useSettings } from './SettingsContext';
 
 const AuthContext = createContext();
@@ -14,102 +14,95 @@ export function AuthProvider({ children }) {
   const { settings } = useSettings();
 
   async function login(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    await getCsrfCookie();
+    const { data } = await api.post('/login', {
       email,
       password,
     });
-    if (error) throw error;
+
+    sessionStorage.setItem('auth_token', 'active');
+    setCurrentUser(normalizeUser(data.user));
+
     return data;
   }
 
-  async function signup(email, password) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    if (error) throw error;
-    return data;
+  async function signup() {
+    throw new Error('إنشاء الحسابات يتم حاليا من لوحة الإدارة.');
   }
 
   async function logout() {
-    sessionStorage.removeItem('auth_token');
-    await supabase.auth.signOut();
+    try {
+      await api.post('/logout');
+    } finally {
+      sessionStorage.removeItem('auth_token');
+      setCurrentUser(null);
+    }
     window.location.href = '/';
   }
 
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
+    let mounted = true;
+
+    api.get('/user')
+      .then(({ data }) => {
+        if (!mounted) return;
         sessionStorage.setItem('auth_token', 'active');
-        fetchUserRole(session.user.id).then(userData => {
-          setCurrentUser({ ...session.user, ...userData });
-          setLoading(false);
-        });
-      } else {
+        setCurrentUser(normalizeUser(data.user));
+      })
+      .catch(() => {
+        if (!mounted) return;
         sessionStorage.removeItem('auth_token');
         setCurrentUser(null);
+      })
+      .finally(() => {
+        if (!mounted) return;
         setLoading(false);
-      }
-    });
+      });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (session?.user) {
-          sessionStorage.setItem('auth_token', 'active');
-          const userData = await fetchUserRole(session.user.id);
-          setCurrentUser({ ...session.user, ...userData });
-        } else {
-          sessionStorage.removeItem('auth_token');
-          setCurrentUser(null);
-        }
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  async function fetchUserRole(userId) {
-    try {
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('role, username, full_name, phone, email')
-        .eq('id', userId)
-        .maybeSingle();
+  function normalizeUser(user) {
+    const roles = user?.roles?.map((role) => role.name) || [];
+    const directPermissions = user?.permissions?.map((permission) => permission.name) || [];
+    const rolePermissions = user?.roles?.flatMap((role) => role.permissions?.map((permission) => permission.name) || []) || [];
+    const permissions = [...new Set([...directPermissions, ...rolePermissions])];
 
-      if (userError || !userData) return { role: 'User', username: '', permissions: [] };
-
-      // Fetch permissions
-      const { data: permData } = await supabase
-        .from('user_permissions')
-        .select('page_id, is_allowed')
-        .eq('user_id', userId);
-
-      const permissions = permData || [];
-
-      return {
-        role: userData.role || 'User',
-        username: userData.username || '',
-        fullName: userData.full_name || '',
-        phone: userData.phone || '',
-        email: userData.email || '',
-        permissions: permissions
-      };
-    } catch {
-      return { role: 'User', username: '', permissions: [] };
-    }
+    return {
+      ...user,
+      role: roles[0] || 'User',
+      roles,
+      permissions,
+      username: user?.name || '',
+      fullName: user?.name || '',
+    };
   }
 
   const canAccess = (pageId) => {
     if (!currentUser) return false;
-    // Master Admin bypass
-    if (currentUser.email === 'ahmed_eslam288@yahoo.com') return true;
-    if (currentUser.role === 'Admin') return true;
-    
-    const perm = currentUser.permissions?.find(p => p.page_id === pageId);
-    return perm ? perm.is_allowed : false;
+    if (currentUser.roles?.includes('مدير') || currentUser.role === 'Admin') return true;
+
+    const pagePermissions = {
+      dashboard: 'dashboard.view',
+      items: 'products.view',
+      'stock-in': 'vouchers.view',
+      'stock-out': 'vouchers.view',
+      returns: 'vouchers.view',
+      'voucher-outward': 'vouchers.view',
+      reps: 'users.manage',
+      'receipt-vouchers': 'receipt-vouchers.view',
+      inventory: 'products.view',
+      'inbound-records': 'vouchers.view',
+      'stock-card': 'vouchers.view',
+      'price-list': 'products.view',
+      'sales-analytics': 'dashboard.view',
+      settings: 'users.manage',
+    };
+
+    const requiredPermission = pagePermissions[pageId];
+    return requiredPermission ? currentUser.permissions?.includes(requiredPermission) : false;
   };
 
   const value = {
@@ -121,7 +114,7 @@ export function AuthProvider({ children }) {
     signup,
     logout,
     canAccess,
-    supabase,
+    api,
   };
 
   return (
