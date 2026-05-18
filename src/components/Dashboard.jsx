@@ -24,8 +24,8 @@ import { useInvoiceModal } from '../hooks/useInvoiceModal';
 import { useReturnModal } from '../hooks/useReturnModal';
 import { useVoucherDetail } from '../hooks/useVoucherDetail';
 import { useItemModal } from '../hooks/useItemModal';
-import { useDataStore, useComputedData } from '../store/useDataStore';
 import DashboardStats from './dashboard/DashboardStats';
+import { useData } from '../contexts/DataContext';
 import { TransactionDetailModal } from './TransactionDetailModal';
 import { MorningBriefModal } from './MorningBriefModal';
 import { VoucherDetailModal } from './VoucherDetailModal';
@@ -66,16 +66,13 @@ export default function Dashboard({}) {
     dbTransactionsList, setDbTransactionsList,
     repsList, setRepsList,
     fetchInitialData,
-  } = useDataStore();
-
-  const {
     voucherTransactionsMemo,
     functionalVoucherGroups,
     pendingVouchers,
     completedVouchers,
     cancelledVouchers,
     morningBriefData,
-  } = useComputedData();
+  } = useData();
 
   const {
     isSalesModalOpen, setIsSalesModalOpen,
