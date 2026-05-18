@@ -24,23 +24,33 @@ export const StatCard = React.memo(({
 
   return (
     <motion.div
-      whileHover={{ y: -4, transition: { duration: 0.25 } }}
-      className="relative h-full flex flex-col rounded-[20px] overflow-hidden cursor-pointer group bg-white shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100/80 hover-stable no-select-click"
+      whileHover={{ y: -6, transition: { duration: 0.3 } }}
+      className="relative h-full flex flex-col justify-between rounded-[24px] overflow-hidden cursor-pointer group shadow-sm hover:shadow-2xl transition-all duration-300 border no-select-click"
       onClick={handleCardClick}
-      style={{ willChange: 'transform', backfaceVisibility: 'hidden', transform: 'translate3d(0, 0, 0)' }}
+      style={{ 
+        willChange: 'transform', 
+        backfaceVisibility: 'hidden', 
+        transform: 'translate3d(0, 0, 0)',
+        background: `linear-gradient(135deg, #ffffff 0%, ${accentColor}0a 100%)`,
+        borderColor: `${accentColor}20`
+      }}
     >
-      <div className="p-6 flex items-start gap-4 flex-1">
+      <div className="p-6 pb-4 flex items-start gap-4">
         <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3"
-          style={{ backgroundColor: accentColor + '18', color: accentColor }}
+          className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-500 group-hover:scale-110 group-hover:rotate-6"
+          style={{ 
+            backgroundColor: accentColor + '15', 
+            color: accentColor,
+            boxShadow: `0 8px 24px -6px ${accentColor}40`
+          }}
         >
-          <Icon size={26} strokeWidth={1.8} />
+          <Icon size={26} strokeWidth={2} />
         </div>
-        <div className="flex flex-col justify-center">
-          <span className="text-[14px] font-bold text-slate-500 font-tajawal mb-1">{label}</span>
+        <div className="flex flex-col justify-center pt-1 z-10">
+          <span className="text-[14px] font-bold text-slate-500 font-tajawal mb-1.5 group-hover:text-slate-700 transition-colors">{label}</span>
           {value !== undefined && value !== null ? (
             <>
-              <span className="text-[32px] font-black text-[#0F2747] font-tajawal leading-none tracking-tight">
+              <span className="text-[34px] font-black font-tajawal leading-none tracking-tight transition-colors drop-shadow-sm" style={{ color: accentColor }}>
                 {value}
               </span>
               {subtext && (
@@ -48,7 +58,7 @@ export const StatCard = React.memo(({
               )}
             </>
           ) : (
-            <span className="text-[13px] font-medium text-slate-400 font-tajawal leading-relaxed mt-0.5">
+            <span className="text-[14px] font-medium text-slate-500 font-tajawal leading-relaxed mt-1">
               {subtext}
             </span>
           )}
@@ -56,21 +66,25 @@ export const StatCard = React.memo(({
       </div>
 
       {actionLabel && (
-        <div className="border-t border-slate-100">
+        <div className="px-5 pb-5 mt-auto z-10">
           <button
             type="button"
-            className="w-full flex items-center justify-center gap-1.5 px-6 py-3 text-xs font-semibold font-tajawal transition-all duration-200 hover:brightness-90 active:scale-[0.98]"
-            style={{ color: accentColor }}
+            className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-[14px] font-bold font-tajawal transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
+            style={{ 
+              backgroundColor: accentColor, 
+              color: '#ffffff',
+              boxShadow: `0 6px 16px -4px ${accentColor}80`
+            }}
             onClick={handleActionClick}
           >
-            <Plus size={14} strokeWidth={2.5} />
+            <Plus size={18} strokeWidth={2.5} />
             {actionLabel}
           </button>
         </div>
       )}
 
       <div
-        className="absolute -top-6 -left-6 w-20 h-20 rounded-full opacity-[0.04] group-hover:opacity-[0.08] transition-opacity duration-500"
+        className="absolute -top-10 -left-10 w-32 h-32 rounded-full opacity-[0.03] group-hover:opacity-[0.08] group-hover:scale-150 transition-all duration-700 pointer-events-none"
         style={{ backgroundColor: accentColor }}
       />
     </motion.div>
