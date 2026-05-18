@@ -3,12 +3,67 @@ import { supabase } from '../lib/supabaseClient';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { useMemo } from 'react';
 
+/**
+ * @typedef {Object} Product
+ * @property {string} id
+ * @property {string} name
+ * @property {string} company
+ * @property {string} cat
+ * @property {string} unit
+ * @property {number} stockQty
+ * @property {number} damagedQty
+ * @property {string} searchKey
+ * @property {string} createdAt
+ * @property {string} normName
+ * @property {string} normCompany
+ */
+
+/**
+ * @typedef {Object} Transaction
+ * @property {string} id
+ * @property {string} type
+ * @property {string} itemId
+ * @property {string} referenceNumber
+ * @property {string} voucherCode
+ * @property {string} voucherGroupId
+ * @property {string} batchId
+ * @property {boolean} isInvoice
+ * @property {boolean} isTransfer
+ * @property {boolean} isFunctional
+ * @property {boolean} isEdited
+ * @property {Object|null} historyLog
+ */
+
+/**
+ * @typedef {Object} VoucherGroup
+ * @property {string} id
+ * @property {string} voucherGroupId
+ * @property {string} voucherCode
+ * @property {string} type
+ * @property {string} kind
+ * @property {string} clientName
+ * @property {Date} timestamp
+ * @property {boolean} invoiced
+ * @property {boolean} isTransfer
+ * @property {boolean} deducted
+ * @property {boolean} isFunctional
+ * @property {string} line_note
+ * @property {Transaction[]} lines
+ * @property {string} [itemName]
+ * @property {number} [quantity]
+ */
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 const FUNCTIONAL_INBOUND_TYPE = 'سند إدخال';
 const FUNCTIONAL_OUTBOUND_TYPE = 'سند إخراج';
 const FUNCTIONAL_VOUCHER_TYPES = [FUNCTIONAL_INBOUND_TYPE, FUNCTIONAL_OUTBOUND_TYPE];
 
 // ─── Normalizers ──────────────────────────────────────────────────────────────
+/**
+ * Normalizes product data from Supabase.
+ * @param {any} d - Raw product record from DB
+ * @returns {Product}
+ */
 function normalizeItem(d) {
   return {
     ...d,
@@ -21,6 +76,11 @@ function normalizeItem(d) {
   };
 }
 
+/**
+ * Processes transaction data from Supabase.
+ * @param {any} d - Raw transaction record from DB
+ * @returns {Transaction|null}
+ */
 function processTx(d) {
   if (!d) return null;
   return {
@@ -79,6 +139,11 @@ function normalizeExpense(e) {
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
+/**
+ * Hook to fetch products (Items).
+ * @param {boolean} [enabled=true]
+ * @returns {import('@tanstack/react-query').UseQueryResult<Product[], Error>}
+ */
 export function useItemsQuery(enabled = true) {
   return useQuery({
     queryKey: ['products'],
@@ -96,6 +161,11 @@ export function useItemsQuery(enabled = true) {
   });
 }
 
+/**
+ * Hook to fetch transactions.
+ * @param {boolean} [enabled=true]
+ * @returns {import('@tanstack/react-query').UseQueryResult<Transaction[], Error>}
+ */
 export function useTransactionsQuery(enabled = true) {
   return useQuery({
     queryKey: ['transactions'],
@@ -162,6 +232,19 @@ export function useRepsQuery(enabled = true) {
 
 // ─── Computed Selectors Hook ──────────────────────────────────────────────────
 
+/**
+ * Computes derived data (groups, pending vouchers, morning brief) from raw data.
+ * @param {Transaction[]} [dbTransactionsList=[]]
+ * @param {Product[]} [items=[]]
+ * @returns {{
+ *   voucherTransactionsMemo: Transaction[],
+ *   functionalVoucherGroups: VoucherGroup[],
+ *   pendingVouchers: VoucherGroup[],
+ *   completedVouchers: VoucherGroup[],
+ *   cancelledVouchers: VoucherGroup[],
+ *   morningBriefData: { atRiskItems: any[], totalQty: number }
+ * }}
+ */
 export function useComputedData(dbTransactionsList = [], items = []) {
   const voucherTransactionsMemo = useMemo(() => {
     if (!dbTransactionsList || dbTransactionsList.length === 0) return [];
