@@ -475,85 +475,12 @@ export default function Returns({ setActiveView }) {
     }
   };
 
-  const exportPDF = async () => {
-    const el = document.createElement('div');
-    el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:794px;background:white;padding:40px;font-family:Cairo,sans-serif;direction:rtl;color:#1e293b;';
-    
-    el.innerHTML = `
-      <div style="border:2px solid #ef4444;border-radius:24px;padding:30px;background:#fff;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:30px;border-bottom:3px solid #ef4444;padding-bottom:20px;">
-          <div>
-            <div style="font-size:28px;font-weight:900;color:#ef4444;">بركة الثمار</div>
-            <div style="font-size:12px;color:#64748b;font-weight:700;">سجل المرتجعات — Returns Registry</div>
-          </div>
-          <div style="text-align:left;direction:ltr;">
-            <div style="font-size:14px;font-weight:800;">Date: ${new Date().toLocaleDateString('ar-SA')}</div>
-            <div style="font-size:12px;color:#94a3b8;">User: ${currentUser?.email || 'System'}</div>
-          </div>
-        </div>
-
-        <table style="width:100%;border-collapse:collapse;margin-bottom:30px;font-size:14px;">
-          <thead>
-            <tr style="background:#ef4444;color:white;">
-              <th style="padding:12px;border:1px solid #dc2626;text-align:center;width:40px;">م</th>
-              <th style="padding:12px;border:1px solid #dc2626;text-align:center;">التاريخ</th>
-              <th style="padding:12px;border:1px solid #dc2626;text-align:right;">الصنف والشركة</th>
-              <th style="padding:12px;border:1px solid #dc2626;text-align:center;width:80px;">الكمية</th>
-              <th style="padding:12px;border:1px solid #dc2626;text-align:center;width:100px;">الحالة</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${filtered.map((tx, idx) => `
-              <tr style="background:${idx % 2 === 0 ? '#fff' : '#fef2f2'};">
-                <td style="padding:10px;border:1px solid #fecaca;text-align:center;font-weight:700;">${idx + 1}</td>
-                <td style="padding:10px;border:1px solid #fecaca;text-align:center;">${tx.date || '-'}</td>
-                <td style="padding:10px;border:1px solid #fecaca;text-align:right;">
-                  <div style="font-weight:800;">${tx.item}</div>
-                  <div style="font-size:11px;color:#94a3b8;">${tx.company || '—'}</div>
-                </td>
-                <td style="padding:10px;border:1px solid #fecaca;text-align:center;font-weight:900;color:#dc2626;">${tx.qty} ${tx.unit}</td>
-                <td style="padding:10px;border:1px solid #fecaca;text-align:center;">
-                   <span style="font-weight:900;color:${tx.status === 'سليم' ? '#059669' : '#e11d48'}">
-                    ${tx.status === 'سليم' ? 'سليم ✅' : 'تالف ❌'}
-                   </span>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-
-        <div style="margin-top:40px;text-align:center;font-size:10px;color:#94a3b8;border-top:1px solid #f1f5f9;padding-top:15px;">
-          نظام بركة الثمار الإلكتروني PRO • سجل المرتجعات المستخرج
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(el);
-    try {
-      const [html2canvasModule, jsPDFModule] = await Promise.all([
-        import('html2canvas'),
-        import('jspdf')
-      ]);
-      const html2canvas = html2canvasModule.default || html2canvasModule;
-      const jsPDF = jsPDFModule.default || jsPDFModule;
-      
-      const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff' });
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Returns_Report_${Date.now()}.pdf`);
-      toast.success('تم تصدير سجل المرتجعات كـ PDF بنجاح 📄');
-    } catch (e) {
-      console.error(e);
-      toast.error('خطأ أثناء تصدير PDF');
-    } finally {
-      document.body.removeChild(el);
-      setIsExportMenuOpen(false);
-    }
+  const exportPDF = () => {
+    setIsExportMenuOpen(false);
+    window.print();
+    toast.success('تم إرسال سجل المرتجعات للطابعة 📄');
   };
+
 
   const cv = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.05 } } };
   const kv = {
@@ -563,9 +490,57 @@ export default function Returns({ setActiveView }) {
 
   return (
     <div className="flex-1 min-h-0 w-full flex flex-col font-readex text-slate-800 bg-slate-50/30 overflow-hidden" dir="rtl">
-      
+
+      {/* ─── PRINT AREA (مخفية شاشةً — تظهر فقط عند الطباعة) ─── */}
+      <div id="returns-print-area" className="hidden print:block" dir="rtl"
+        style={{ fontFamily: "'Tajawal', sans-serif", color: '#1e293b', padding: '40px' }}
+      >
+        <div style={{ border: '2px solid #ef4444', borderRadius: '24px', padding: '30px', background: '#fff' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', borderBottom: '3px solid #ef4444', paddingBottom: '20px' }}>
+            <div>
+              <div style={{ fontSize: '28px', fontWeight: 900, color: '#ef4444' }}>بركة الثمار</div>
+              <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 700 }}>سجل المرتجعات — Returns Registry</div>
+            </div>
+            <div style={{ textAlign: 'left', direction: 'ltr' }}>
+              <div style={{ fontSize: '14px', fontWeight: 800 }}>التاريخ: {new Date().toLocaleDateString('ar-SA')}</div>
+              <div style={{ fontSize: '12px', color: '#94a3b8' }}>المستخدم: {currentUser?.email || 'System'}</div>
+            </div>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <thead>
+              <tr style={{ background: '#ef4444', color: 'white' }}>
+                <th style={{ padding: '10px', border: '1px solid #dc2626', textAlign: 'center', width: '40px' }}>م</th>
+                <th style={{ padding: '10px', border: '1px solid #dc2626', textAlign: 'center' }}>التاريخ</th>
+                <th style={{ padding: '10px', border: '1px solid #dc2626', textAlign: 'right' }}>الصنف والشركة</th>
+                <th style={{ padding: '10px', border: '1px solid #dc2626', textAlign: 'center' }}>الكمية</th>
+                <th style={{ padding: '10px', border: '1px solid #dc2626', textAlign: 'center' }}>الحالة</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((tx, idx) => (
+                <tr key={tx.id} style={{ background: idx % 2 === 0 ? '#fff' : '#fef2f2' }}>
+                  <td style={{ padding: '8px', border: '1px solid #fecaca', textAlign: 'center', fontWeight: 700 }}>{idx + 1}</td>
+                  <td style={{ padding: '8px', border: '1px solid #fecaca', textAlign: 'center' }}>{tx.date || '-'}</td>
+                  <td style={{ padding: '8px', border: '1px solid #fecaca' }}>
+                    <div style={{ fontWeight: 800 }}>{tx.item}</div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>{tx.company || '—'}</div>
+                  </td>
+                  <td style={{ padding: '8px', border: '1px solid #fecaca', textAlign: 'center', fontWeight: 900, color: '#dc2626' }}>{tx.qty} {tx.unit}</td>
+                  <td style={{ padding: '8px', border: '1px solid #fecaca', textAlign: 'center', fontWeight: 900, color: tx.status === 'سليم' ? '#059669' : '#e11d48' }}>
+                    {tx.status === 'سليم' ? 'سليم ✅' : 'تالف ❌'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ marginTop: '40px', textAlign: 'center', fontSize: '10px', color: '#94a3b8', borderTop: '1px solid #f1f5f9', paddingTop: '15px' }}>
+            نظام بركة الثمار الإلكتروني PRO • سجل المرتجعات المستخرج
+          </div>
+        </div>
+      </div>
+
       {/* ─── PREMIUM HEADER ─── */}
-      <div className="mx-6 mt-6 shrink-0 z-20">
+      <div className="mx-6 mt-6 shrink-0 z-20 print:hidden">
         <div className="bg-white border border-slate-200 rounded-[1.5rem] p-3 flex flex-col lg:flex-row items-center justify-between shadow-sm gap-4 lg:gap-0">
           
           <div className="flex items-center gap-3 w-full lg:w-auto justify-between lg:justify-start lg:pl-4 lg:border-l border-slate-200 shrink-0">

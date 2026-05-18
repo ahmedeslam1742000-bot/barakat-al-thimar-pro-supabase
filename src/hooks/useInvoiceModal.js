@@ -28,7 +28,6 @@ const EMPTY_INVOICE_ITEM = () => ({
  *   playWarning     — audio feedback fn
  *   playSuccess     — audio feedback fn
  *   fetchInitialData — Dashboard data-refetch callback
- *   setInvoiceDataForCapture — setter for off-screen InvoiceTemplate render
  *   setInvoiceTimestamps     — setter for per-voucher invoice timestamp map
  */
 export function useInvoiceModal({
@@ -37,7 +36,6 @@ export function useInvoiceModal({
   playWarning,
   playSuccess,
   fetchInitialData,
-  setInvoiceDataForCapture,
   setInvoiceTimestamps,
   setStockSearchActiveIndex,
 }) {
@@ -58,29 +56,6 @@ export function useInvoiceModal({
 
   // ─── Refs ────────────────────────────────────────────────────────────
   const invoiceSearchInputRef = useRef(null);
-
-  // ─── Cloudinary uploader (pure utility) ─────────────────────────────
-  const uploadToCloudinary = useCallback(async (blob, data) => {
-    const year = new Date().getFullYear();
-    const month = new Date().getMonth() + 1;
-    const client = (data.clientName || data.client || 'عام').trim();
-    const subFolder = data.type === 'sale' ? 'فاتورة_مبيعات' : 'سند_إخراج';
-    const folderPath = `vouchers/outward/${subFolder}/${client}/${year}/${month}`;
-    const formData = new FormData();
-    formData.append('file', blob);
-    formData.append('upload_preset', 'invoices');
-    formData.append('folder', folderPath);
-    const res = await fetch('https://api.cloudinary.com/v1_1/dvxryz62u/image/upload', {
-      method: 'POST',
-      body: formData,
-    });
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(`Cloudinary Error: ${errorData.error?.message || res.statusText}`);
-    }
-    const uploadResult = await res.json();
-    return uploadResult.secure_url;
-  }, []);
 
   // ─── Auto-focus on open ──────────────────────────────────────────────
   useEffect(() => {
@@ -265,67 +240,8 @@ export function useInvoiceModal({
       if (!rpcResult?.ok) throw new Error(rpcResult?.error_message || 'فشل تنفيذ عملية الفاتورة عبر RPC');
 
       const invoiceTimestamp = rpcResult?.ui_snapshot?.invoice_timestamp;
-
       if (sourceVoucher && invoiceTimestamp && setInvoiceTimestamps) {
         setInvoiceTimestamps(prev => ({ ...prev, [sourceVoucher.id]: invoiceTimestamp }));
-      }
-
-      // ─── Invoice image capture + Cloudinary upload ─────────────────
-      try {
-        const finalBatchId = rpcResult?.batch_id;
-
-        const invData = {
-          type: sourceVoucher ? 'voucher' : 'sale',
-          clientName: sourceVoucher
-            ? sourceVoucher.clientName
-            : (invoiceForm.rep || invoiceForm.client),
-          rep: invoiceForm.rep,
-          date: invoiceForm.date,
-          batchId: finalBatchId,
-          voucherCode: sourceVoucher ? sourceVoucher.voucherCode : null,
-          items: invoiceForm.items.map(it => ({
-            name: it.name || it.selectedItem?.name,
-            company: it.company || it.selectedItem?.company,
-            cat: it.cat || it.selectedItem?.cat,
-            qty: it.qty,
-            unit: it.unit || it.selectedItem?.unit,
-          })),
-          notes: sourceVoucher
-            ? `تحويل السند ${sourceVoucher.voucherCode} إلى فاتورة`
-            : (invoiceForm.notes.trim() || 'فاتورة مبيعات'),
-        };
-
-        if (setInvoiceDataForCapture) setInvoiceDataForCapture(invData);
-
-        // Wait for the InvoiceTemplate to signal it's rendered and ready for capture
-        await new Promise(resolve => {
-          const handler = () => {
-            window.removeEventListener('invoice-ready', handler);
-            resolve();
-          };
-          window.addEventListener('invoice-ready', handler);
-          // Safety fallback to prevent hanging if event never fires
-          setTimeout(() => {
-            window.removeEventListener('invoice-ready', handler);
-            resolve();
-          }, 2500);
-        });
-
-        const element = document.getElementById('invoice-capture-area');
-        if (element) {
-          const html2canvasModule = await import('html2canvas');
-          const html2canvas = html2canvasModule.default || html2canvasModule;
-          const canvas = await html2canvas(element, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-          const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-          const imageUrl = await uploadToCloudinary(blob, invData);
-          if (imageUrl && finalBatchId) {
-            rpcPayload.invoice_header.receipt_image_url = imageUrl;
-            await supabase.from('transactions').update({ receipt_image: imageUrl }).eq('batch_id', finalBatchId);
-          }
-        }
-        if (setInvoiceDataForCapture) setInvoiceDataForCapture(null);
-      } catch (genErr) {
-        if (import.meta.env.DEV) console.error('Invoice image generation failed:', genErr);
       }
 
       toast.success(`تم تأكيد الفاتورة بنجاح ✅${rpcResult?.reference_number ? ` (${rpcResult.reference_number})` : ''}`);
@@ -340,7 +256,7 @@ export function useInvoiceModal({
     }
   }, [
     invoiceForm, sourceVoucher, items,
-    uploadToCloudinary, setInvoiceDataForCapture, setInvoiceTimestamps,
+    setInvoiceTimestamps,
     playSuccess, performInvoiceReset, fetchInitialData, setLoading,
   ]);
 

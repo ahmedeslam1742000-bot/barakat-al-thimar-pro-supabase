@@ -50,7 +50,6 @@ const FUNCTIONAL_OUTBOUND_TYPE = 'سند إخراج';
 export default function Dashboard({ setActiveView, activeView }) {
   const [isStockInModalOpen, setIsStockInModalOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [invoiceDataForCapture, setInvoiceDataForCapture] = useState(null);
   const [invoiceTimestamps, setInvoiceTimestamps] = useState({});
   // const [locations, setLocations] = useState(['مستودع الرياض', 'مستودع جدة', 'المركز الرئيسي', 'مورد خارجي']); // معطلة مؤقتاً لاستخدامها مستقبلاً عند تعدد المخازن
   const [stockSearchActiveIndex, setStockSearchActiveIndex] = useState(-1);
@@ -99,7 +98,6 @@ export default function Dashboard({ setActiveView, activeView }) {
     playWarning,
     playSuccess,
     fetchInitialData,
-    setInvoiceDataForCapture,
     setInvoiceTimestamps,
     setStockSearchActiveIndex,
   });

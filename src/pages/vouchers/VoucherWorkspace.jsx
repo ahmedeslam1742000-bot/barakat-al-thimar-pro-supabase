@@ -162,7 +162,6 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
   const [isConfirmSaveOpen, setIsConfirmSaveOpen] = useState(false);
 
   const [exportJob, setExportJob] = useState(null);
-  const [isExporting, setIsExporting] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [groupToReset, setGroupToReset] = useState(null);
   const [originalHistoryTags, setOriginalHistoryTags] = useState('');
@@ -345,42 +344,6 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
       const { error: insError } = await supabase.from('transactions').insert(rows);
       if (insError) throw insError;
 
-      // ─── 3. Image Capture (Non-blocking for UI success) ───
-      // We do this in the background and don't let it stop the success flow
-      const runCapture = async () => {
-        try {
-          const dummyGroup = { 
-            voucherCode: refNo, 
-            date: session.date, 
-            supplier: session.supplier, 
-            rep: session.rep, 
-            lines: modalDrafts, 
-            line_note: session.line_note 
-          };
-          setExportJob({ group: dummyGroup, mode: 'silent-capture' });
-          
-          await new Promise(r => setTimeout(r, 800)); // Give it time to render
-          
-          const el = receiptRef.current;
-          if (el) {
-            const html2canvasModule = await import('html2canvas');
-            const html2canvas = html2canvasModule.default || html2canvasModule;
-            const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-            const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-            const imageUrl = await uploadToCloudinary(blob, refNo);
-            if (imageUrl) {
-              await supabase.from('transactions').update({ attachment: imageUrl }).eq('batch_id', batchId);
-            }
-          }
-        } catch (capErr) {
-          console.error('Capture on save failed:', capErr);
-        } finally {
-          setExportJob(null);
-        }
-      };
-
-      runCapture(); // Run in background
-
       toast.success(editingGroupId ? 'تم تحديث السند بنجاح ✅' : 'تم حفظ السند بنجاح ✅');
       closeAddModal();
       
@@ -490,44 +453,16 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
   const resetFilters = () => { setFilterSearch(''); setFilterDateFrom(''); setFilterDateTo(''); };
   const triggerExport = (group, mode) => setExportJob({ group, mode });
 
+  // ─── Native Browser Print ──────────────────────────────────────────
   useEffect(() => {
     if (!exportJob || exportJob.mode === 'silent-capture') return;
-
-    const processExport = async () => {
-      setIsExporting(true);
-      // Wait for template to render off-screen
-      await new Promise(r => setTimeout(r, 600));
-
-      try {
-        const el = exportJob.mode === 'blank-png' ? blankRef.current : receiptRef.current;
-        if (!el) throw new Error("Capture element not found");
-
-        const html2canvas = (await import('html2canvas')).default;
-        const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-
-        if (exportJob.mode === 'png' || exportJob.mode === 'blank-png') {
-          const link = document.createElement('a');
-          link.download = `voucher_${exportJob.group?.voucherCode || 'export'}.png`;
-          link.href = canvas.toDataURL('image/png');
-          link.click();
-        } else {
-          const jsPDF = (await import('jspdf')).default;
-          const pdf = new jsPDF('p', 'mm', 'a4');
-          const imgData = canvas.toDataURL('image/png');
-          pdf.addImage(imgData, 'PNG', 0, 0, 210, 297);
-          pdf.save(`voucher_${exportJob.group?.voucherCode || 'export'}.pdf`);
-        }
-        toast.success('تم استخراج الملف بنجاح');
-      } catch (err) {
-        console.error("Export error:", err);
-        toast.error("فشل في استخراج الملف");
-      } finally {
-        setIsExporting(false);
-        setExportJob(null);
-      }
-    };
-
-    processExport();
+    // Give the template time to render, then trigger native print
+    const timer = setTimeout(() => {
+      window.print();
+      toast.success('تم إرسال السند للطابعة 🖨️');
+      setExportJob(null);
+    }, 400);
+    return () => clearTimeout(timer);
   }, [exportJob]);
 
   const itemSuggestions = useMemo(() => {
@@ -553,28 +488,23 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
   return (
     <div className="flex-1 min-h-0 w-full flex flex-col gap-6 animate-in fade-in duration-500 font-readex" dir="rtl">
       
-      {/* Off-screen Templates */}
-      <div ref={receiptRef} style={{ position: 'fixed', left: '-9999px', top: 0, width: '794px', background: '#fff' }}>
+      {/* Off-screen Templates — visible only during print */}
+      <div ref={receiptRef}
+        className="hidden print:block"
+        style={{ position: 'fixed', left: '-9999px', top: 0, width: '794px', background: '#fff' }}
+      >
         {exportJob && exportJob.mode !== 'blank-png' && (
           <VoucherReceiptTemplate kind={kind} group={exportJob.group} paddedLines={paddedLines} accentHex={accentHex} accentLight={accentLight} accentDark={accentDark} partyLabel={partyLabel} partyValue={partyValue} userName={userName} settings={settings} />
         )}
       </div>
-      <div ref={blankRef} style={{ position: 'fixed', left: '-9999px', top: 0, width: '794px', background: '#fff' }}>
+      <div ref={blankRef}
+        className="hidden print:block"
+        style={{ position: 'fixed', left: '-9999px', top: 0, width: '794px', background: '#fff' }}
+      >
         {exportJob && exportJob.mode === 'blank-png' && (
           <BlankVoucherTemplate kind={kind} accentHex={accentHex} accentLight={accentLight} accentDark={accentDark} partyLabel={partyLabel} settings={settings} />
         )}
       </div>
-
-      <AnimatePresence>
-        {isExporting && (
-          <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-slate-900/40 backdrop-blur-md">
-            <div className="p-8 bg-white dark:bg-slate-800 rounded-3xl shadow-2xl flex flex-col items-center gap-4">
-              <div className="w-12 h-12 border-4 border-slate-200 border-t-primary animate-spin rounded-full" />
-              <p className="text-sm font-black dark:text-white">جاري إنشاء الملف...</p>
-            </div>
-          </div>
-        )}
-      </AnimatePresence>
 
       <VoucherSidePanel
         kind={kind} cfg={cfg} theme={theme} settings={settings}

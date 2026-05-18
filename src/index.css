@@ -268,3 +268,36 @@
     -moz-appearance: textfield;
   }
 }
+
+/* ── Native Browser Print Styles ───────────────────────────────────── */
+@media print {
+  /* Hide the entire app UI during print */
+  body > #root {
+    display: none !important;
+  }
+
+  /* Show only the designated print areas */
+  .print-only-block {
+    display: block !important;
+    position: static !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+  }
+
+  /* For Tailwind print:block utility — make receipt/voucher templates visible */
+  .print\:block {
+    display: block !important;
+    position: static !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    background: #fff !important;
+  }
+
+  /* Page setup */
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+}
