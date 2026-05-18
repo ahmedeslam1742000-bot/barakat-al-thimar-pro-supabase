@@ -25,28 +25,32 @@ export const StatCard = React.memo(({
   return (
     <motion.div
       whileHover={{ y: -4, transition: { duration: 0.25 } }}
-      className="relative rounded-[20px] overflow-hidden cursor-pointer group bg-white shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100/80 hover-stable no-select-click"
+      className="relative h-full flex flex-col rounded-[20px] overflow-hidden cursor-pointer group bg-white shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100/80 hover-stable no-select-click"
       onClick={handleCardClick}
       style={{ willChange: 'transform', backfaceVisibility: 'hidden', transform: 'translate3d(0, 0, 0)' }}
     >
-      <div className="p-6 flex items-center gap-5">
+      <div className="p-6 flex items-start gap-4 flex-1">
         <div
           className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3"
           style={{ backgroundColor: accentColor + '18', color: accentColor }}
         >
           <Icon size={26} strokeWidth={1.8} />
         </div>
-        <div className="flex flex-col">
-          <span className="text-[13px] font-medium text-slate-500 font-readex mb-1">{label}</span>
-          {value !== undefined && value !== null && (
+        <div className="flex flex-col justify-center">
+          <span className="text-[14px] font-bold text-slate-500 font-tajawal mb-1">{label}</span>
+          {value !== undefined && value !== null ? (
             <>
-              <span className="text-[32px] font-bold text-[#0F2747] font-tajawal leading-none tracking-tight">
+              <span className="text-[32px] font-black text-[#0F2747] font-tajawal leading-none tracking-tight">
                 {value}
               </span>
               {subtext && (
-                <span className="text-[11px] text-slate-400 font-readex mt-1.5">{subtext}</span>
+                <span className="text-[12px] text-slate-400 font-readex mt-2">{subtext}</span>
               )}
             </>
+          ) : (
+            <span className="text-[13px] font-medium text-slate-400 font-tajawal leading-relaxed mt-0.5">
+              {subtext}
+            </span>
           )}
         </div>
       </div>
@@ -100,6 +104,7 @@ const StatsCards = React.memo(({
     <StatCard
       icon={Truck}
       label="الوارد"
+      subtext="إدارة مخزونك الوارد"
       actionLabel="إضافة وارد"
       onAction={onAddStock}
       accentColor="#3B82F6"
@@ -111,6 +116,7 @@ const StatsCards = React.memo(({
     <StatCard
       icon={TrendingUp}
       label="الفواتير"
+      subtext="إصدار وإدارة المبيعات"
       actionLabel="فاتورة جديدة"
       onAction={onAddInvoice}
       accentColor="#F59E0B"
@@ -122,6 +128,7 @@ const StatsCards = React.memo(({
     <StatCard
       icon={RotateCcw}
       label="المرتجعات"
+      subtext="متابعة الأصناف المرتجعة"
       actionLabel="تسجيل مرتجع"
       onAction={onAddReturn}
       accentColor="#EF4444"
