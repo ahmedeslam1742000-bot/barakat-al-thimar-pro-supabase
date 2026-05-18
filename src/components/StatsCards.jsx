@@ -47,18 +47,18 @@ export const StatCard = React.memo(({
           <Icon size={26} strokeWidth={2} />
         </div>
         <div className="flex flex-col justify-center pt-1 z-10">
-          <span className="text-[14px] font-bold text-slate-500 font-tajawal mb-1.5 group-hover:text-slate-700 transition-colors">{label}</span>
+          <span className="text-[16px] font-black text-slate-800 font-tajawal mb-1.5 transition-colors">{label}</span>
           {value !== undefined && value !== null ? (
             <>
               <span className="text-[34px] font-black font-tajawal leading-none tracking-tight transition-colors drop-shadow-sm" style={{ color: accentColor }}>
                 {value}
               </span>
               {subtext && (
-                <span className="text-[12px] text-slate-400 font-readex mt-2">{subtext}</span>
+                <span className="text-[12px] font-bold text-slate-500 font-readex mt-2">{subtext}</span>
               )}
             </>
           ) : (
-            <span className="text-[14px] font-medium text-slate-500 font-tajawal leading-relaxed mt-1">
+            <span className="text-[14px] font-bold text-slate-600 font-tajawal leading-relaxed mt-1">
               {subtext}
             </span>
           )}
@@ -69,7 +69,7 @@ export const StatCard = React.memo(({
         <div className="px-5 pb-5 mt-auto z-10">
           <button
             type="button"
-            className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-[14px] font-bold font-tajawal transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
+            className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-[15px] font-black font-tajawal transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
             style={{ 
               backgroundColor: accentColor, 
               color: '#ffffff',
