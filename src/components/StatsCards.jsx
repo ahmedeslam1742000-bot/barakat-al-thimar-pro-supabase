@@ -11,10 +11,10 @@ export const StatCard = React.memo(({
   onAction,
   accentColor = '#10B981',
   navigateTo,
-  setActiveView,
+  
 }) => {
   const handleCardClick = () => {
-    if (navigateTo && setActiveView) setActiveView(navigateTo);
+    if (navigateTo) navigate({ to: '/' + navigateTo });
   };
 
   const handleActionClick = (e) => {
@@ -98,7 +98,7 @@ const StatsCards = React.memo(({
   onAddStock,
   onAddInvoice,
   onAddReturn,
-  setActiveView,
+  
 }) => (
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 shrink-0">
     {/* ── كارت 1: إجمالي الأصناف ── */}
@@ -111,7 +111,7 @@ const StatsCards = React.memo(({
       onAction={onAddItem}
       accentColor="#10B981"
       navigateTo="items"
-      setActiveView={setActiveView}
+      
     />
 
     {/* ── كارت 2: الوارد → صفحة المخزون ── */}
@@ -123,7 +123,7 @@ const StatsCards = React.memo(({
       onAction={onAddStock}
       accentColor="#3B82F6"
       navigateTo="stock-in"
-      setActiveView={setActiveView}
+      
     />
 
     {/* ── كارت 3: الفواتير → صفحة الفواتير ── */}
@@ -135,7 +135,7 @@ const StatsCards = React.memo(({
       onAction={onAddInvoice}
       accentColor="#F59E0B"
       navigateTo="stock-out"
-      setActiveView={setActiveView}
+      
     />
 
     {/* ── كارت 4: المرتجعات → صفحة المرتجعات ── */}
@@ -147,7 +147,7 @@ const StatsCards = React.memo(({
       onAction={onAddReturn}
       accentColor="#EF4444"
       navigateTo="returns"
-      setActiveView={setActiveView}
+      
     />
   </div>
 ));

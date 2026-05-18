@@ -24,13 +24,15 @@ import { useSettings } from '../contexts/SettingsContext';
 import { supabase } from '../lib/supabaseClient';
 import Sidebar from './Sidebar';
 import { normalizeArabic } from '../lib/arabicTextUtils';
+import { useNavigate } from '@tanstack/react-router';
 
-export default function MainLayout({ children, activeView, setActiveView }) {
+export default function MainLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { currentUser, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
   const { isMuted, toggleMute } = useAudio();
   const { settings } = useSettings();
+  const navigate = useNavigate();
   
   const [criticalItems, setCriticalItems] = useState([]);
   const [allItems, setAllItems] = useState([]);
@@ -116,8 +118,6 @@ export default function MainLayout({ children, activeView, setActiveView }) {
       <Sidebar 
         isSidebarOpen={isSidebarOpen} 
         setIsSidebarOpen={setIsSidebarOpen}
-        activeView={activeView}
-        setActiveView={setActiveView}
       />
 
       {/* Main Content Area */}
@@ -253,7 +253,7 @@ export default function MainLayout({ children, activeView, setActiveView }) {
                     </div>
                     <div className="p-1">
                       <button 
-                        onClick={() => { setActiveView('settings'); setIsProfileOpen(false); }}
+                        onClick={() => { navigate({ to: '/settings' }); setIsProfileOpen(false); }}
                         className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-600 font-bold hover:bg-slate-50 rounded-lg transition-colors"
                       >
                         <Settings size={16} className="text-slate-400" />
@@ -279,7 +279,7 @@ export default function MainLayout({ children, activeView, setActiveView }) {
           <div className="print:hidden shrink-0 flex items-center gap-3 px-6 py-2.5 bg-rose-600 text-white text-xs font-black z-30 shadow-lg shadow-rose-600/20">
             <AlertOctagon size={16} className="animate-pulse" />
             <span className="flex-1">النظام مجمَّد — جميع عمليات الإدخال معطّلة حتى يتم إلغاء التجميد من صفحة الإعدادات</span>
-            <button type="button" onClick={() => setActiveView('settings')} className="shrink-0 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg transition-colors border border-white/20">الإعدادات</button>
+            <button type="button" onClick={() => navigate({ to: '/settings' })} className="shrink-0 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg transition-colors border border-white/20">الإعدادات</button>
           </div>
         )}
 

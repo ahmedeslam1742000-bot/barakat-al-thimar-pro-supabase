@@ -47,7 +47,7 @@ import DashboardConfirmationDialogs from './dashboard/DashboardConfirmationDialo
 const FUNCTIONAL_INBOUND_TYPE = 'سند إدخال';
 const FUNCTIONAL_OUTBOUND_TYPE = 'سند إخراج';
 
-export default function Dashboard({ setActiveView, activeView }) {
+export default function Dashboard({}) {
   const [isStockInModalOpen, setIsStockInModalOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [invoiceTimestamps, setInvoiceTimestamps] = useState({});
@@ -158,7 +158,7 @@ export default function Dashboard({ setActiveView, activeView }) {
     playWarning,
     playSuccess,
     fetchInitialData,
-    setActiveView,
+    
     invoiceTimestamps,
     setInvoiceTimestamps,
     setSourceVoucher,
@@ -283,7 +283,7 @@ export default function Dashboard({ setActiveView, activeView }) {
         onAddInvoice={openInvoiceModal}
         onAddReturn={openReturnModal}
         onOpenMorningBrief={() => setIsMorningBriefOpen(true)}
-        setActiveView={setActiveView}
+        
       />
 
       {/* ─── PHASE 2: MOVEMENT COLUMNS ─── */}

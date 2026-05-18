@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -61,7 +62,8 @@ const PriceItemRow = React.memo(({ item, idx, isViewer, openEditModal }) => {
   );
 });
 
-export default function PriceList({ setActiveView }) {
+export default function () {
+  const navigate = useNavigate();
   const { isViewer } = useAuth();
   const { items, fetchInitialData } = useData();
   const [searchQuery, setSearchQuery] = useState('');
@@ -234,7 +236,7 @@ export default function PriceList({ setActiveView }) {
         </div>
 
         <button 
-          onClick={() => setActiveView('dashboard')}
+          onClick={() => navigate({ to: '/' })}
           className="flex items-center justify-center w-12 h-12 bg-rose-50 border border-rose-100 text-rose-500 rounded-2xl hover:bg-rose-100 transition-all active:scale-95 shadow-sm"
         >
           <LogOut size={22} className="rotate-180" />

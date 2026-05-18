@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -15,7 +16,8 @@ import { normalizeArabic } from '../lib/arabicTextUtils';
 const CATS = ['مجمدات', 'بلاستيك', 'تبريد'];
 const UNITS = ['كرتونة', 'قطعة', 'كيلو', 'لتر', 'طرد', 'علبة'];
 
-export default function Items({ setActiveView }) {
+export default function () {
+  const navigate = useNavigate();
   const { isViewer } = useAuth();
   // ─── Items from global DataContext (no independent fetch or Realtime channel needed) ───
   const { items } = useData();
@@ -161,7 +163,7 @@ export default function Items({ setActiveView }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <button onClick={() => setActiveView && setActiveView('dashboard')} title="العودة للرئيسية" className="flex items-center justify-center w-11 h-11 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 rounded-2xl transition-all hover:bg-rose-100 hover:scale-105 active:scale-95"><LogOut size={20} strokeWidth={2.5} className="rotate-180" /></button>
+          <button onClick={() => navigate({ to: '/' })} title="العودة للرئيسية" className="flex items-center justify-center w-11 h-11 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 rounded-2xl transition-all hover:bg-rose-100 hover:scale-105 active:scale-95"><LogOut size={20} strokeWidth={2.5} className="rotate-180" /></button>
           <button onClick={() => setIsPreviewModalOpen(true)} title="معاينة الدليل" className="flex items-center justify-center w-11 h-11 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 rounded-2xl transition-all hover:bg-emerald-100 hover:scale-105 active:scale-95"><FileDown size={20} strokeWidth={2.5} /></button>
         </div>
       </div>

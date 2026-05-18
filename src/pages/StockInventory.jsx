@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   ClipboardList, Search, Snowflake, Thermometer, Package, PackageX,
@@ -49,7 +50,8 @@ const InventoryItemRow = React.memo(({ item, idx, lowStockThreshold }) => {
   );
 });
 
-export default function StockInventory({ setActiveView }) {
+export default function () {
+  const navigate = useNavigate();
   const { items } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [catFilter, setCatFilter] = useState('الكل');
@@ -359,7 +361,7 @@ export default function StockInventory({ setActiveView }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <button onClick={() => setActiveView && setActiveView('dashboard')} title="العودة للرئيسية" className="flex items-center justify-center w-11 h-11 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 rounded-2xl transition-all hover:bg-rose-100 hover:scale-105 active:scale-95"><LogOut size={20} strokeWidth={2.5} className="rotate-180" /></button>
+            <button onClick={() => navigate({ to: '/' })} title="العودة للرئيسية" className="flex items-center justify-center w-11 h-11 bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 rounded-2xl transition-all hover:bg-rose-100 hover:scale-105 active:scale-95"><LogOut size={20} strokeWidth={2.5} className="rotate-180" /></button>
             <button onClick={handleExportExcel} title="تصدير ملف اكسيل" className="flex items-center justify-center w-11 h-11 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400 rounded-2xl transition-all hover:bg-emerald-100 hover:scale-105 active:scale-95"><FileDown size={20} strokeWidth={2.5} /></button>
             <button onClick={handlePrintPDF} title="طباعة التقرير" className="flex items-center justify-center w-11 h-11 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 rounded-2xl transition-all hover:bg-indigo-100 hover:scale-105 active:scale-95"><Printer size={20} strokeWidth={2.5} /></button>
           </div>

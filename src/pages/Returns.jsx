@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -137,7 +138,8 @@ const ModalWrapper = ({
 const InputClass = 'w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm font-bold rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 block px-4 py-2.5 outline-none transition-all';
 const LabelClass = 'block text-xs font-black text-slate-700 mb-1.5 transition-colors duration-300';
 
-export default function Returns({ setActiveView }) {
+export default function () {
+  const navigate = useNavigate();
   const { playSuccess, playWarning } = useAudio();
   const { currentUser, isViewer } = useAuth();
 
@@ -570,7 +572,7 @@ export default function Returns({ setActiveView }) {
 
           <div className="flex items-center gap-3">
              <button 
-               onClick={() => setActiveView('dashboard')}
+               onClick={() => navigate({ to: '/' })}
                className="w-11 h-11 bg-rose-50 text-rose-500 hover:bg-rose-100 hover:text-rose-600 rounded-[14px] flex items-center justify-center transition-all border border-rose-100 group shadow-sm shadow-rose-500/10"
                title="العودة للرئيسية"
              >

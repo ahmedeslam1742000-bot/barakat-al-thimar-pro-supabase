@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -88,7 +89,8 @@ const emptyForm = { name: '', phone: '', zone: '' };
 /* ══════════════════════════════════════════════════════
    MAIN COMPONENT
 ══════════════════════════════════════════════════════ */
-export default function Reps({ setActiveView }) {
+export default function () {
+  const navigate = useNavigate();
   const { playSuccess, playWarning } = useAudio();
   const { isViewer } = useAuth();
 
@@ -275,7 +277,7 @@ export default function Reps({ setActiveView }) {
                </button>
              )}
              <button 
-               onClick={() => setActiveView && setActiveView('dashboard')}
+               onClick={() => navigate({ to: '/' })}
                className="w-11 h-11 bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500/20 hover:text-rose-600 rounded-[14px] flex items-center justify-center transition-all border border-rose-100 dark:border-rose-500/20 group shadow-sm shadow-rose-500/10 shrink-0"
                title="العودة للرئيسية"
              >

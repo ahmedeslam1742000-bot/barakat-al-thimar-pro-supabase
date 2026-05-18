@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -77,7 +78,8 @@ const categoryIcons = {
   'الكل': <LayoutGrid size={14} className="text-slate-400" />
 };
 
-export default function InboundRecords({ setActiveView }) {
+export default function () {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('الكل');
   const [dateRange, setDateRange] = useState({ from: '', to: '' });
@@ -272,7 +274,7 @@ export default function InboundRecords({ setActiveView }) {
 
             <div className="flex items-center gap-3">
                <button 
-                 onClick={() => setActiveView('dashboard')}
+                 onClick={() => navigate({ to: '/' })}
                  className="w-11 h-11 bg-rose-50 dark:bg-rose-500/10 text-rose-500 dark:text-rose-400 rounded-[14px] flex items-center justify-center transition-all border border-rose-100 dark:border-rose-500/20 group shadow-sm shadow-rose-500/10"
                  title="العودة للرئيسية"
                >

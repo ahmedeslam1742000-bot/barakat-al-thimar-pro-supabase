@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -18,7 +19,8 @@ const categoryIcons = {
 };
 const getCatIcon = (catName) => categoryIcons[catName] || <Package size={18} className="text-slate-500" />;
 
-export default function StockOut({ setActiveView }) {
+export default function () {
+  const navigate = useNavigate();
   // ─── Data from global DataContext (no independent fetch needed) ───
   const { items, dbTransactionsList: transactions } = useData();
   const [searchQuery, setSearchQuery] = useState('');
@@ -127,7 +129,7 @@ export default function StockOut({ setActiveView }) {
             </div>
           </div>
           <div className="flex items-center gap-3">
-             <button onClick={() => setActiveView('dashboard')} className="w-11 h-11 bg-rose-50 text-rose-500 hover:bg-rose-100 hover:text-rose-600 rounded-[14px] flex items-center justify-center transition-all border border-rose-100 group shadow-sm shadow-rose-500/10">
+             <button onClick={() => navigate({ to: '/' })} className="w-11 h-11 bg-rose-50 text-rose-500 hover:bg-rose-100 hover:text-rose-600 rounded-[14px] flex items-center justify-center transition-all border border-rose-100 group shadow-sm shadow-rose-500/10">
                 <LogOut size={22} className="group-hover:-translate-x-1 transition-transform rotate-180" />
              </button>
           </div>

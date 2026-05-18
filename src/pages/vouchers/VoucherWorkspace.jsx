@@ -118,7 +118,7 @@ const uploadToCloudinary = async (blob, voucherCode) => {
    MAIN WORKSPACE COMPONENT
 ═══════════════════════════════════════════════════════════════════ */
 
-export default function VoucherWorkspace({ kind, setActiveView }) {
+export default function VoucherWorkspace({ kind }) {
   const cfg = KIND_CONFIG[kind];
   const theme = accentTheme(cfg.accent);
   const { playSuccess, playWarning } = useAudio();
@@ -349,7 +349,7 @@ export default function VoucherWorkspace({ kind, setActiveView }) {
       
       if (fetchInitialData) fetchInitialData();
       
-      if (setActiveView) {
+      {
           // Force a refresh of the list
           setLoading(true);
           setTimeout(() => setLoading(false), 500);

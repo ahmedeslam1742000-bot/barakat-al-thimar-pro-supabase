@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -55,7 +56,8 @@ const categoryIcons = {
 
 const getCatIcon = (cat) => categoryIcons[cat] || <Package size={16} className="text-slate-400" />;
 
-export default function InboundItems({ setActiveView }) {
+export default function () {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -234,7 +236,7 @@ export default function InboundItems({ setActiveView }) {
              <button onClick={() => setIsPreviewModalOpen(true)} className="w-10 h-10 flex items-center justify-center rounded-[12px] bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all active:scale-95 border border-emerald-100/50">
                 <FileDown size={18} />
              </button>
-             <button onClick={() => setActiveView('dashboard')} className="w-10 h-10 flex items-center justify-center rounded-[12px] bg-rose-50 text-rose-500 hover:bg-rose-100 transition-all active:scale-95 border border-rose-100/50">
+             <button onClick={() => navigate({ to: '/' })} className="w-10 h-10 flex items-center justify-center rounded-[12px] bg-rose-50 text-rose-500 hover:bg-rose-100 transition-all active:scale-95 border border-rose-100/50">
                 <LogOut size={18} className="rotate-180" />
              </button>
           </div>

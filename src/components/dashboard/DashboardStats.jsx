@@ -10,7 +10,7 @@ const DashboardStats = ({
   onAddInvoice,
   onAddReturn,
   onOpenMorningBrief,
-  setActiveView,
+  
 }) => {
   const today = new Date().toLocaleDateString('ar-SA', {
     weekday: 'long',
@@ -62,7 +62,7 @@ const DashboardStats = ({
         onAddStock={onAddStock}
         onAddInvoice={onAddInvoice}
         onAddReturn={onAddReturn}
-        setActiveView={setActiveView}
+        
       />
     </div>
   );

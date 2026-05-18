@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -22,7 +23,8 @@ const categoryIcons = {
 
 const getCatIcon = (cat) => categoryIcons[cat] || <Package size={16} className="text-slate-400" />;
 
-export default function StockCard({ setActiveView }) {
+export default function () {
+  const navigate = useNavigate();
   const { items } = useData();
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -217,7 +219,7 @@ export default function StockCard({ setActiveView }) {
             />
           </div>
 
-          <button onClick={() => setActiveView('dashboard')} className="w-12 h-12 flex items-center justify-center rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-all active:scale-95 border border-rose-100/50">
+          <button onClick={() => navigate({ to: '/' })} className="w-12 h-12 flex items-center justify-center rounded-2xl bg-rose-50 text-rose-500 hover:bg-rose-100 transition-all active:scale-95 border border-rose-100/50">
              <LogOut size={20} className="rotate-180" />
           </button>
         </div>

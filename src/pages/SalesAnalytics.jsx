@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import React from 'react';
 import AnalyticsSection from '../components/dashboard/AnalyticsSection';
 import { useData } from '../contexts/DataContext';
@@ -5,7 +6,8 @@ import { useTransactionAnalytics } from '../hooks/useTransactionAnalytics';
 import { motion } from 'framer-motion';
 import { TrendingUp, ArrowRight, Filter, Calendar, Building2, Search } from 'lucide-react';
 
-export default function SalesAnalytics({ setActiveView }) {
+export default function () {
+  const navigate = useNavigate();
   const { items, dbTransactionsList } = useData();
   
   const {
@@ -28,7 +30,7 @@ export default function SalesAnalytics({ setActiveView }) {
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             <button 
-              onClick={() => setActiveView('dashboard')}
+              onClick={() => navigate({ to: '/' })}
               className="w-12 h-12 flex items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-indigo-600 transition-all border border-transparent hover:border-indigo-100 shadow-sm"
             >
               <ArrowRight size={24} />

@@ -22,6 +22,7 @@ import {
   Banknote
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate, useLocation } from '@tanstack/react-router';
 
 const menuGroups = [
   {
@@ -80,26 +81,31 @@ const menuGroups = [
   }
 ];
 
-export default function Sidebar({ isSidebarOpen, setIsSidebarOpen, activeView, setActiveView }) {
+export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
   const { logout, isAdmin, canAccess } = useAuth();
   const [openGroup, setOpenGroup] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activePath = location.pathname;
+
+  const getPath = (view) => view === 'dashboard' ? '/' : `/${view}`;
 
   const toggleGroup = (groupId) => {
     setOpenGroup(openGroup === groupId ? null : groupId);
   };
 
   const handleStaticClick = (view) => {
-    setActiveView(view);
+    navigate({ to: getPath(view) });
     setOpenGroup(null);
   };
 
   const handleSubItemClick = (view) => {
-    setActiveView(view);
+    navigate({ to: getPath(view) });
   };
 
   const isGroupActive = (group) => {
-    if (group.isStatic) return activeView === group.view;
-    return group.subItems.some(sub => sub.view === activeView);
+    if (group.isStatic) return activePath === getPath(group.view);
+    return group.subItems.some(sub => activePath === getPath(sub.view));
   };
 
   return (
@@ -185,7 +191,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen, activeView, s
                         >
                           <div className="flex flex-col py-0.5 mt-0.5 pr-10 space-y-0.5">
                             {allowedSubItems.map((sub) => {
-                              const isSubActive = activeView === sub.view;
+                              const isSubActive = activePath === getPath(sub.view);
                               return (
                                 <button
                                   key={sub.id}
@@ -216,14 +222,14 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen, activeView, s
           <div className="p-4 border-t border-slate-100 shrink-0 space-y-1.5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl">
             {isAdmin && (
               <button
-                onClick={() => setActiveView('settings')}
+                onClick={() => navigate({ to: '/settings' })}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-300 font-medium text-xs ${
-                  activeView === 'settings'
+                  activePath === '/settings'
                     ? 'bg-primary text-white shadow-lg shadow-primary/20'
                     : 'text-slate-500 hover:bg-slate-100/50'
                 }`}
               >
-                <div className={`p-1 rounded-md ${activeView === 'settings' ? 'bg-white/10' : ''}`}>
+                <div className={`p-1 rounded-md ${activePath === '/settings' ? 'bg-white/10' : ''}`}>
                   <Settings size={16} />
                 </div>
                 <span>الإعدادات</span>

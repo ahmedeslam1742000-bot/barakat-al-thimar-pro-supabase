@@ -29,7 +29,7 @@ export function useVoucherDetail({
   playWarning,
   playSuccess,
   fetchInitialData,
-  setActiveView,
+  
   invoiceTimestamps: controlledInvoiceTimestamps,
   setInvoiceTimestamps: controlledSetInvoiceTimestamps,
   // Invoice bridge
@@ -186,12 +186,12 @@ export function useVoucherDetail({
     const view = voucher.kind === 'in' ? 'voucher-in' : 'voucher-outward';
     try {
       await localforage.setItem('edit_voucher_id', voucher.id);
-      if (setActiveView) setActiveView(view);
+      navigate({ to: '/' + view });
       closeVoucherDetail();
     } catch (err) {
       toast.error('فشل حفظ التعديل محلياً.');
     }
-  }, [setActiveView, closeVoucherDetail]);
+  }, [ closeVoucherDetail]);
 
   // ─── Mark voucher as invoiced ─────────────────────────────────────────
   const handleMarkAsInvoiced = useCallback(async (voucher = null) => {
@@ -335,7 +335,7 @@ export function useVoucherDetail({
       const view = voucher.kind === 'in' ? 'voucher-in' : 'voucher-outward';
       try {
         await localforage.setItem('duplicate_voucher_data', voucher);
-        if (setActiveView) setActiveView(view);
+        navigate({ to: '/' + view });
         setIsVoucherDetailOpen(false);
       } catch (err) {
         toast.error('فشل حفظ السند المكرر. الذاكرة قد تكون ممتلئة.');
