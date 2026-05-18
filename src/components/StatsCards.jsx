@@ -25,14 +25,14 @@ export const StatCard = React.memo(({
   return (
     <motion.div
       whileHover={{ y: -6, transition: { duration: 0.3 } }}
-      className="relative h-full flex flex-col justify-between rounded-[24px] overflow-hidden cursor-pointer group shadow-sm hover:shadow-2xl transition-all duration-300 border no-select-click"
+      className="relative h-full flex flex-col justify-between rounded-[24px] overflow-hidden cursor-pointer group shadow-sm hover:shadow-2xl transition-all duration-300 border-2 no-select-click"
       onClick={handleCardClick}
       style={{ 
         willChange: 'transform', 
         backfaceVisibility: 'hidden', 
         transform: 'translate3d(0, 0, 0)',
         background: `linear-gradient(135deg, #ffffff 0%, ${accentColor}0a 100%)`,
-        borderColor: `${accentColor}20`
+        borderColor: `${accentColor}40`
       }}
     >
       <div className="p-6 pb-4 flex items-start gap-4">
