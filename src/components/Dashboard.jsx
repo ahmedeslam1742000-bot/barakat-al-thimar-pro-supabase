@@ -487,11 +487,6 @@ export default function Dashboard({}) {
       )}
 
 
-      {/* Hidden Invoice Template for Capture */}
-      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', opacity: 0, pointerEvents: 'none' }}>
-        {invoiceDataForCapture && <InvoiceTemplate data={invoiceDataForCapture} />}
-      </div>
-
       <DashboardConfirmationDialogs
         showInvoiceExitConfirm={showInvoiceExitConfirm}
         setShowInvoiceExitConfirm={setShowInvoiceExitConfirm}
