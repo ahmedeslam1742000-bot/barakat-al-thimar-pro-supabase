@@ -1,4 +1,4 @@
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -24,12 +24,13 @@ const CATS = ['مجمدات', 'بلاستيك', 'تبريد'];
 const UNITS = ['كرتونة', 'قطعة', 'كيلو', 'لتر', 'طرد', 'علبة'];
 
 export default function () {
-  const navigate = useNavigate();
+  const navigate = useNavigate({ from: '/items' });
+  const { q: searchQuery, category: activeCategory } = useSearch({ from: '/items' });
   const { isViewer } = useAuth();
-  // ─── Items from global DataContext (no independent fetch or Realtime channel needed) ───
   const { items } = useData();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('الكل');
+  
+  const setSearchQuery = (val) => navigate({ search: prev => ({ ...prev, q: val }), replace: true });
+  const setActiveCategory = (val) => navigate({ search: prev => ({ ...prev, category: val }), replace: true });
   const [dynamicCats] = useState(CATS);
   const [dynamicUnits] = useState(UNITS);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);

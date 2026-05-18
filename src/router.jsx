@@ -82,6 +82,10 @@ const itemsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/items',
   component: withPermission('items', Items),
+  validateSearch: (search) => ({
+    q: search.q || '',
+    category: search.category || 'الكل',
+  }),
 });
 
 const stockInRoute = createRoute({
