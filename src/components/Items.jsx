@@ -12,6 +12,13 @@ import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  flexRender,
+} from '@tanstack/react-table';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 const CATS = ['مجمدات', 'بلاستيك', 'تبريد'];
 const UNITS = ['كرتونة', 'قطعة', 'كيلو', 'لتر', 'طرد', 'علبة'];
@@ -39,25 +46,76 @@ export default function () {
                           normalizeArabic(item.company || '').includes(q);
       const matchCat = activeCategory === 'الكل' || item.cat === activeCategory;
       return matchSearch && matchCat;
-    }).sort((a, b) => {
-      if (a.cat === 'مجمدات' && b.cat !== 'مجمدات') return -1;
-      if (a.cat !== 'مجمدات' && b.cat === 'مجمدات') return 1;
-      const catOrder = (a.cat || '').localeCompare(b.cat || '', 'ar');
-      if (catOrder !== 0) return catOrder;
-      return (a.name || '').localeCompare(b.name || '', 'ar');
     });
   }, [items, searchQuery, activeCategory]);
 
-  // --- GROUPING ---
-  const groupedItems = useMemo(() => {
-    const groups = {};
-    filteredItems.forEach(item => {
-      const cat = item.cat || 'أخرى';
-      if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(item);
-    });
-    return groups;
-  }, [filteredItems]);
+  const [sorting, setSorting] = useState([
+    { id: 'cat', desc: false },
+    { id: 'name', desc: false }
+  ]);
+
+  const columns = useMemo(() => [
+    {
+      id: 'index',
+      header: 'م',
+      cell: info => <span className="text-[11px] font-black text-slate-400">{info.row.index + 1}</span>,
+      size: 60,
+    },
+    {
+      accessorKey: 'name',
+      header: 'اسم الصنف',
+      cell: info => <div className="font-tajawal font-bold text-sm text-slate-800 dark:text-white leading-none">{info.getValue()}</div>,
+      size: 300,
+    },
+    {
+      accessorKey: 'company',
+      header: 'الشركة',
+      cell: info => <div className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200 inline-block">{info.getValue() || 'بدون شركة'}</div>,
+      size: 150,
+    },
+    {
+      accessorKey: 'cat',
+      header: 'القسم',
+      cell: info => <span className="text-[10px] font-black px-2.5 py-0.5 rounded-lg border bg-slate-50 text-slate-600 border-slate-100">{info.getValue()}</span>,
+      size: 100,
+    },
+    {
+      accessorKey: 'unit',
+      header: 'وحدة القياس',
+      cell: info => <div className="text-[11px] font-bold text-slate-600">{info.getValue()}</div>,
+      size: 100,
+    },
+    {
+      id: 'actions',
+      header: 'إجراء',
+      cell: ({ row }) => !isViewer ? (
+        <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+          <button onClick={() => openEditModal(row.original)} className="p-2 text-primary hover:bg-primary/10 rounded-xl transition-all"><Pencil size={15} /></button>
+          <button onClick={() => openDeleteModal(row.original)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><Trash size={15} /></button>
+        </div>
+      ) : null,
+      size: 100,
+    }
+  ], [isViewer]);
+
+  const table = useReactTable({
+    data: filteredItems,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
+
+  const parentRef = React.useRef(null);
+  const { rows } = table.getRowModel();
+
+  const rowVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 52, // approximate row height in px
+    overscan: 10,
+  });
 
   const openEditModal = (item) => {
     setSelectedItem(item);
@@ -184,38 +242,52 @@ export default function () {
 
       {/* ═══ TABLE ═══ */}
       <div className="flex-1 overflow-hidden flex flex-col bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-700 shadow-sm">
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
-          <table className="w-full border-separate border-spacing-0">
-            <thead className="sticky top-0 z-20 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-              <tr>
-                <th className="px-4 py-3 text-center text-[10px] font-black text-slate-500 w-12 border-x border-slate-100">م</th>
-                <th className="px-4 py-3 text-center text-[10px] font-black text-slate-500 border-x border-slate-100">اسم الصنف</th>
-                <th className="px-4 py-3 text-center text-[10px] font-black text-slate-500 w-48 border-x border-slate-100">الشركة</th>
-                <th className="px-4 py-3 text-center text-[10px] font-black text-slate-500 w-32 border-x border-slate-100">القسم</th>
-                <th className="px-4 py-3 text-center text-[10px] font-black text-slate-500 w-32 border-x border-slate-100">وحدة القياس</th>
-                <th className="px-4 py-3 text-center text-[10px] font-black text-slate-500 w-28 border-x border-slate-100">إجراء</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredItems.map((item, idx) => (
-                <tr key={item.id} className="group hover:bg-slate-50 transition-colors border-b border-slate-100">
-                  <td className="px-4 py-2.5 text-center align-middle"><span className="text-[11px] font-black text-slate-400">{idx + 1}</span></td>
-                  <td className="px-4 py-2.5 text-center align-middle"><div className="font-tajawal font-bold text-sm text-slate-800 dark:text-white leading-none">{item.name}</div></td>
-                  <td className="px-4 py-2.5 text-center align-middle"><div className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200 inline-block">{item.company || 'بدون شركة'}</div></td>
-                  <td className="px-4 py-2.5 text-center align-middle"><span className="text-[10px] font-black px-2.5 py-0.5 rounded-lg border bg-slate-50 text-slate-600 border-slate-100">{item.cat}</span></td>
-                  <td className="px-4 py-2.5 text-center align-middle"><div className="text-[11px] font-bold text-slate-600">{item.unit}</div></td>
-                  <td className="px-4 py-2.5 text-center align-middle">
-                    {!isViewer && (
-                      <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                        <button onClick={() => openEditModal(item)} className="p-2 text-primary hover:bg-primary/10 rounded-xl transition-all"><Pencil size={15} /></button>
-                        <button onClick={() => openDeleteModal(item)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><Trash size={15} /></button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div ref={parentRef} className="flex-1 overflow-y-auto custom-scrollbar p-1">
+          <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+            <table className="w-full border-separate border-spacing-0">
+              <thead className="sticky top-0 z-20 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+                {table.getHeaderGroups().map(headerGroup => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map(header => (
+                      <th 
+                        key={header.id} 
+                        style={{ width: header.getSize() }}
+                        className="px-4 py-3 text-center text-[10px] font-black text-slate-500 border-x border-slate-100 cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {{
+                            asc: ' 🔼',
+                            desc: ' 🔽',
+                          }[header.column.getIsSorted()] ?? null}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+              <tbody style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${rowVirtualizer.getVirtualItems()[0]?.start ?? 0}px)` }}>
+                {rowVirtualizer.getVirtualItems().map(virtualRow => {
+                  const row = rows[virtualRow.index];
+                  return (
+                    <tr 
+                      key={row.id} 
+                      data-index={virtualRow.index}
+                      ref={rowVirtualizer.measureElement}
+                      className="group hover:bg-slate-50 transition-colors border-b border-slate-100"
+                    >
+                      {row.getVisibleCells().map(cell => (
+                        <td key={cell.id} className="px-4 py-2.5 text-center align-middle">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
