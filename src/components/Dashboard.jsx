@@ -44,6 +44,8 @@ import DashboardConfirmationDialogs from './dashboard/DashboardConfirmationDialo
 
 // (تم تنظيف المكونات والبيانات الوهمية غير المستخدمة هنا)
 
+const FUNCTIONAL_INBOUND_TYPE = 'سند إدخال';
+const FUNCTIONAL_OUTBOUND_TYPE = 'سند إخراج';
 
 export default function Dashboard({ setActiveView, activeView }) {
   const [isStockInModalOpen, setIsStockInModalOpen] = useState(false);
