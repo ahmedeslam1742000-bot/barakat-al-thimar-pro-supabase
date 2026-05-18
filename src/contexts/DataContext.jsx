@@ -8,6 +8,8 @@ export function DataProvider({ children, currentUser }) {
   const computed = useComputedData();
 
   useEffect(() => {
+    if (!currentUser) return; // Wait until logged in
+    
     store.fetchInitialData();
     store.initRealtime();
     return () => {
@@ -16,7 +18,7 @@ export function DataProvider({ children, currentUser }) {
       store.cleanupRealtime();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [currentUser]);
 
   const value = useMemo(() => ({
     items: store.items,
