@@ -162,6 +162,7 @@ export default function VoucherWorkspace({ kind }) {
   const [isConfirmSaveOpen, setIsConfirmSaveOpen] = useState(false);
 
   const [exportJob, setExportJob] = useState(null);
+  const isExporting = !!exportJob;
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [groupToReset, setGroupToReset] = useState(null);
   const [originalHistoryTags, setOriginalHistoryTags] = useState('');
