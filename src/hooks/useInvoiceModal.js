@@ -159,7 +159,7 @@ export function useInvoiceModal({
 
   // ─── Validation → triggers confirmation dialog ────────────────────────
   const handleAddInvoice = useCallback((e) => {
-    if (e) e.preventDefault();
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (!invoiceForm.client.trim()) {
       setInvoiceErrors({ client: true });
       return toast.error('أدخل اسم العميل أولاً!');

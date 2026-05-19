@@ -137,7 +137,7 @@ export function useReturnModal({
 
   // ─── Validation → triggers confirmation dialog ────────────────────────
   const handleAddReturn = useCallback((e) => {
-    if (e) e.preventDefault();
+    if (e && typeof e.preventDefault === 'function') e.preventDefault();
     if (!returnForm.returnee.trim()) {
       setReturnErrors({ returnee: true });
       return toast.error('يرجى تحديد الشخص أو الجهة التي قامت بالترجيع');
