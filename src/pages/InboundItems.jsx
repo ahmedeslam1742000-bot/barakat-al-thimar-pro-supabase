@@ -66,12 +66,6 @@ export default function () {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
   const parentRef = React.useRef(null);
-  const rowVirtualizer = useVirtualizer({
-    count: 0, // Will be updated
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 52,
-    overscan: 10,
-  });
 
   // ─── Phase 2: استخدام RPC بدلاً من جلب كل السجلات وحسابها في المتصفح ───
   const fetchInboundItems = useCallback(async () => {
@@ -155,8 +149,12 @@ export default function () {
     });
   }, [transactions, debouncedSearchQuery, categoryFilter]);
 
-  // Update virtualizer count when items change
-  rowVirtualizer.options.count = filteredItems.length;
+  const rowVirtualizer = useVirtualizer({
+    count: filteredItems.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 52,
+    overscan: 10,
+  });
 
   const groupedItems = useMemo(() => {
     const groups = {};
@@ -278,7 +276,7 @@ export default function () {
 
 
           <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex-1 flex flex-col">
-          <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar">
+          <div ref={parentRef} className="flex-1 overflow-auto">
             {loading ? (
               <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
                 <div className="w-12 h-12 border-4 border-slate-100 border-t-emerald-500 rounded-full animate-spin" />
@@ -301,24 +299,23 @@ export default function () {
                     <th className="px-4 py-2 text-center w-32 border-x border-slate-100 text-teal-600">السليم الحالي</th>
                     <th className="px-4 py-2 text-center w-32 border-x border-slate-100 text-rose-600">التالف الحالي</th>
                     <th className="px-4 py-2 text-center w-48 border-x border-slate-100">القسم</th>
-                    <th className="px-4 py-2 text-center w-48 border-x border-slate-100">القسم</th>
                     <th className="px-4 py-2 text-center w-48 border-x border-slate-100">وحدة القياس</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {rowVirtualizer.getVirtualItems().length > 0 && rowVirtualizer.getVirtualItems()[0].start > 0 && (
-                    <tr><td style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} colSpan={8} /></tr>
+                    <tr><td style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} colSpan={7} /></tr>
                   )}
                   {rowVirtualizer.getVirtualItems().map((virtualRow) => (
                     <InboundItemRow 
-                      key={filteredItems[virtualRow.index].uniqueId} 
-                      it={filteredItems[virtualRow.index]} 
-                      idx={virtualRow.index} 
-                      getCatIcon={getCatIcon} 
+                       key={filteredItems[virtualRow.index].uniqueId} 
+                       it={filteredItems[virtualRow.index]} 
+                       idx={virtualRow.index} 
+                       getCatIcon={getCatIcon} 
                     />
                   ))}
                   {rowVirtualizer.getVirtualItems().length > 0 && (
-                    <tr><td style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} colSpan={8} /></tr>
+                    <tr><td style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} colSpan={7} /></tr>
                   )}
                 </tbody>
               </table>

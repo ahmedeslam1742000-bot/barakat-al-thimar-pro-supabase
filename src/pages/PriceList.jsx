@@ -108,7 +108,6 @@ export default function () {
     overscan: 10,
   });
 
-  rowVirtualizer.options.count = filteredItems.length;
 
   // --- EDIT LOGIC ---
   const openEditModal = (item) => {

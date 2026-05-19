@@ -112,12 +112,6 @@ export default function ReceiptVouchers({}) {
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const parentRef = React.useRef(null);
-  const rowVirtualizer = useVirtualizer({
-    count: 0,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 52,
-    overscan: 10,
-  });
 
   // Form State
   const emptyForm = {
@@ -204,6 +198,13 @@ export default function ReceiptVouchers({}) {
       return matchesSearch && !e.is_settled;
     });
   }, [repExpenses, debouncedSearchTerm]);
+
+  const rowVirtualizer = useVirtualizer({
+    count: activeTable === 'vouchers' ? filteredVouchers.length : filteredExpenses.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 52,
+    overscan: 10,
+  });
 
   const fetchJournalEntries = async () => {
     const { data, error } = await supabase.from('journal_entries').select('*').order('created_at', { ascending: false });
@@ -296,7 +297,7 @@ export default function ReceiptVouchers({}) {
     }
   };
 
-  rowVirtualizer.options.count = activeTable === 'vouchers' ? filteredVouchers.length : filteredExpenses.length;
+
 
   // Dirty check
   const isDirty = useMemo(() => {

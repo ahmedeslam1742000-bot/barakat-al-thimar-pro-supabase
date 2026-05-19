@@ -161,12 +161,6 @@ export default function () {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
   const parentRef = useRef(null);
-  const rowVirtualizer = useVirtualizer({
-    count: 0,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 52,
-    overscan: 10,
-  });
 
   const itemNameRef = useRef(null);
   const [bulkRep, setBulkRep] = useState('');
@@ -301,7 +295,12 @@ export default function () {
     });
   }, [returnTxs, debouncedSearchQuery, startDate, endDate]);
 
-  rowVirtualizer.options.count = groupedVouchers.length;
+  const rowVirtualizer = useVirtualizer({
+    count: groupedVouchers.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 52,
+    overscan: 10,
+  });
 
   const todayTotal = useMemo(() => {
     const t = formatDate(new Date());

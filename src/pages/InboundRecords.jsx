@@ -91,12 +91,6 @@ export default function () {
   const isDataLoading = dbTransactionsList.length === 0;
 
   const parentRef = React.useRef(null);
-  const rowVirtualizer = useVirtualizer({
-    count: 0,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 52,
-    overscan: 10,
-  });
 
   // Use a separate effect to handle ESC with correct state access
   useEffect(() => {
@@ -181,7 +175,12 @@ export default function () {
     });
   }, [computedRecords, searchQuery, categoryFilter, dateRange]);
 
-  rowVirtualizer.options.count = filteredRecords.length;
+  const rowVirtualizer = useVirtualizer({
+    count: filteredRecords.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 52,
+    overscan: 10,
+  });
 
   const handlePrint = () => {
     window.print();
