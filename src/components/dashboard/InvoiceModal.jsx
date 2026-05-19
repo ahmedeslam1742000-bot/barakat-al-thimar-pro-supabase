@@ -9,9 +9,10 @@ import { z } from 'zod';
 import { toast } from 'sonner';
 
 const invoiceSchema = z.object({
-  rep: z.string().min(1, 'يجب اختيار المندوب المسجل'),
+  rep: z.string().optional(),
   date: z.string().min(1, 'تاريخ الفاتورة مطلوب'),
   notes: z.string().optional(),
+  isVoucherInvoice: z.boolean().optional(),
   items: z.array(
     z.object({
       name: z.string(),
@@ -21,6 +22,14 @@ const invoiceSchema = z.object({
       qty: z.coerce.number().positive('الكمية يجب أن تكون موجبة وأكبر من الصفر'),
     })
   ).min(1, 'يجب إضافة صنف واحد على الأقل للفاتورة'),
+}).superRefine((data, ctx) => {
+  if (!data.isVoucherInvoice && (!data.rep || data.rep.trim() === '')) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'يجب اختيار المندوب المسجل',
+      path: ['rep'],
+    });
+  }
 });
 
 export default function InvoiceModal({
@@ -41,6 +50,7 @@ export default function InvoiceModal({
       date: initialForm?.date || new Date().toISOString().split('T')[0],
       notes: initialForm?.notes || '',
       items: initialForm?.items || [],
+      isVoucherInvoice: isVoucherInvoice,
     },
     mode: 'onChange',
   });
@@ -56,6 +66,7 @@ export default function InvoiceModal({
         setValue('rep', initialForm?.rep || '');
         setValue('date', initialForm?.date || new Date().toISOString().split('T')[0]);
         setValue('notes', initialForm?.notes || '');
+        setValue('isVoucherInvoice', isVoucherInvoice);
         replace(initialForm?.items || []);
         setHasInitialized(true);
       }
@@ -64,7 +75,7 @@ export default function InvoiceModal({
         setHasInitialized(false);
       }
     }
-  }, [isOpen, initialForm, setValue, replace, hasInitialized]);
+  }, [isOpen, initialForm, setValue, replace, hasInitialized, isVoucherInvoice]);
 
   // Sync back to parent (for unsaved changes warning)
   useEffect(() => {

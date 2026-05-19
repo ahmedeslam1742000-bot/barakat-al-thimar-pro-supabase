@@ -136,7 +136,7 @@ export function useVoucherDetail({
 
     const invoiceBase = {
       client: voucher.clientName || voucher.recipient || 'عميل نقدي',
-      rep: '',
+      rep: voucher.rep || '',
       date: new Date().toISOString().split('T')[0],
       items: lineItems,
     };
