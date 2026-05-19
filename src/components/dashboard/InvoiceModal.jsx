@@ -47,21 +47,40 @@ export default function InvoiceModal({
 
   const { fields, append, remove, update, replace } = useFieldArray({ control, name: 'items' });
 
-  // Sync initialForm when modal opens or changes
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  // Sync initialForm when modal opens
   useEffect(() => {
     if (isOpen) {
-      setValue('rep', initialForm?.rep || '');
-      setValue('date', initialForm?.date || new Date().toISOString().split('T')[0]);
-      setValue('notes', initialForm?.notes || '');
-      replace(initialForm?.items || []);
+      if (!hasInitialized) {
+        setValue('rep', initialForm?.rep || '');
+        setValue('date', initialForm?.date || new Date().toISOString().split('T')[0]);
+        setValue('notes', initialForm?.notes || '');
+        replace(initialForm?.items || []);
+        setHasInitialized(true);
+      }
+    } else {
+      if (hasInitialized) {
+        setHasInitialized(false);
+      }
     }
-  }, [isOpen, initialForm, setValue, replace]);
+  }, [isOpen, initialForm, setValue, replace, hasInitialized]);
 
   // Sync back to parent (for unsaved changes warning)
   useEffect(() => {
     const subscription = watch((value) => {
       if (setInvoiceForm) {
-        setInvoiceForm(prev => ({ ...prev, ...value }));
+        setInvoiceForm(prev => {
+          if (
+            prev.rep === value.rep &&
+            prev.date === value.date &&
+            prev.notes === value.notes &&
+            JSON.stringify(prev.items) === JSON.stringify(value.items)
+          ) {
+            return prev;
+          }
+          return { ...prev, ...value };
+        });
       }
     });
     return () => subscription.unsubscribe();
