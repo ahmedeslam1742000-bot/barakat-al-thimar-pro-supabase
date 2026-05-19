@@ -343,6 +343,7 @@ export default function Dashboard({}) {
         handleMarkAsInvoiced={handleMarkAsInvoiced}
         setIsVoucherModalOpen={setIsVoucherModalOpen}
         setSelectedVoucher={setSelectedVoucher}
+        invoiceTimestamps={invoiceTimestamps}
       />
 
       <VoucherConfirmationModal

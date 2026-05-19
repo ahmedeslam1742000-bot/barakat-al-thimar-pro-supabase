@@ -29,13 +29,15 @@ export function VoucherDetailModal({
   loading,
   handleMarkAsInvoiced,
   setIsVoucherModalOpen,
-  setSelectedVoucher
+  setSelectedVoucher,
+  invoiceTimestamps
 }) {
   if (!isOpen || !voucher) return null;
 
   const isIn = voucher.kind === 'in';
   const isCompleted = voucher.invoiced === true;
   const lines = voucher.lines || [];
+  const invoiceDate = invoiceTimestamps?.[voucher.id] || voucher.invoiceDate;
 
   const cleanNote = (note) => {
     if (!note) return '—';
@@ -103,9 +105,11 @@ export function VoucherDetailModal({
                                 {voucher.isTransfer ? 'سند تحويل مخزني' : (isIn ? 'سند إدخال بضاعة' : 'سند إخراج بضاعة')}
                             </h3>
                             <div className="flex gap-1.5">
-                                <span className={`text-[10px] font-black px-2 py-1 rounded shadow-sm ${isCompleted ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-slate-900'}`}>
-                                    {isCompleted ? 'مكتمل ومفوتـر' : 'قيد الانتظار'}
-                                </span>
+                                {!isCompleted && (
+                                    <span className="text-[10px] font-black px-2.5 py-1 rounded shadow-sm bg-amber-400 text-slate-900">
+                                        قيد الانتظار
+                                    </span>
+                                )}
                                 {isEdited && <span className="text-[10px] font-black px-2 py-1 rounded bg-indigo-500 text-white shadow-sm">معدّل</span>}
                             </div>
                         </div>
@@ -201,7 +205,14 @@ export function VoucherDetailModal({
 
               {/* COMPACT FOOTER */}
               <footer className="flex items-center justify-between mt-6 shrink-0">
-                <div />
+                <div>
+                  {isCompleted && (
+                    <span className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-500/20 shadow-sm inline-flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-emerald-500" />
+                      تم إصدار الفاتورة بتاريخ: {formatVoucherDate(invoiceDate) || '—'}
+                    </span>
+                  )}
+                </div>
                 <div className="flex gap-3">
                   <button 
                     onClick={() => setShowVoucherHistory(!showVoucherHistory)} 
