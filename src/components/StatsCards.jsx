@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Package, Truck, TrendingUp, RotateCcw } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
 
 export const StatCard = React.memo(({
   icon: Icon,
@@ -13,6 +14,7 @@ export const StatCard = React.memo(({
   navigateTo,
   
 }) => {
+  const navigate = useNavigate();
   const handleCardClick = () => {
     if (navigateTo) navigate({ to: '/' + navigateTo });
   };
