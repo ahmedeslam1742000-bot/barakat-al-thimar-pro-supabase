@@ -59,7 +59,7 @@ export default function () {
     {
       id: 'index',
       header: 'م',
-      cell: info => <span className="text-[11px] font-black text-slate-400">{info.row.index + 1}</span>,
+      cell: info => <span className="text-[11px] font-black text-slate-400">{info.table.getSortedRowModel().flatRows.indexOf(info.row) + 1}</span>,
       size: 60,
     },
     {
@@ -244,51 +244,59 @@ export default function () {
       {/* ═══ TABLE ═══ */}
       <div className="flex-1 overflow-hidden flex flex-col bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-700 shadow-sm">
         <div ref={parentRef} className="flex-1 overflow-y-auto custom-scrollbar p-1">
-          <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
-            <table className="w-full border-separate border-spacing-0">
-              <thead className="sticky top-0 z-20 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
-                {table.getHeaderGroups().map(headerGroup => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map(header => (
-                      <th 
-                        key={header.id} 
-                        style={{ width: header.getSize() }}
-                        className="px-4 py-3 text-center text-[10px] font-black text-slate-500 border-x border-slate-100 cursor-pointer select-none hover:bg-slate-100 transition-colors"
-                        onClick={header.column.getToggleSortingHandler()}
-                      >
-                        <div className="flex items-center justify-center gap-1">
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {{
-                            asc: ' 🔼',
-                            desc: ' 🔽',
-                          }[header.column.getIsSorted()] ?? null}
-                        </div>
-                      </th>
+          <table className="w-full border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+              {table.getHeaderGroups().map(headerGroup => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map(header => (
+                    <th 
+                      key={header.id} 
+                      style={{ width: header.getSize() }}
+                      className="px-4 py-3 text-center text-[10px] font-black text-slate-500 border-x border-slate-100 cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {{
+                          asc: ' 🔼',
+                          desc: ' 🔽',
+                        }[header.column.getIsSorted()] ?? null}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {rowVirtualizer.getVirtualItems().length > 0 && rowVirtualizer.getVirtualItems()[0].start > 0 && (
+                <tr>
+                  <td style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} colSpan={columns.length} />
+                </tr>
+              )}
+              {rowVirtualizer.getVirtualItems().map(virtualRow => {
+                const row = rows[virtualRow.index];
+                return (
+                  <tr 
+                    key={row.id} 
+                    data-index={virtualRow.index}
+                    ref={rowVirtualizer.measureElement}
+                    className="group hover:bg-slate-50 transition-colors border-b border-slate-100"
+                  >
+                    {row.getVisibleCells().map(cell => (
+                      <td key={cell.id} style={{ width: cell.column.getSize() }} className="px-4 py-2.5 text-center align-middle">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
                     ))}
                   </tr>
-                ))}
-              </thead>
-              <tbody style={{ position: 'absolute', top: 0, left: 0, width: '100%', transform: `translateY(${rowVirtualizer.getVirtualItems()[0]?.start ?? 0}px)` }}>
-                {rowVirtualizer.getVirtualItems().map(virtualRow => {
-                  const row = rows[virtualRow.index];
-                  return (
-                    <tr 
-                      key={row.id} 
-                      data-index={virtualRow.index}
-                      ref={rowVirtualizer.measureElement}
-                      className="group hover:bg-slate-50 transition-colors border-b border-slate-100"
-                    >
-                      {row.getVisibleCells().map(cell => (
-                        <td key={cell.id} className="px-4 py-2.5 text-center align-middle">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                );
+              })}
+              {rowVirtualizer.getVirtualItems().length > 0 && (
+                <tr>
+                  <td style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} colSpan={columns.length} />
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
