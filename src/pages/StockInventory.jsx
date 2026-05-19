@@ -368,7 +368,7 @@ export default function () {
         </div>
 
         {/* ═══ CATEGORY HUB ═══ */}
-        <div className="shrink-0 flex gap-2 overflow-x-auto pb-4 pt-1 px-1 custom-scrollbar no-scrollbar" style={{ scrollbarWidth: 'none' }}>
+        <div dir="rtl" className="shrink-0 flex gap-2 overflow-x-auto pb-4 pt-1 px-1 custom-scrollbar no-scrollbar" style={{ scrollbarWidth: 'none' }}>
           <button onClick={() => setCatFilter('الكل')} className={`flex-shrink-0 px-4 py-2 rounded-xl border-2 transition-all duration-300 flex items-center gap-2.5 ${catFilter === 'الكل' ? 'bg-[#0F2747] border-[#0F2747] shadow-lg shadow-[#0F2747]/20 text-white' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 hover:bg-slate-50 hover:border-slate-200'}`}>
             <LayoutGrid size={16} strokeWidth={catFilter === 'الكل' ? 2.5 : 2} />
             <span className="font-tajawal font-bold text-xs pt-0.5">كل الأقسام</span>

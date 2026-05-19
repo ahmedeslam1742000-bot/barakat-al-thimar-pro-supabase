@@ -59,7 +59,7 @@ export default function () {
     {
       id: 'index',
       header: 'م',
-      cell: info => <span className="text-[11px] font-black text-slate-400">{info.table.getSortedRowModel().flatRows.indexOf(info.row) + 1}</span>,
+      cell: info => <span className="text-[11px] font-black text-slate-400">{info.table.getRowModel().rows.findIndex(r => r.id === info.row.id) + 1}</span>,
       size: 60,
     },
     {
@@ -197,6 +197,14 @@ export default function () {
     }
   };
 
+  const groupedItems = useMemo(() => {
+    return filteredItems.reduce((acc, item) => {
+      if (!acc[item.cat]) acc[item.cat] = [];
+      acc[item.cat].push(item);
+      return acc;
+    }, {});
+  }, [filteredItems]);
+
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-2 font-readex h-full overflow-hidden" dir="rtl">
       {/* ═══ TOP BAR ═══ */}
@@ -228,7 +236,7 @@ export default function () {
       </div>
 
       {/* ═══ CATEGORY HUB ═══ */}
-      <div className="shrink-0 flex gap-2 overflow-x-auto pb-4 pt-1 px-1 custom-scrollbar no-scrollbar" style={{ scrollbarWidth: 'none' }}>
+      <div dir="rtl" className="shrink-0 flex gap-2 overflow-x-auto pb-4 pt-1 px-1 custom-scrollbar no-scrollbar" style={{ scrollbarWidth: 'none' }}>
         <button onClick={() => setActiveCategory('الكل')} className={`flex-shrink-0 px-4 py-2 rounded-xl border-2 transition-all duration-300 flex items-center gap-2.5 ${activeCategory === 'الكل' ? 'bg-[#0F2747] border-[#0F2747] shadow-lg shadow-[#0F2747]/20 text-white' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 text-slate-600 hover:bg-slate-50 hover:border-slate-200'}`}>
           <LayoutGrid size={16} strokeWidth={activeCategory === 'الكل' ? 2.5 : 2} />
           <span className="font-tajawal font-bold text-xs pt-0.5">كل الأقسام</span>

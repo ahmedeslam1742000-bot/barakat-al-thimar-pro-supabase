@@ -283,7 +283,7 @@ export default function () {
             </div>
           </div>
 
-          <div className="flex items-center justify-start gap-2 overflow-x-auto no-scrollbar pt-1">
+          <div dir="rtl" className="flex items-center justify-start gap-2 overflow-x-auto no-scrollbar pt-1">
              {CATS.map(cat => (
                 <button
                   key={cat}
