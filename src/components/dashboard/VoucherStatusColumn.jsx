@@ -5,6 +5,14 @@ import { LayoutDashboard, FileText, AlertTriangle, CheckCircle2 } from 'lucide-r
 /**
  * VoucherStatusColumn - Displays the status of pending, completed, and cancelled vouchers.
  */
+const cleanInvoiceDate = (dateStr) => {
+  if (!dateStr) return '—';
+  const datePart = dateStr.trim().split(/\s+/)[0];
+  const parts = datePart.split('-');
+  if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  return datePart;
+};
+
 export const VoucherStatusColumn = React.memo(function VoucherStatusColumn({ 
   pendingVouchers, 
   completedVouchers, 
@@ -70,7 +78,7 @@ export const VoucherStatusColumn = React.memo(function VoucherStatusColumn({
                       </h4>
                       {isCompleted && invoiceDate ? (
                         <p className="text-[8px] text-emerald-600 font-readex mt-0.5 truncate font-medium">
-                          تم إصدار الفاتورة بتاريخ: {invoiceDate}
+                          تم إصدار الفاتورة بتاريخ: {cleanInvoiceDate(invoiceDate)}
                         </p>
                       ) : (
                         <div className="flex flex-col gap-1">
@@ -127,7 +135,7 @@ export const VoucherStatusColumn = React.memo(function VoucherStatusColumn({
                           </h4>
                           {invoiceDate ? (
                             <p className="text-[8px] text-emerald-600 font-readex mt-0.5 truncate font-medium">
-                              تم إصدار الفاتورة بتاريخ: {invoiceDate}
+                              تم إصدار الفاتورة بتاريخ: {cleanInvoiceDate(invoiceDate)}
                             </p>
                           ) : (
                             <p className="text-[9px] text-slate-400 font-readex mt-0.5 truncate">

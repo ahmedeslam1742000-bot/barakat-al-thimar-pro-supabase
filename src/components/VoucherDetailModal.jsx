@@ -16,6 +16,12 @@ const formatVoucherDate = (dateStr) => {
   return dateStr;
 };
 
+const cleanInvoiceDate = (dateStr) => {
+  if (!dateStr) return '—';
+  const datePart = dateStr.trim().split(/\s+/)[0];
+  return formatVoucherDate(datePart);
+};
+
 export function VoucherDetailModal({
   isOpen,
   onClose,
@@ -209,7 +215,7 @@ export function VoucherDetailModal({
                   {isCompleted && (
                     <span className="text-xs sm:text-sm font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-2.5 rounded-xl border border-emerald-200 dark:border-emerald-500/20 shadow-sm inline-flex items-center gap-2">
                       <CheckCircle2 size={16} className="text-emerald-500" />
-                      تم إصدار الفاتورة بتاريخ: {formatVoucherDate(invoiceDate) || '—'}
+                      تم إصدار الفاتورة بتاريخ: {cleanInvoiceDate(invoiceDate)}
                     </span>
                   )}
                 </div>
