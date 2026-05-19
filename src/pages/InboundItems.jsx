@@ -245,7 +245,7 @@ export default function () {
 
         {/* Category Pills Row + Damaged Stat */}
         <div className="flex items-center gap-4 mt-4">
-          <div dir="rtl" className="flex-1 flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar custom-scrollbar">
+          <div dir="rtl" className="flex-1 flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
              <button onClick={() => setCategoryFilter('الكل')} className={`flex items-center gap-2 px-5 py-2.5 rounded-[12px] text-[12px] font-bold transition-all shadow-sm shrink-0 ${categoryFilter === 'الكل' ? 'bg-[#0f2747] text-white border-transparent' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
                 <Layers size={14} /> كل الأقسام
              </button>
