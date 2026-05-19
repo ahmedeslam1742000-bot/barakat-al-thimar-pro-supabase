@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
+import { formatItemNameWithCompany } from '../lib/itemFields';
 import {
   useReactTable,
   getCoreRowModel,
@@ -426,7 +427,7 @@ export default function () {
                     <h3 className="text-xl font-black font-tajawal mb-3 text-slate-900">{cat}</h3>
                     <table className="w-full">
                       <thead><tr className="bg-gray-100"><th className="border border-black py-2 px-3 text-sm font-bold w-16">م</th><th className="border border-black py-2 px-3 text-sm font-bold">اسم الصنف</th><th className="border border-black py-2 px-3 text-sm font-bold w-32">وحدة القياس</th></tr></thead>
-                      <tbody>{groupedItems[cat].map((item, idx) => (<tr key={item.id}><td className="border border-black py-2 px-3 text-center text-sm">{idx + 1}</td><td className="border border-black py-2 px-3 text-right text-sm">{item.name} - {item.company}</td><td className="border border-black py-2 px-3 text-center text-sm">{item.unit}</td></tr>))}</tbody>
+                      <tbody>{groupedItems[cat].map((item, idx) => (<tr key={item.id}><td className="border border-black py-2 px-3 text-center text-sm">{idx + 1}</td><td className="border border-black py-2 px-3 text-right text-sm">{formatItemNameWithCompany(item.name, item.company)}</td><td className="border border-black py-2 px-3 text-center text-sm">{item.unit}</td></tr>))}</tbody>
                     </table>
                   </div>
                 ))}
