@@ -384,7 +384,6 @@ export default function ReceiptVouchers({}) {
       setIsModalOpen(false);
     }
   };
-
   const confirmExit = () => {
     setIsConfirmCloseOpen(false);
     setIsModalOpen(false);
@@ -414,296 +413,22 @@ export default function ReceiptVouchers({}) {
       return;
     }
     
-    // Group vouchers by type
-    const groupedVouchers = filteredVouchers.reduce((acc, v) => {
-      if (!acc[v.type]) acc[v.type] = [];
-      acc[v.type].push(v);
-      return acc;
-    }, {});
-
-    let contentHtml = '';
-    let grandTotal = 0;
-
-    const types = ['نقدي', 'شبكة']; // Predefined order
-
-    types.forEach(type => {
-      const vouchersForType = groupedVouchers[type];
-      if (!vouchersForType || vouchersForType.length === 0) return;
-
-      const subtotal = vouchersForType.reduce((sum, v) => sum + Number(v.amount || 0), 0);
-      grandTotal += subtotal;
-
-      const tableRows = vouchersForType.map((v, i) => `
-        <tr>
-          <td class="text-center">${i + 1}</td>
-          <td>${formatDateToDisplay(v.date)}</td>
-          <td class="font-bold">${v.repName}</td>
-          <td>${v.customerName}</td>
-          <td class="text-center">${v.voucherNo}</td>
-          <td class="text-center font-bold text-emerald">${v.amount.toLocaleString()} ر.س</td>
-          <td class="text-center"><span class="badge ${type === 'نقدي' ? 'badge-cash' : type === 'شبكة' ? 'badge-card' : 'badge-transfer'}">${v.type}</span></td>
-        </tr>
-      `).join('');
-
-      contentHtml += `
-        <div class="section-title">محصلات الدفع: ${type}</div>
-        <table>
-          <thead>
-            <tr>
-              <th width="5%">م</th>
-              <th width="12%">التاريخ</th>
-              <th width="18%">المندوب</th>
-              <th width="18%">العميل</th>
-              <th width="15%">رقم السند</th>
-              <th width="15%">المبلغ</th>
-              <th width="12%">نوع التحصيل</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${tableRows}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="5" class="text-left font-bold" style="padding-left: 20px;">إجمالي (${type}):</td>
-              <td class="text-center font-black text-emerald" style="font-size: 14px;">${subtotal.toLocaleString()} ر.س</td>
-              <td></td>
-            </tr>
-          </tfoot>
-        </table>
-      `;
-    });
-
-    const html = `
-      <html dir="rtl">
-        <head>
-          <title>تقرير سندات التحصيل</title>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
-            
-            :root {
-              --primary: #059669;
-              --primary-light: #d1fae5;
-              --text-main: #1e293b;
-              --text-muted: #64748b;
-              --border-color: #e2e8f0;
-              --bg-light: #f8fafc;
-            }
-
-            * { box-sizing: border-box; }
-            body { 
-              font-family: 'Cairo', sans-serif; 
-              padding: 40px; 
-              color: var(--text-main); 
-              background-color: #fff;
-              line-height: 1.5;
-            }
-
-            .header-container {
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-start;
-              margin-bottom: 40px;
-              padding-bottom: 20px;
-              border-bottom: 3px solid var(--primary-light);
-            }
-
-            .report-main-title {
-              /* Defined below */
-            }
-
-            .section-title {
-              font-size: 18px;
-              font-weight: 800;
-              color: #334155;
-              margin: 30px 0 15px 0;
-              display: flex;
-              align-items: center;
-              gap: 10px;
-            }
-            
-            .section-title::before {
-              content: '';
-              display: inline-block;
-              width: 6px;
-              height: 20px;
-              background-color: var(--primary);
-              border-radius: 4px;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-
-            table { 
-              width: 100%; 
-              border-collapse: separate; 
-              border-spacing: 0;
-              margin-bottom: 10px; 
-              border: 1px solid var(--border-color);
-              border-radius: 12px;
-              overflow: hidden;
-            }
-
-            th, td { 
-              padding: 10px 8px; 
-              text-align: right; 
-              font-size: 11px; 
-            }
-
-            th { 
-              background-color: var(--bg-light); 
-              font-weight: 800; 
-              color: #475569; 
-              border-bottom: 2px solid var(--border-color);
-              white-space: nowrap;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-
-            td {
-              border-bottom: 1px solid var(--border-color);
-              color: #334155;
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              max-width: 150px; /* safety for extremely long text */
-            }
-
-            tbody tr:last-child td {
-              border-bottom: none;
-            }
-
-            tbody tr:nth-child(even) td {
-              background-color: #fcfcfc;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-
-            tfoot td {
-              background-color: var(--bg-light);
-              border-top: 2px solid var(--border-color);
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-
-            .text-center { text-align: center; }
-            .text-left { text-align: left; }
-            .font-bold { font-weight: 700; }
-            .font-black { font-weight: 900; }
-            .text-emerald { color: #059669; }
-
-            .badge {
-              display: inline-block;
-              padding: 4px 10px;
-              border-radius: 20px;
-              font-size: 11px;
-              font-weight: 800;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            .badge-cash { background: #d1fae5; color: #047857; }
-            .badge-card { background: #dbeafe; color: #1d4ed8; }
-            .badge-transfer { background: #f3e8ff; color: #7e22ce; }
-
-
-            .report-main-title {
-              font-size: 32px;
-              font-weight: 900;
-              color: var(--primary);
-              letter-spacing: -0.5px;
-              text-shadow: 2px 2px 0px rgba(5, 150, 105, 0.1);
-              font-family: 'Cairo', sans-serif;
-              position: relative;
-              display: inline-block;
-            }
-            
-            .report-main-title::after {
-              content: '';
-              position: absolute;
-              bottom: -4px;
-              right: 0;
-              width: 50%;
-              height: 4px;
-              background-color: var(--primary);
-              border-radius: 4px;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-
-            .meta-info {
-              text-align: left;
-            }
-
-            .meta-item {
-              font-size: 14px;
-              color: var(--text-muted);
-            }
-            .meta-item span {
-              font-weight: 800;
-              color: var(--text-main);
-              margin-right: 8px;
-              background-color: var(--bg-light);
-              padding: 4px 12px;
-              border-radius: 8px;
-              border: 1px solid var(--border-color);
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-
-            @media print {
-              body { padding: 0; }
-              table {
-                break-inside: auto;
-              }
-              tr {
-                break-inside: avoid;
-                page-break-inside: avoid;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header-container">
-            <div>
-              <div class="report-main-title">تقرير سندات التحصيل</div>
-            </div>
-            <div class="meta-info">
-              <div class="meta-item">تاريخ الإصدار: <span>${new Date().toLocaleDateString('ar-SA')}</span></div>
-            </div>
-          </div>
-          
-          ${contentHtml || '<div class="text-center" style="padding: 40px; color: var(--text-muted);">لا توجد بيانات للعرض</div>'}
-          
-          <script>
-            window.onload = () => {
-              window.print();
-            };
-            window.onafterprint = () => {
-              window.close();
-            };
-          </script>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
-  };
-
-  const handlePrintSettlementReport = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast.error('لم نتمكن من فتح نافذة الطباعة. يرجى السماح بالنوافذ المنبثقة (Pop-ups) في متصفحك.');
-      return;
-    }
+    const hasSelection = selectedVoucherIds.length > 0 || selectedExpenseIds.length > 0;
     
-    const selectedVouchersList = filteredVouchers.filter(v => selectedVoucherIds.includes(v.id));
-    const selectedExpensesList = repExpenses.filter(e => selectedExpenseIds.includes(e.id));
-    
+    const vouchersToPrint = hasSelection 
+      ? filteredVouchers.filter(v => selectedVoucherIds.includes(v.id))
+      : filteredVouchers;
+      
+    const expensesToPrint = hasSelection 
+      ? filteredExpenses.filter(e => selectedExpenseIds.includes(e.id))
+      : filteredExpenses;
+      
     let contentHtml = '';
     let totalVouchers = 0;
     let totalExpenses = 0;
 
-    if (selectedVouchersList.length > 0) {
-      const tableRows = selectedVouchersList.map((v, i) => {
+    if (vouchersToPrint.length > 0) {
+      const tableRows = vouchersToPrint.map((v, i) => {
         totalVouchers += Number(v.amount || 0);
         return `
         <tr>
@@ -712,13 +437,13 @@ export default function ReceiptVouchers({}) {
           <td class="font-bold">${v.repName}</td>
           <td>${v.customerName}</td>
           <td class="text-center">${v.voucherNo}</td>
-          <td class="text-center font-bold text-emerald">${v.amount.toLocaleString()} ر.س</td>
+          <td class="text-center font-bold text-emerald">${Number(v.amount || 0).toLocaleString()} ر.س</td>
           <td class="text-center"><span class="badge ${v.type === 'نقدي' ? 'badge-cash' : v.type === 'شبكة' ? 'badge-card' : 'badge-transfer'}">${v.type}</span></td>
         </tr>
       `}).join('');
 
       contentHtml += `
-        <div class="section-title">محصلات الدفع المحددة للتسوية</div>
+        <div class="section-title">محصلات الدفع${hasSelection ? ' المحددة للتسوية' : ''}</div>
         <table>
           <thead>
             <tr>
@@ -743,8 +468,8 @@ export default function ReceiptVouchers({}) {
       `;
     }
 
-    if (selectedExpensesList.length > 0) {
-      const tableRows = selectedExpensesList.map((e, i) => {
+    if (expensesToPrint.length > 0) {
+      const tableRows = expensesToPrint.map((e, i) => {
         totalExpenses += Number(e.amount || 0);
         return `
         <tr>
@@ -752,12 +477,12 @@ export default function ReceiptVouchers({}) {
           <td>${formatDateToDisplay(e.date)}</td>
           <td class="font-bold">${e.repName}</td>
           <td>${e.statement}</td>
-          <td class="text-center font-bold text-rose" style="color: #e11d48;">${e.amount.toLocaleString()} ر.س</td>
+          <td class="text-center font-bold text-rose" style="color: #e11d48;">${Number(e.amount || 0).toLocaleString()} ر.س</td>
         </tr>
       `}).join('');
 
       contentHtml += `
-        <div class="section-title">المصروفات المحددة للتسوية</div>
+        <div class="section-title">المصروفات${hasSelection ? ' المحددة للتسوية' : ''}</div>
         <table>
           <thead>
             <tr>
@@ -780,11 +505,12 @@ export default function ReceiptVouchers({}) {
     }
 
     const netAmount = totalVouchers - totalExpenses;
+    const title = hasSelection ? 'تقرير تسوية وتوريد' : 'تقرير السندات والمصروفات';
 
     const html = `
       <html dir="rtl">
         <head>
-          <title>تقرير التسوية</title>
+          <title>${title}</title>
           <style>
              @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
              :root { --primary: #4f46e5; --primary-light: #e0e7ff; --text-main: #1e293b; --text-muted: #64748b; --border-color: #e2e8f0; --bg-light: #f8fafc; }
@@ -814,7 +540,7 @@ export default function ReceiptVouchers({}) {
         <body>
           <div class="header-container">
             <div>
-              <div class="report-main-title">تقرير تسوية وتوريد</div>
+              <div class="report-main-title">${title}</div>
             </div>
             <div class="meta-info">
               <div class="meta-item">تاريخ الإصدار: <span>${new Date().toLocaleDateString('ar-SA')}</span></div>
@@ -825,7 +551,7 @@ export default function ReceiptVouchers({}) {
           
           ${(totalVouchers > 0 || totalExpenses > 0) ? `
           <div style="margin-top: 30px; padding: 20px; background-color: var(--bg-light); border: 2px dashed var(--border-color); border-radius: 12px; text-align: center;">
-            <div style="font-size: 14px; font-weight: 800; color: var(--text-muted); margin-bottom: 5px;">صافي التوريد (السندات - المصروفات)</div>
+            <div style="font-size: 14px; font-weight: 800; color: var(--text-muted); margin-bottom: 5px;">${hasSelection ? 'صافي التوريد' : 'صافي المبالغ'} (السندات - المصروفات)</div>
             <div style="font-size: 28px; font-weight: 900; color: var(--primary);">${netAmount.toLocaleString()} ر.س</div>
           </div>
           ` : ''}
@@ -1688,7 +1414,7 @@ export default function ReceiptVouchers({}) {
                   <button onClick={() => setIsSettlementWizardOpen(false)} className="px-8 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">إلغاء</button>
                   <button 
                     disabled={loading}
-                    onClick={handlePrintSettlementReport}
+                    onClick={handlePrint}
                     className="px-6 py-4 rounded-2xl font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 dark:text-indigo-400 transition-all flex items-center gap-2"
                   >
                     <Printer size={20} />
