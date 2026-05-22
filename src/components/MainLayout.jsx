@@ -127,7 +127,8 @@ export default function MainLayout({ children }) {
       <main
         className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out print:mr-0 print:block print:overflow-visible ${isSidebarOpen ? 'lg:mr-64' : 'mr-0'}`}
       >
-        <header className="print:hidden w-full shrink-0 z-40 px-4 lg:px-6 pt-4 pb-2 transition-all duration-300">
+        {isDashboard && (
+          <header className="print:hidden w-full shrink-0 z-40 px-4 lg:px-6 pt-4 pb-2 transition-all duration-300">
           <div className={`relative ${isDashboard ? 'bg-white dark:bg-[#111C44] rounded-[24px] shadow-sm p-4 md:p-6 border border-slate-100 dark:border-slate-800/50 overflow-hidden flex-col md:flex-row md:items-center' : 'flex-row items-center'} flex justify-between gap-4`}>
             
             {/* Soft Background Accent (Only Dashboard) */}
@@ -309,7 +310,18 @@ export default function MainLayout({ children }) {
               </div>
             </div>
           </div>
-        </header>
+          </header>
+        )}
+
+        {/* Floating Menu Toggle for non-dashboard pages when sidebar is closed */}
+        {!isDashboard && !isSidebarOpen && (
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="print:hidden fixed top-6 right-6 z-50 p-2.5 bg-white dark:bg-[#111C44] text-slate-500 hover:text-emerald-500 rounded-[14px] shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-slate-100 dark:border-slate-800 transition-all hover:scale-105"
+          >
+            <Menu size={22} />
+          </button>
+        )}
 
         {/* ── System Freeze Banner ── */}
         {settings?.systemFrozen && (
