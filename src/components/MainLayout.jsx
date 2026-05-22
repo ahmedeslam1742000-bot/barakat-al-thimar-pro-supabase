@@ -15,7 +15,8 @@ import {
   ChevronDown,
   Warehouse,
   Settings,
-  LogOut
+  LogOut,
+  Timer
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
