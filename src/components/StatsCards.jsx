@@ -10,9 +10,9 @@ export const StatCard = React.memo(({
   subtext,
   actionLabel,
   onAction,
-  accentColor = '#059669',
+  colorFrom = '#10B981',
+  colorTo = '#059669',
   navigateTo,
-  
 }) => {
   const navigate = useNavigate();
   const handleCardClick = () => {
@@ -28,36 +28,38 @@ export const StatCard = React.memo(({
     <div className="flex flex-col gap-3 h-full">
       {/* ── الكارت الرئيسي ── */}
       <motion.div
-        whileHover={{ y: -3, scale: 1.01 }}
-        className="relative flex flex-col justify-between bg-white dark:bg-[#111C44] rounded-[20px] cursor-pointer group border border-slate-200 dark:border-slate-700 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden no-select-click flex-1 min-h-[130px]"
+        whileHover={{ y: -4, scale: 1.02 }}
+        className="relative flex flex-col justify-center bg-white dark:bg-[#111C44] rounded-[24px] cursor-pointer group border border-slate-100 dark:border-slate-800 shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-300 overflow-hidden no-select-click flex-1 min-h-[140px]"
         onClick={handleCardClick}
-        style={{ isolation: 'isolate' }}
       >
-        {/* شريط لوني علوي */}
-        <div
-          className="absolute top-0 right-0 left-0 h-1 rounded-t-[20px]"
-          style={{ backgroundColor: accentColor }}
+        {/* Subtle background glow effect */}
+        <div 
+          className="absolute -top-10 -left-10 w-32 h-32 rounded-full blur-3xl opacity-20 dark:opacity-10 transition-opacity group-hover:opacity-30 pointer-events-none"
+          style={{ backgroundColor: colorFrom }}
         />
 
         {/* محتوى الكارت */}
-        <div className="p-5 flex items-center justify-between gap-4 mt-1">
-          {/* أيقونة على اليمين */}
-          <div
-            className="w-14 h-14 rounded-[16px] flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:-rotate-6 shadow-sm"
-            style={{ backgroundColor: `${accentColor}18`, color: accentColor }}
-          >
-            <Icon size={26} strokeWidth={2.5} />
-          </div>
-
-          {/* النص على اليسار */}
-          <div className="flex flex-col items-end text-right flex-1">
+        <div className="p-5 flex items-center justify-between gap-4 relative z-10">
+          {/* النص على اليمين (لأننا في RTL) */}
+          <div className="flex flex-col items-start text-right flex-1">
             {value !== undefined && value !== null && (
-              <span className="text-[30px] font-black font-tajawal leading-none text-slate-800 dark:text-white mb-1">
+              <span className="text-[34px] font-black font-tajawal leading-none text-slate-800 dark:text-white mb-2 tracking-tight">
                 {value}
               </span>
             )}
-            <span className="text-[15px] font-black font-tajawal text-slate-700 dark:text-slate-100">{label}</span>
-            <span className="text-[11px] font-semibold font-readex text-slate-400 dark:text-slate-400 mt-0.5">{subtext}</span>
+            <span className="text-[16px] font-bold font-tajawal text-slate-700 dark:text-slate-200">{label}</span>
+            <span className="text-[12px] font-medium font-readex text-slate-400 dark:text-slate-500 mt-1">{subtext}</span>
+          </div>
+
+          {/* أيقونة على اليسار */}
+          <div
+            className="w-16 h-16 rounded-[20px] flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 shadow-lg"
+            style={{ 
+              background: `linear-gradient(135deg, ${colorFrom} 0%, ${colorTo} 100%)`,
+              boxShadow: `0 10px 25px -5px ${colorFrom}66`
+            }}
+          >
+            <Icon size={28} strokeWidth={2} className="text-white" />
           </div>
         </div>
       </motion.div>
@@ -65,16 +67,16 @@ export const StatCard = React.memo(({
       {/* ── زر الإجراء المنفصل ── */}
       {actionLabel && (
         <motion.button
-          whileHover={{ scale: 1.03, y: -1 }}
-          whileTap={{ scale: 0.97 }}
+          whileHover={{ scale: 1.02, y: -1 }}
+          whileTap={{ scale: 0.98 }}
           onClick={handleActionClick}
-          className="w-full rounded-[14px] py-3 px-4 flex items-center justify-center gap-2 text-[13px] font-black font-tajawal cursor-pointer text-white shrink-0 transition-all duration-200"
+          className="w-full rounded-[16px] py-3.5 px-4 flex items-center justify-center gap-2 text-[14px] font-black font-tajawal cursor-pointer text-white shrink-0 transition-all duration-300"
           style={{
-            backgroundColor: accentColor,
-            boxShadow: `0 6px 20px -4px ${accentColor}55`,
+            background: `linear-gradient(to right, ${colorFrom}, ${colorTo})`,
+            boxShadow: `0 8px 25px -6px ${colorFrom}66`,
           }}
         >
-          <Plus size={16} strokeWidth={3} className="transition-transform group-hover:rotate-90 duration-300" />
+          <Plus size={18} strokeWidth={3} className="transition-transform group-hover:rotate-90 duration-300" />
           {actionLabel}
         </motion.button>
       )}
@@ -89,9 +91,8 @@ const StatsCards = React.memo(({
   onAddStock,
   onAddInvoice,
   onAddReturn,
-  
 }) => (
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 shrink-0">
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 shrink-0">
     {/* ── كارت 1: إجمالي الأصناف ── */}
     <StatCard
       icon={Package}
@@ -100,7 +101,8 @@ const StatsCards = React.memo(({
       subtext="صنف مسجل"
       actionLabel="إضافة صنف"
       onAction={onAddItem}
-      accentColor="#059669"
+      colorFrom="#10B981" // Modern Emerald
+      colorTo="#047857"
       navigateTo="items"
     />
 
@@ -111,7 +113,8 @@ const StatsCards = React.memo(({
       subtext="إدارة مخزونك الوارد"
       actionLabel="إضافة وارد"
       onAction={onAddStock}
-      accentColor="#4F46E5"
+      colorFrom="#6366F1" // Modern Indigo
+      colorTo="#4338CA"
       navigateTo="stock-in"
     />
 
@@ -122,7 +125,8 @@ const StatsCards = React.memo(({
       subtext="إصدار وإدارة المبيعات"
       actionLabel="فاتورة جديدة"
       onAction={onAddInvoice}
-      accentColor="#D97706"
+      colorFrom="#F59E0B" // Modern Amber
+      colorTo="#B45309"
       navigateTo="stock-out"
     />
 
@@ -133,7 +137,8 @@ const StatsCards = React.memo(({
       subtext="متابعة الأصناف المرتجعة"
       actionLabel="تسجيل مرتجع"
       onAction={onAddReturn}
-      accentColor="#DC2626"
+      colorFrom="#F43F5E" // Modern Rose/Red
+      colorTo="#BE123C"
       navigateTo="returns"
     />
   </div>
