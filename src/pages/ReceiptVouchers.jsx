@@ -112,8 +112,7 @@ export default function ReceiptVouchers({}) {
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const parentRef = React.useRef(null);
 
-  const [isEditJournalOpen, setIsEditJournalOpen] = useState(false);
-  const [editJournalForm, setEditJournalForm] = useState({ id: null, journalNo: '', totalAmount: '' });
+  const [editingJournalForm, setEditingJournalForm] = useState({ journalNo: '', totalAmount: '' });
 
   // Form State
   const emptyForm = {
@@ -631,19 +630,19 @@ export default function ReceiptVouchers({}) {
     }
   };
 
-  const handleEditJournal = async () => {
-    if (!editJournalForm.journalNo || !editJournalForm.totalAmount) {
+  const handleSaveJournalDetails = async () => {
+    if (!editingJournalForm.journalNo || !editingJournalForm.totalAmount) {
       toast.error('يرجى تعبئة جميع الحقول');
       return;
     }
     setLoading(true);
     try {
       const { error } = await supabase.from('journal_entries')
-        .update({ journal_no: editJournalForm.journalNo, total_amount: Number(editJournalForm.totalAmount) })
-        .eq('id', editJournalForm.id);
+        .update({ journal_no: editingJournalForm.journalNo, total_amount: Number(editingJournalForm.totalAmount) })
+        .eq('id', selectedJournalEntry.id);
       if (error) throw error;
-      toast.success('تم التعديل بنجاح');
-      setIsEditJournalOpen(false);
+      toast.success('تم الحفظ بنجاح');
+      setSelectedJournalEntry(prev => ({ ...prev, journal_no: editingJournalForm.journalNo, total_amount: Number(editingJournalForm.totalAmount) }));
       await fetchJournalEntries();
     } catch (err) {
       console.error('❌ Edit Journal error:', err);
@@ -651,6 +650,26 @@ export default function ReceiptVouchers({}) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRemoveFromJournal = async (id, type) => {
+    if (!window.confirm('هل أنت متأكد من إزالة هذا العنصر من القيد؟ (لن يتم حذفه من النظام، بل سيعود غير مسوى)')) return;
+    try {
+      const table = type === 'voucher' ? 'receipt_vouchers' : 'representative_expenses';
+      const { error } = await supabase.from(table).update({ is_settled: false, settlement_batch_id: null }).eq('id', id);
+      if (error) throw error;
+      toast.success('تمت الإزالة من القيد بنجاح');
+      await fetchInitialData();
+    } catch (err) {
+      console.error('❌ Remove from journal error:', err);
+      toast.error('حدث خطأ أثناء الإزالة');
+    }
+  };
+
+  const openJournalDetail = (journal) => {
+    setSelectedJournalEntry(journal);
+    setEditingJournalForm({ journalNo: journal.journal_no, totalAmount: journal.total_amount });
+    setIsJournalDetailOpen(true);
   };
 
   // Keyboard support
@@ -934,7 +953,7 @@ export default function ReceiptVouchers({}) {
               )) : journalEntries.map((journal, idx) => (
                 <tr 
                   key={journal.id} 
-                  onClick={() => { setSelectedJournalEntry(journal); setIsJournalDetailOpen(true); }}
+                  onClick={() => openJournalDetail(journal)}
                   className="animate-fade-in-up group cursor-pointer hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors"
                 >
                   <td className="px-6 py-5 text-center text-xs font-black text-slate-400">{idx + 1}</td>
@@ -943,7 +962,7 @@ export default function ReceiptVouchers({}) {
                   <td className="px-6 py-5 text-center text-sm font-black text-indigo-600 dark:text-indigo-400">{journal.total_amount.toLocaleString()} <small className="text-[10px]">ر.س</small></td>
                   <td className="px-6 py-5 text-center">
                     <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => { e.stopPropagation(); setEditJournalForm({ id: journal.id, journalNo: journal.journal_no, totalAmount: journal.total_amount }); setIsEditJournalOpen(true); }} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all" title="تعديل"><Pencil size={18} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); openJournalDetail(journal); }} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all" title="تعديل"><Pencil size={18} /></button>
                       <button onClick={(e) => { e.stopPropagation(); handleDelete(journal.id, 'journal_entry'); }} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all" title="مسح"><Trash2 size={18} /></button>
                     </div>
                   </td>
@@ -1562,10 +1581,25 @@ export default function ReceiptVouchers({}) {
               </div>
 
               <div className="p-10 overflow-y-auto custom-scrollbar bg-slate-50/30 dark:bg-slate-900/20 flex-1 space-y-8 text-right" dir="rtl">
-                <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 border border-slate-100 dark:border-slate-700 shadow-sm text-center">
-                  <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">إجمالي المبلغ المسجل</span>
-                  <div className="text-4xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
-                    {selectedJournalEntry.total_amount.toLocaleString()} <span className="text-sm">ر.س</span>
+                
+                {/* Edit Form */}
+                <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row gap-6 justify-center items-end">
+                  <div className="flex-1">
+                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">رقم الدفتر</label>
+                    <input type="text" className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 font-black text-lg outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-center" value={editingJournalForm.journalNo} onChange={e => setEditingJournalForm({...editingJournalForm, journalNo: e.target.value})} />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">إجمالي المبلغ المسجل</label>
+                    <div className="relative">
+                      <input type="number" className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 pl-12 font-black text-lg outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-center text-indigo-600 dark:text-indigo-400" value={editingJournalForm.totalAmount} onChange={e => setEditingJournalForm({...editingJournalForm, totalAmount: e.target.value})} />
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">ر.س</span>
+                    </div>
+                  </div>
+                  <div>
+                    <button onClick={handleSaveJournalDetails} disabled={loading} className="h-12 px-8 rounded-2xl font-black text-white bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-lg shadow-indigo-600/20">
+                      {loading ? <Clock size={18} className="animate-spin" /> : <Save size={18} />}
+                      حفظ التعديلات
+                    </button>
                   </div>
                 </div>
 
@@ -1583,17 +1617,21 @@ export default function ReceiptVouchers({}) {
                             <th className="px-6 py-4 font-black text-slate-400">المندوب</th>
                             <th className="px-6 py-4 font-black text-slate-400">العميل</th>
                             <th className="px-6 py-4 font-black text-slate-400 text-left">المبلغ</th>
+                            <th className="px-6 py-4 font-black text-slate-400 text-center w-16">إزالة</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                           {receiptVouchers.filter(v => v.settlement_batch_id === selectedJournalEntry.id).map((v, i) => (
-                            <tr key={v.id}>
+                            <tr key={v.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                               <td className="px-6 py-4 text-center text-slate-400 font-bold">{i + 1}</td>
                               <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-300">{formatDateToDisplay(v.date)}</td>
                               <td className="px-6 py-4 font-black text-slate-800 dark:text-white">{v.voucherNo}</td>
                               <td className="px-6 py-4 font-bold text-blue-600">{v.repName}</td>
                               <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-400">{v.customerName}</td>
                               <td className="px-6 py-4 text-left font-black text-emerald-600 tabular-nums">{v.amount.toLocaleString()}</td>
+                              <td className="px-6 py-4 text-center">
+                                <button onClick={() => handleRemoveFromJournal(v.id, 'voucher')} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all" title="إزالة من القيد"><Trash2 size={16} /></button>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -1613,16 +1651,20 @@ export default function ReceiptVouchers({}) {
                             <th className="px-6 py-4 font-black text-slate-400">المندوب</th>
                             <th className="px-6 py-4 font-black text-slate-400">البيان</th>
                             <th className="px-6 py-4 font-black text-slate-400 text-left">المبلغ</th>
+                            <th className="px-6 py-4 font-black text-slate-400 text-center w-16">إزالة</th>
                           </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                               {repExpenses.filter(e => e.settlement_batch_id === selectedJournalEntry.id).map((e, i) => (
-                                <tr key={e.id}>
+                                <tr key={e.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                                   <td className="px-6 py-4 text-center text-slate-400 font-bold">{i + 1}</td>
                                   <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-300">{formatDateToDisplay(e.date)}</td>
                                   <td className="px-6 py-4 font-black text-blue-600">{e.repName}</td>
                                   <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-400">{e.statement}</td>
                                   <td className="px-6 py-4 text-left font-black text-rose-600 tabular-nums">-{e.amount.toLocaleString()}</td>
+                                  <td className="px-6 py-4 text-center">
+                                    <button onClick={() => handleRemoveFromJournal(e.id, 'expense')} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all" title="إزالة من القيد"><Trash2 size={16} /></button>
+                                  </td>
                                 </tr>
                               ))}
                             </tbody>
