@@ -406,22 +406,37 @@ export default function ReceiptVouchers({}) {
     setIsModalOpen(true);
   };
 
-  const handlePrint = () => {
+  const handlePrint = (journalEntryOrEvent = null) => {
+    const isEvent = journalEntryOrEvent && !!journalEntryOrEvent.nativeEvent;
+    const journalEntry = isEvent ? null : journalEntryOrEvent;
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       toast.error('لم نتمكن من فتح نافذة الطباعة. يرجى السماح بالنوافذ المنبثقة (Pop-ups) في متصفحك.');
       return;
     }
     
-    const hasSelection = selectedVoucherIds.length > 0 || selectedExpenseIds.length > 0;
-    
-    const vouchersToPrint = hasSelection 
-      ? filteredVouchers.filter(v => selectedVoucherIds.includes(v.id))
-      : filteredVouchers;
-      
-    const expensesToPrint = hasSelection 
-      ? filteredExpenses.filter(e => selectedExpenseIds.includes(e.id))
-      : filteredExpenses;
+    let vouchersToPrint = [];
+    let expensesToPrint = [];
+    let title = '';
+    let hasSelection = false;
+
+    if (journalEntry) {
+      vouchersToPrint = receiptVouchers.filter(v => v.settlement_batch_id === journalEntry.id);
+      expensesToPrint = repExpenses.filter(e => e.settlement_batch_id === journalEntry.id);
+      title = `تقرير تسوية وتوريد (قيد ${journalEntry.journal_no})`;
+    } else {
+      hasSelection = selectedVoucherIds.length > 0 || selectedExpenseIds.length > 0;
+      vouchersToPrint = hasSelection 
+        ? filteredVouchers.filter(v => selectedVoucherIds.includes(v.id))
+        : filteredVouchers;
+        
+      expensesToPrint = hasSelection 
+        ? filteredExpenses.filter(e => selectedExpenseIds.includes(e.id))
+        : filteredExpenses;
+        
+      title = hasSelection ? 'تقرير تسوية وتوريد' : 'تقرير السندات والمصروفات';
+    }
       
     let contentHtml = '';
     let totalVouchers = 0;
@@ -544,6 +559,7 @@ export default function ReceiptVouchers({}) {
             </div>
             <div class="meta-info">
               <div class="meta-item">تاريخ الإصدار: <span>${new Date().toLocaleDateString('ar-SA')}</span></div>
+              ${journalEntry ? `<div class="meta-item" style="margin-top: 8px;">تاريخ القيد: <span>${new Date(journalEntry.created_at).toLocaleDateString('ar-SA')}</span></div>` : ''}
             </div>
           </div>
           
@@ -1491,7 +1507,13 @@ export default function ReceiptVouchers({}) {
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">قيد رقم: {selectedJournalEntry.journal_no} | التاريخ: {new Date(selectedJournalEntry.created_at).toLocaleDateString('ar-EG')}</p>
                   </div>
                 </div>
-                <button onClick={() => setIsJournalDetailOpen(false)} className="w-12 h-12 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-all shadow-sm"><X size={24} /></button>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => handlePrint(selectedJournalEntry)} className="px-5 py-2.5 rounded-xl font-bold text-indigo-600 bg-white hover:bg-indigo-50 border border-indigo-100 transition-all flex items-center gap-2 shadow-sm">
+                    <Printer size={18} />
+                    طباعة التقرير
+                  </button>
+                  <button onClick={() => setIsJournalDetailOpen(false)} className="w-12 h-12 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-all shadow-sm"><X size={24} /></button>
+                </div>
               </div>
 
               <div className="p-10 overflow-y-auto custom-scrollbar bg-slate-50/30 dark:bg-slate-900/20 flex-1 space-y-8 text-right" dir="rtl">

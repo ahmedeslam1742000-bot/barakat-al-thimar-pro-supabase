@@ -122,6 +122,8 @@ function normalizeVoucher(r) {
     type: r.type,
     is_deposited: r.is_deposited || false,
     deposited_at: r.deposited_at || null,
+    is_settled: r.is_settled || false,
+    settlement_batch_id: r.settlement_batch_id || null,
   };
 }
 
