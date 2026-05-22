@@ -688,6 +688,160 @@ export default function ReceiptVouchers({}) {
     printWindow.document.close();
   };
 
+  const handlePrintSettlementReport = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('لم نتمكن من فتح نافذة الطباعة. يرجى السماح بالنوافذ المنبثقة (Pop-ups) في متصفحك.');
+      return;
+    }
+    
+    const selectedVouchersList = filteredVouchers.filter(v => selectedVoucherIds.includes(v.id));
+    const selectedExpensesList = repExpenses.filter(e => selectedExpenseIds.includes(e.id));
+    
+    let contentHtml = '';
+    let totalVouchers = 0;
+    let totalExpenses = 0;
+
+    if (selectedVouchersList.length > 0) {
+      const tableRows = selectedVouchersList.map((v, i) => {
+        totalVouchers += Number(v.amount || 0);
+        return `
+        <tr>
+          <td class="text-center">${i + 1}</td>
+          <td>${formatDateToDisplay(v.date)}</td>
+          <td class="font-bold">${v.repName}</td>
+          <td>${v.customerName}</td>
+          <td class="text-center">${v.voucherNo}</td>
+          <td class="text-center font-bold text-emerald">${v.amount.toLocaleString()} ر.س</td>
+          <td class="text-center"><span class="badge ${v.type === 'نقدي' ? 'badge-cash' : v.type === 'شبكة' ? 'badge-card' : 'badge-transfer'}">${v.type}</span></td>
+        </tr>
+      `}).join('');
+
+      contentHtml += `
+        <div class="section-title">محصلات الدفع المحددة للتسوية</div>
+        <table>
+          <thead>
+            <tr>
+              <th width="5%">م</th>
+              <th width="12%">التاريخ</th>
+              <th width="18%">المندوب</th>
+              <th width="18%">العميل</th>
+              <th width="15%">رقم السند</th>
+              <th width="15%">المبلغ</th>
+              <th width="12%">نوع التحصيل</th>
+            </tr>
+          </thead>
+          <tbody>${tableRows}</tbody>
+          <tfoot>
+            <tr>
+              <td colspan="5" class="text-left font-bold" style="padding-left: 20px;">إجمالي السندات:</td>
+              <td class="text-center font-black text-emerald" style="font-size: 14px;">${totalVouchers.toLocaleString()} ر.س</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      `;
+    }
+
+    if (selectedExpensesList.length > 0) {
+      const tableRows = selectedExpensesList.map((e, i) => {
+        totalExpenses += Number(e.amount || 0);
+        return `
+        <tr>
+          <td class="text-center">${i + 1}</td>
+          <td>${formatDateToDisplay(e.date)}</td>
+          <td class="font-bold">${e.repName}</td>
+          <td>${e.statement}</td>
+          <td class="text-center font-bold text-rose" style="color: #e11d48;">${e.amount.toLocaleString()} ر.س</td>
+        </tr>
+      `}).join('');
+
+      contentHtml += `
+        <div class="section-title">المصروفات المحددة للتسوية</div>
+        <table>
+          <thead>
+            <tr>
+              <th width="5%">م</th>
+              <th width="12%">التاريخ</th>
+              <th width="20%">المستفيد</th>
+              <th width="43%">البيان</th>
+              <th width="20%">المبلغ</th>
+            </tr>
+          </thead>
+          <tbody>${tableRows}</tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4" class="text-left font-bold" style="padding-left: 20px;">إجمالي المصروفات:</td>
+              <td class="text-center font-black" style="color: #e11d48; font-size: 14px;">${totalExpenses.toLocaleString()} ر.س</td>
+            </tr>
+          </tfoot>
+        </table>
+      `;
+    }
+
+    const netAmount = totalVouchers - totalExpenses;
+
+    const html = `
+      <html dir="rtl">
+        <head>
+          <title>تقرير التسوية</title>
+          <style>
+             @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+             :root { --primary: #4f46e5; --primary-light: #e0e7ff; --text-main: #1e293b; --text-muted: #64748b; --border-color: #e2e8f0; --bg-light: #f8fafc; }
+             * { box-sizing: border-box; }
+             body { font-family: 'Cairo', sans-serif; padding: 40px; color: var(--text-main); background-color: #fff; line-height: 1.5; }
+             .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 3px solid var(--primary-light); }
+             .section-title { font-size: 18px; font-weight: 800; color: #334155; margin: 30px 0 15px 0; display: flex; align-items: center; gap: 10px; }
+             .section-title::before { content: ''; display: inline-block; width: 6px; height: 20px; background-color: var(--primary); border-radius: 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+             table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; }
+             th, td { padding: 10px 8px; text-align: right; font-size: 11px; }
+             th { background-color: var(--bg-light); font-weight: 800; color: #475569; border-bottom: 2px solid var(--border-color); white-space: nowrap; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+             td { border-bottom: 1px solid var(--border-color); color: #334155; }
+             tbody tr:last-child td { border-bottom: none; }
+             tbody tr:nth-child(even) td { background-color: #fcfcfc; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+             tfoot td { background-color: var(--bg-light); border-top: 2px solid var(--border-color); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+             .text-center { text-align: center; } .text-left { text-align: left; } .font-bold { font-weight: 700; } .font-black { font-weight: 900; } .text-emerald { color: #059669; }
+             .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+             .badge-cash { background: #d1fae5; color: #047857; } .badge-card { background: #dbeafe; color: #1d4ed8; } .badge-transfer { background: #f3e8ff; color: #7e22ce; }
+             .report-main-title { font-size: 32px; font-weight: 900; color: var(--primary); letter-spacing: -0.5px; text-shadow: 2px 2px 0px rgba(79, 70, 229, 0.1); font-family: 'Cairo', sans-serif; position: relative; display: inline-block; }
+             .report-main-title::after { content: ''; position: absolute; bottom: -4px; right: 0; width: 50%; height: 4px; background-color: var(--primary); border-radius: 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+             .meta-info { text-align: left; }
+             .meta-item { font-size: 14px; color: var(--text-muted); }
+             .meta-item span { font-weight: 800; color: var(--text-main); margin-right: 8px; background-color: var(--bg-light); padding: 4px 12px; border-radius: 8px; border: 1px solid var(--border-color); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+             @media print { body { padding: 0; } table { break-inside: auto; } tr { break-inside: avoid; page-break-inside: avoid; } }
+          </style>
+        </head>
+        <body>
+          <div class="header-container">
+            <div>
+              <div class="report-main-title">تقرير تسوية وتوريد</div>
+            </div>
+            <div class="meta-info">
+              <div class="meta-item">تاريخ الإصدار: <span>${new Date().toLocaleDateString('ar-SA')}</span></div>
+            </div>
+          </div>
+          
+          ${contentHtml || '<div class="text-center" style="padding: 40px; color: var(--text-muted);">لا توجد بيانات للعرض</div>'}
+          
+          ${(totalVouchers > 0 || totalExpenses > 0) ? `
+          <div style="margin-top: 30px; padding: 20px; background-color: var(--bg-light); border: 2px dashed var(--border-color); border-radius: 12px; text-align: center;">
+            <div style="font-size: 14px; font-weight: 800; color: var(--text-muted); margin-bottom: 5px;">صافي التوريد (السندات - المصروفات)</div>
+            <div style="font-size: 28px; font-weight: 900; color: var(--primary);">${netAmount.toLocaleString()} ر.س</div>
+          </div>
+          ` : ''}
+
+          <script>
+            window.onload = () => { window.print(); };
+            window.onafterprint = () => { window.close(); };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   const handleDelete = (id, type = 'voucher') => {
     setDeleteTargetId(id);
     setDeleteTargetType(type);
@@ -816,11 +970,24 @@ export default function ReceiptVouchers({}) {
             <span>إنشاء سند جديد</span>
           </button>
           <button 
-            onClick={(selectedVoucherIds.length > 0 || selectedExpenseIds.length > 0) ? () => setIsSettlementWizardOpen(true) : handlePrint}
-            className={`p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl transition-all shadow-sm flex items-center gap-2 ${(selectedVoucherIds.length > 0 || selectedExpenseIds.length > 0) ? 'text-blue-500 border-blue-200 bg-blue-50/50' : 'text-slate-500 hover:text-emerald-500'}`}
+            onClick={() => setIsSettlementWizardOpen(true)}
+            disabled={selectedVoucherIds.length === 0 && selectedExpenseIds.length === 0}
+            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-xs shadow-lg transition-all group ${
+              (selectedVoucherIds.length > 0 || selectedExpenseIds.length > 0) 
+                ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-indigo-600/20 hover:scale-[1.02] active:scale-[0.98]' 
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-60'
+            }`}
+          >
+            <CheckCircle2 size={18} className={(selectedVoucherIds.length > 0 || selectedExpenseIds.length > 0) ? 'group-hover:scale-110 transition-transform' : ''} />
+            <span>تسوية محددة {(selectedVoucherIds.length > 0 || selectedExpenseIds.length > 0) ? `(${selectedVoucherIds.length + selectedExpenseIds.length})` : ''}</span>
+          </button>
+
+          <button 
+            onClick={handlePrint}
+            className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-emerald-500 rounded-2xl transition-all shadow-sm flex items-center justify-center shrink-0"
+            title="طباعة السندات المعروضة"
           >
             <Printer size={20} />
-            {(selectedVoucherIds.length > 0 || selectedExpenseIds.length > 0) && <span className="text-[10px] font-black">طباعة وتسوية ({selectedVoucherIds.length + selectedExpenseIds.length})</span>}
           </button>
         </div>
       </div>
@@ -1521,16 +1688,19 @@ export default function ReceiptVouchers({}) {
                   <button onClick={() => setIsSettlementWizardOpen(false)} className="px-8 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">إلغاء</button>
                   <button 
                     disabled={loading}
-                    onClick={async () => {
-                      handlePrintSettlement();
-                      setTimeout(() => {
-                        setIsConfirmSettlementOpen(true);
-                      }, 1000);
-                    }} 
+                    onClick={handlePrintSettlementReport}
+                    className="px-6 py-4 rounded-2xl font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:hover:bg-indigo-900/50 dark:text-indigo-400 transition-all flex items-center gap-2"
+                  >
+                    <Printer size={20} />
+                    طباعة التقرير
+                  </button>
+                  <button 
+                    disabled={loading}
+                    onClick={() => setIsConfirmSettlementOpen(true)} 
                     className="px-10 py-4 rounded-2xl font-black text-white bg-indigo-600 hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-600/20 active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50"
                   >
-                    {loading ? <Clock size={20} className="animate-spin" /> : <Printer size={20} />}
-                    اعتماد وطباعة التسوية
+                    {loading ? <Clock size={20} className="animate-spin" /> : <CheckCircle2 size={20} />}
+                    اعتماد التسوية
                   </button>
                 </div>
               </div>
@@ -1810,7 +1980,5 @@ export default function ReceiptVouchers({}) {
   </>
   );
 
-  function handlePrintSettlement() {
-    window.print();
-  }
+
 }
