@@ -2,9 +2,8 @@ import { useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Search, Pencil, X, Check, Tags,
-  TrendingUp, TrendingDown, LogOut,
-  AlertCircle, LayoutGrid, Snowflake, Box, Thermometer, Package
+  Search, Pencil, Tags,
+  LogOut, AlertCircle, LayoutGrid, Snowflake, Box, Thermometer, Package
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
@@ -85,56 +84,26 @@ const PriceItemRow = React.memo(({ item, idx, isViewer, onSave }) => {
         <span className="text-[11px] font-bold text-slate-400">{item.unit || 'وحدة'}</span>
       </td>
 
-      {/* السعر السابق */}
-      <td className="px-6 py-2 text-center align-middle">
-        <div className="flex items-center justify-center text-slate-400 font-bold tabular-nums">
-          <span className="text-lg">{item.old_price || 0}</span>
-        </div>
-      </td>
-
       {/* السعر الحالي — قابل للتعديل inline */}
       <td className="px-6 py-2 text-center align-middle">
         {editing ? (
-          <div className="flex items-center justify-center gap-1">
+          <div className="flex items-center justify-center">
             <input
               ref={inputRef}
               type="number"
               value={draft}
               onChange={e => setDraft(e.target.value)}
               onKeyDown={handleKey}
+              onFocus={e => e.target.select()}
               disabled={saving}
-              className="w-24 h-9 rounded-xl border-2 border-indigo-400 bg-white text-center text-lg font-black text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-300 tabular-nums shadow-md"
+              className="w-28 h-10 rounded-xl border-2 border-indigo-500 bg-indigo-50 text-center text-xl font-black text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-300 tabular-nums shadow-md"
               style={{ MozAppearance: 'textfield' }}
             />
-            {/* زرار حفظ */}
-            <button
-              onClick={save}
-              disabled={saving}
-              className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 disabled:opacity-50 transition-all shadow"
-              title="حفظ (Enter)"
-            >
-              {saving
-                ? <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                : <Check size={15} strokeWidth={3} />}
-            </button>
-            {/* زرار إلغاء */}
-            <button
-              onClick={cancel}
-              disabled={saving}
-              className="w-8 h-8 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 disabled:opacity-50 transition-all shadow"
-              title="إلغاء (Esc)"
-            >
-              <X size={15} strokeWidth={3} />
-            </button>
+            {saving && <span className="mr-2 w-4 h-4 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />}
           </div>
         ) : (
           <div className="flex items-center justify-center gap-2 text-emerald-600 font-black tabular-nums bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 inline-flex mx-auto">
             <span className="text-xl">{item.price || 0}</span>
-            {item.price > (item.old_price || 0) ? (
-              <TrendingUp size={14} />
-            ) : item.price < (item.old_price || 0) ? (
-              <TrendingDown size={14} />
-            ) : null}
           </div>
         )}
       </td>
@@ -282,14 +251,13 @@ export default function PriceList() {
                   <th className="px-6 py-2">اسم الصنف</th>
                   <th className="px-6 py-2 text-center w-32">القسم</th>
                   <th className="px-6 py-2 text-center w-32">الوحدة</th>
-                  <th className="px-6 py-2 text-center w-40">السعر السابق</th>
                   <th className="px-6 py-2 text-center w-52">السعر الحالي</th>
                   <th className="px-6 py-2 text-center w-24">إجراء</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {rowVirtualizer.getVirtualItems().length > 0 && rowVirtualizer.getVirtualItems()[0].start > 0 && (
-                  <tr><td style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} colSpan={7} /></tr>
+                  <tr><td style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} colSpan={6} /></tr>
                 )}
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => (
                   <PriceItemRow 
@@ -301,7 +269,7 @@ export default function PriceList() {
                   />
                 ))}
                 {rowVirtualizer.getVirtualItems().length > 0 && (
-                  <tr><td style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} colSpan={7} /></tr>
+                  <tr><td style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} colSpan={6} /></tr>
                 )}
               </tbody>
             </table>
