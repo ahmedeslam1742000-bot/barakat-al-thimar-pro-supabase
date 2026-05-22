@@ -125,21 +125,16 @@ export default function MainLayout({ children }) {
         className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out print:mr-0 print:block print:overflow-visible ${isSidebarOpen ? 'lg:mr-56' : 'mr-0'}`}
       >
         {/* Top Navbar - Transparent & Modern */}
-        <header className="print:hidden w-full h-20 shrink-0 z-40 flex items-center justify-between px-6 lg:px-8 transition-all duration-300 pt-4">
+        <header className="print:hidden w-full h-16 shrink-0 z-40 flex items-center justify-between px-6 lg:px-8 transition-all duration-300 pt-2">
           <div className="flex items-center gap-4">
             {!isSidebarOpen && (
               <button 
                 onClick={() => setIsSidebarOpen(true)}
-                className="p-2 text-slate-500 hover:text-primary dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all"
+                className="p-2 text-slate-500 hover:text-primary dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all shadow-sm"
               >
                 <Menu size={20} />
               </button>
             )}
-            
-            <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-0.5">الصفحات / لوحة القيادة</span>
-              <h1 className="text-2xl font-black font-tajawal tracking-tight text-[#2B3674] dark:text-white">لوحة القيادة</h1>
-            </div>
           </div>
           
           {/* Middle: Spacer */}
