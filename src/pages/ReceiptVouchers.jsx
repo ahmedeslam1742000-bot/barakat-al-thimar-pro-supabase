@@ -424,7 +424,7 @@ export default function ReceiptVouchers({}) {
     if (journalEntry) {
       vouchersToPrint = receiptVouchers.filter(v => v.settlement_batch_id === journalEntry.id);
       expensesToPrint = repExpenses.filter(e => e.settlement_batch_id === journalEntry.id);
-      title = `تقرير تسوية وتوريد (قيد ${journalEntry.journal_no})`;
+      title = `تقرير تسوية وتوريد`;
     } else {
       hasSelection = selectedVoucherIds.length > 0 || selectedExpenseIds.length > 0;
       vouchersToPrint = hasSelection 
@@ -558,14 +558,19 @@ export default function ReceiptVouchers({}) {
               <div class="report-main-title">${title}</div>
             </div>
             <div class="meta-info">
-              <div class="meta-item">تاريخ الطباعة: <span>${new Date().toLocaleDateString('ar-EG')}</span></div>
-              ${journalEntry ? `
-                <div class="meta-item">تاريخ القيد: <span>${new Date(journalEntry.created_at).toLocaleDateString('ar-EG')}</span></div>
-                <div class="meta-item">رقم الدفتر: <span style="color: var(--primary);">${journalEntry.journal_no}</span></div>
-                <div class="meta-item">إجمالي القيد: <span style="color: #e11d48;">${Number(journalEntry.total_amount).toLocaleString()} ر.س</span></div>
-              ` : ''}
+              ${journalEntry 
+                ? `<div class="meta-item">تاريخ القيد: <span>${new Date(journalEntry.created_at).toLocaleDateString('ar-EG')}</span></div>`
+                : `<div class="meta-item">تاريخ التقرير: <span>${new Date().toLocaleDateString('ar-EG')}</span></div>`
+              }
             </div>
           </div>
+          
+          ${journalEntry ? `
+          <div style="display: flex; gap: 20px; margin-bottom: 30px; background: var(--bg-light); padding: 15px 20px; border-radius: 12px; border: 1px dashed var(--border-color); -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+            <div style="flex: 1; font-size: 15px; font-weight: 800; color: var(--text-muted);">رقم الدفتر: <span style="color: var(--primary); font-weight: 900; margin-right: 8px; font-size: 16px;">${journalEntry.journal_no}</span></div>
+            <div style="flex: 1; font-size: 15px; font-weight: 800; color: var(--text-muted);">إجمالي القيد المسجل: <span style="color: #e11d48; font-weight: 900; margin-right: 8px; font-size: 16px;">${Number(journalEntry.total_amount).toLocaleString()} ر.س</span></div>
+          </div>
+          ` : ''}
           
           ${contentHtml || '<div class="text-center" style="padding: 40px; color: var(--text-muted);">لا توجد بيانات للعرض</div>'}
           
