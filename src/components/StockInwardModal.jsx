@@ -13,8 +13,9 @@ import { useAudio } from '../contexts/AudioContext';
 import { useData } from '../contexts/DataContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { formatDate } from '../lib/dateUtils';
-import { isInvalidCompany } from '../lib/itemFields';
+import { isInvalidCompany, formatItemNameWithCompany, getItemName } from '../lib/itemFields';
 import SmartDateInput from './SmartDateInput';
+import { Combobox } from './ui/Combobox';
 
 // --- Premium UI Components ---
 
@@ -68,7 +69,6 @@ export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
     qty: '',
   });
 
-  const [suggestionsIndex, setSuggestionsIndex] = useState(-1);
   const [locations, setLocations] = useState(['مستودع الرياض']);
   const [isAddingNewSupplier, setIsAddingNewSupplier] = useState(false);
   const [newSupplierName, setNewSupplierName] = useState('');
@@ -102,20 +102,17 @@ export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
     }
   }, [isOpen]);
 
-  const itemSuggestions = useMemo(() => {
-    if (!currentStockItem.name || currentStockItem.selectedItem) return [];
-    const query = normalizeArabic(currentStockItem.name);
-    return items.filter(i => {
-      const name = normalizeArabic(i.name);
-      const company = normalizeArabic(i.company || '');
-      return name.includes(query) || company.includes(query);
-    }).slice(0, 8);
-  }, [items, currentStockItem.name, currentStockItem.selectedItem]);
-
-  // Reset suggestion index when suggestions change
-  useEffect(() => {
-    setSuggestionsIndex(-1);
-  }, [itemSuggestions]);
+  const comboboxItems = useMemo(() => {
+    return items.map(i => ({
+      value: i.id.toString(),
+      label: formatItemNameWithCompany(i.name, i.company),
+      name: i.name,
+      company: i.company,
+      cat: i.cat,
+      unit: i.unit,
+      id: i.id
+    }));
+  }, [items]);
 
   const handlePushToDraft = () => {
     const { name, qty, unit, cat, selectedItem } = currentStockItem;
@@ -325,27 +322,7 @@ export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
     onClose();
   };
 
-  const handleItemNameKeyDown = (e) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSuggestionsIndex(prev => Math.min(prev + 1, itemSuggestions.length - 1));
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSuggestionsIndex(prev => Math.max(prev - 1, -1));
-    } else if (e.key === 'Enter') {
-      e.preventDefault();
-      if (suggestionsIndex >= 0 && itemSuggestions[suggestionsIndex]) {
-        const s = itemSuggestions[suggestionsIndex];
-        const combinedName = `${s.name}${s.company ? ` - ${s.company}` : ''}`;
-        setCurrentStockItem({ ...currentStockItem, name: combinedName, selectedItem: s, cat: s.cat, unit: s.unit });
-      } else if (itemSuggestions.length > 0) {
-        const s = itemSuggestions[0];
-        const combinedName = `${s.name}${s.company ? ` - ${s.company}` : ''}`;
-        setCurrentStockItem({ ...currentStockItem, name: combinedName, selectedItem: s, cat: s.cat, unit: s.unit });
-      }
-      qtyRef.current?.focus();
-    }
-  };
+
 
   const isReceiptDisabled = stockForm.receiptType === 'بدون';
 
@@ -483,29 +460,24 @@ export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
                 <div className="grid grid-cols-12 gap-2 items-end mb-6">
                   <div className="col-span-12 md:col-span-5 relative">
                     <CompactLabel color="text-[#279489]">اسم الصنف</CompactLabel>
-                    <PremiumInput ref={itemNameRef} placeholder="ابحث هنا..." className="text-center" value={currentStockItem.name} onChange={e => setCurrentStockItem({ ...currentStockItem, name: e.target.value, selectedItem: null })} onKeyDown={handleItemNameKeyDown} />
-                    {itemSuggestions.length > 0 && (
-                      <div className="absolute top-full left-0 right-0 bg-white border border-slate-100 shadow-2xl rounded-xl mt-1 z-[200] overflow-hidden">
-                        {itemSuggestions.map((s, idx) => (
-                          <button 
-                            key={s.id} 
-                            type="button" 
-                            onClick={() => { 
-                              const combinedName = `${s.name}${s.company ? ` - ${s.company}` : ''}`;
-                              setCurrentStockItem({ ...currentStockItem, name: combinedName, selectedItem: s, cat: s.cat, unit: s.unit }); 
-                              qtyRef.current?.focus(); 
-                            }} 
-                            className={`w-full px-4 py-2.5 text-right flex items-center justify-between border-b border-slate-50 last:border-0 transition-colors ${suggestionsIndex === idx ? 'bg-teal-50 border-teal-100' : 'hover:bg-slate-50'}`}
-                          >
-                            <div className="flex items-center gap-2 font-tajawal">
-                              <span className="font-black text-slate-800 text-[13px]">{s.name}</span>
-                              <span className="text-[11px] text-slate-400 font-bold">— {s.company || 'بدون شركة'}</span>
-                            </div>
-                            <span className="text-[10px] font-black bg-slate-50 px-2 py-0.5 rounded text-slate-400 uppercase font-tajawal">{s.cat}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    <Combobox
+                      ref={itemNameRef}
+                      items={comboboxItems}
+                      value={currentStockItem.selectedItem?.id?.toString() || ""}
+                      onSelect={(matchedItem) => {
+                        setCurrentStockItem({
+                          name: matchedItem.label,
+                          selectedItem: matchedItem,
+                          cat: matchedItem.cat || 'مجمدات',
+                          unit: matchedItem.unit || 'كرتونة',
+                          qty: currentStockItem.qty
+                        });
+                        setTimeout(() => qtyRef.current?.focus(), 50);
+                      }}
+                      placeholder="ابحث واختر الصنف..."
+                      searchPlaceholder="اكتب اسم الصنف..."
+                      emptyMessage="الصنف غير موجود."
+                    />
                   </div>
                   <div className="col-span-4 md:col-span-2">
                     <CompactLabel color="text-[#279489]">الكمية</CompactLabel>
@@ -609,7 +581,7 @@ export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
                             <td className="py-3 px-4 text-[10px] font-bold text-slate-400 text-center">{idx + 1}</td>
                             <td className="py-3 px-4 text-center">
                               <div className="flex items-center justify-center gap-1.5">
-                                <span className="font-bold text-slate-700 text-[12px]">{item.item}</span>
+                                <span className="font-bold text-slate-700 text-[12px]">{getItemName({ name: item.item })}</span>
                                 {!isInvalidCompany(item.company) && (
                                   <span className="text-[11px] text-slate-700 font-medium"> - {item.company}</span>
                                 )}

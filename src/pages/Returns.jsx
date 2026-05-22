@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { useAudio } from '../contexts/AudioContext';
 import { useAuth } from '../contexts/AuthContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
-import { getItemName, getCompany, getCategory, getUnit, formatItemDisplay } from '../lib/itemFields';
+import { getItemName, getCompany, getCategory, getUnit, formatItemDisplay, isInvalidCompany } from '../lib/itemFields';
 import { useData } from '../contexts/DataContext';
 import { useDebounce } from '../hooks/useDebounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -524,7 +524,7 @@ export default function () {
                   <td style={{ padding: '8px', border: '1px solid #fecaca', textAlign: 'center' }}>{tx.date || '-'}</td>
                   <td style={{ padding: '8px', border: '1px solid #fecaca' }}>
                     <div style={{ fontWeight: 800 }}>{tx.item}</div>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>{tx.company || '—'}</div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>{!isInvalidCompany(tx.company) ? tx.company : '—'}</div>
                   </td>
                   <td style={{ padding: '8px', border: '1px solid #fecaca', textAlign: 'center', fontWeight: 900, color: '#dc2626' }}>{tx.qty} {tx.unit}</td>
                   <td style={{ padding: '8px', border: '1px solid #fecaca', textAlign: 'center', fontWeight: 900, color: tx.status === 'سليم' ? '#059669' : '#e11d48' }}>
@@ -712,7 +712,7 @@ export default function () {
                              <tr key={it.id} className="hover:bg-slate-50/50 transition-colors group">
                                 <td className="px-5 py-3 text-center text-slate-300 font-bold tabular-nums">{i + 1}</td>
                                 <td className="px-5 py-3 font-black text-slate-700">{it.item}</td>
-                                <td className="px-5 py-3 text-center font-bold text-slate-400">{it.company || '—'}</td>
+                                <td className="px-5 py-3 text-center font-bold text-slate-400">{!isInvalidCompany(it.company) ? it.company : '—'}</td>
                                 <td className="px-5 py-3 text-center font-black text-orange-600 tabular-nums text-sm">{it.qty}</td>
                                 <td className="px-5 py-3 text-center">
                                    <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded-md text-[9px] font-bold">{it.cat}</span>
@@ -959,7 +959,9 @@ export default function () {
                             <td className="px-4 py-3 border-y border-slate-100">
                                <div className="flex flex-col">
                                   <span className="text-sm font-black text-slate-700 leading-tight">{dr.item}</span>
-                                  <span className="text-[10px] font-bold text-slate-400 mt-1">{dr.company}</span>
+                                   {!isInvalidCompany(dr.company) && (
+                                     <span className="text-[10px] font-bold text-slate-400 mt-1">{dr.company}</span>
+                                   )}
                                </div>
                             </td>
                             <td className="px-4 py-3 text-center border-y border-slate-100 text-xs font-bold text-slate-400">

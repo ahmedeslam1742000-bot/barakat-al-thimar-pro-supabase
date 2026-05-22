@@ -5,6 +5,7 @@ import { useData } from '../contexts/DataContext';
 import { useTransactionAnalytics } from '../hooks/useTransactionAnalytics';
 import { motion } from 'framer-motion';
 import { TrendingUp, ArrowRight, Filter, Calendar, Building2, Search } from 'lucide-react';
+import { isInvalidCompany } from '../lib/itemFields';
 
 export default function () {
   const navigate = useNavigate();
@@ -21,7 +22,7 @@ export default function () {
     topSellingItems
   } = useTransactionAnalytics({ dbTransactionsList, items });
 
-  const companies = ['الكل', ...new Set(items.map(i => i.company).filter(Boolean))];
+  const companies = ['الكل', ...new Set(items.map(i => i.company).filter(c => c && !isInvalidCompany(c)))];
 
   return (
     <div className="flex-1 flex flex-col gap-5 font-readex h-full overflow-hidden bg-[#F8FAFC] dark:bg-slate-950 p-2" dir="rtl">
@@ -215,7 +216,7 @@ export default function () {
                         <span className="text-sm font-black text-slate-700 dark:text-slate-300">{item.name}</span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="text-xs font-bold text-slate-400">{item.company}</span>
+                        <span className="text-xs font-bold text-slate-400">{!isInvalidCompany(item.company) ? item.company : '—'}</span>
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm font-black text-indigo-600">{item.sales} وحدة</span>

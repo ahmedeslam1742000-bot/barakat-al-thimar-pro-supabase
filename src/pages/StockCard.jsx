@@ -13,6 +13,7 @@ import { supabase } from '../lib/supabaseClient';
 import { useData } from '../contexts/DataContext';
 import { toast } from 'sonner';
 import { normalizeArabic } from '../lib/arabicTextUtils';
+import { isInvalidCompany } from '../lib/itemFields';
 import { useDebounce } from '../hooks/useDebounce';
 
 const categoryIcons = {
@@ -280,7 +281,7 @@ export default function () {
                             {item.name}
                          </h3>
                          <p className="text-[11px] font-bold text-slate-400 group-hover:text-slate-500 truncate">
-                            {item.company || 'بدون شركة'}
+                            {!isInvalidCompany(item.company) ? item.company : '—'}
                          </p>
                       </div>
                    </div>
@@ -325,7 +326,7 @@ export default function () {
                        </div>
                        <div>
                           <h3 className="text-2xl font-black leading-tight">كارت حركة الصنف</h3>
-                          <p className="text-indigo-100 text-xs font-bold mt-1 opacity-80">{selectedItem.name} — {selectedItem.company}</p>
+                          <p className="text-indigo-100 text-xs font-bold mt-1 opacity-80">{selectedItem.name}{!isInvalidCompany(selectedItem.company) && ` — ${selectedItem.company}`}</p>
                        </div>
                     </div>
                     <div className="flex items-center gap-3 no-print">
@@ -376,7 +377,7 @@ export default function () {
                      </div>
                      <div className="flex flex-col">
                         <span className="text-[10px] font-black text-slate-400 uppercase mb-1">القسم / الشركة</span>
-                        <span className="text-xs font-black text-slate-700 truncate">{selectedItem.cat} - {selectedItem.company}</span>
+                        <span className="text-xs font-black text-slate-700 truncate">{selectedItem.cat}{!isInvalidCompany(selectedItem.company) && ` - ${selectedItem.company}`}</span>
                      </div>
                      <div className="flex flex-col items-end">
                         <span className="text-[10px] font-black text-slate-400 uppercase mb-1">عدد الحركات</span>

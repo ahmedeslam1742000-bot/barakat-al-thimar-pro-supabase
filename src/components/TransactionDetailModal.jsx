@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, FileText, FileInput, FileOutput, Box, RotateCcw, ArrowDownLeft, ArrowUpRight, Calendar, User, Activity, Eye, RefreshCw } from 'lucide-react';
+import { getItemName, isInvalidCompany } from '../lib/itemFields';
 
 /**
  * TransactionDetailModal - Displays detailed information about a batch of transactions.
@@ -179,7 +180,7 @@ export function TransactionDetailModal({
                     <tbody className="divide-y divide-slate-50">
                        {transactions.filter(t => t.is_summary !== true).map((tx, idx) => {
                          const itemFromId = tx.item_id ? items.find(i => i.id === tx.item_id) : null;
-                         const itemName = itemFromId ? itemFromId.name : (tx.item || tx.itemName || 'صنف غير معروف');
+                         const itemName = getItemName({ name: itemFromId ? itemFromId.name : (tx.item || tx.itemName || 'صنف غير معروف') });
                          const itemCompany = itemFromId ? itemFromId.company : (tx.company || '');
                          const itemCat = tx.cat || itemFromId?.cat || '-';
                          
@@ -192,7 +193,7 @@ export function TransactionDetailModal({
                                  </div>
                               </td>
                               <td className="px-4 py-3 text-center">
-                                 <span className="text-[10px] font-bold text-slate-500">{itemCompany || '-'}</span>
+                                 <span className="text-[10px] font-bold text-slate-500">{!isInvalidCompany(itemCompany) ? itemCompany : '—'}</span>
                               </td>
                               <td className="px-4 py-3 text-center">
                                  <span className="text-[9px] font-bold bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase">

@@ -10,6 +10,7 @@ import {
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { normalizeArabic } from '../lib/arabicTextUtils';
+import { isInvalidCompany } from '../lib/itemFields';
 import { useAnimationConfig } from '../hooks/useAnimationConfig';
 import { useDebounce } from '../hooks/useDebounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -23,8 +24,10 @@ const InboundItemRow = React.memo(({ it, idx, getCatIcon }) => (
     <td className="px-4 py-1.5 text-center align-middle">
       <div className="font-bold text-sm text-slate-800 leading-none">{it.item}</div>
     </td>
-    <td className="px-4 py-1.5 text-center align-middle">
-      <div className="text-[11px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200 inline-block">{it.company}</div>
+    <td className="px-4 py-1.5 text-center align-middle text-[11px] font-bold text-slate-500">
+      {!isInvalidCompany(it.company) ? (
+        <div className="bg-slate-100 px-2 py-0.5 rounded-lg border border-slate-200 inline-block">{it.company}</div>
+      ) : '—'}
     </td>
     <td className="px-4 py-1.5 text-center align-middle">
       <span className="inline-flex items-center px-3 py-1 bg-teal-50 text-teal-700 rounded-lg text-[12px] font-black border border-teal-100 shadow-sm">
@@ -372,7 +375,7 @@ export default function () {
                           <tr key={item.uniqueId}>
                             <td className="border border-black py-2 px-3 text-center text-sm">{idx + 1}</td>
                             <td className="border border-black py-2 px-3 text-right text-sm">{item.item}</td>
-                            <td className="border border-black py-2 px-3 text-right text-sm">{item.company}</td>
+                            <td className="border border-black py-2 px-3 text-right text-sm">{!isInvalidCompany(item.company) ? item.company : '—'}</td>
                             <td className="border border-black py-2 px-3 text-center text-sm">{item.qty}</td>
                             <td className="border border-black py-2 px-3 text-center text-sm">{item.stockQty}</td>
                             <td className="border border-black py-2 px-3 text-center text-sm">{item.damagedQty}</td>

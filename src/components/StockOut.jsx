@@ -11,6 +11,7 @@ import { useAudio } from '../contexts/AudioContext';
 import { useData } from '../contexts/DataContext';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { formatDate } from '../lib/dateUtils';
+import { getItemName, isInvalidCompany } from '../lib/itemFields';
 
 const categoryIcons = {
   'مجمدات': <Snowflake size={18} className="text-cyan-500" />,
@@ -236,7 +237,10 @@ export default function () {
                              <tr key={i} className="hover:bg-slate-50/50 transition-colors group">
                                 <td className="px-6 py-3.5 text-center text-[11px] font-bold text-slate-300 tabular-nums">{i + 1}</td>
                                 <td className="px-6 py-3.5">
-                                   <span className="text-[13px] font-black text-slate-700 whitespace-nowrap">{it.item} - {it.company || 'بدون شركة'}</span>
+                                   <span className="text-[13px] font-black text-slate-700 whitespace-nowrap">
+                                     {getItemName({ name: it.item })}
+                                     {it.company && !isInvalidCompany(it.company) && ` - ${it.company}`}
+                                   </span>
                                 </td>
                                 <td className="px-6 py-3.5 text-center">
                                    <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black border ${
@@ -360,9 +364,9 @@ export default function () {
                           <tr key={i} className="group hover:bg-slate-50/50 transition-colors">
                             <td className="py-6 px-3 text-center text-[13px] font-bold text-slate-400">{(previewPage - 1) * ITEMS_PER_PAGE + i + 1}</td>
                             <td className="py-6 px-4">
-                                <span className="text-[16px] font-black text-slate-800">
-                                  {it.item} {it.company && it.company !== 'بدون شركة' ? <span className="text-slate-400 font-bold text-[14px]"> - {it.company}</span> : ''}
-                                </span>
+                                 <span className="text-[16px] font-black text-slate-800">
+                                   {getItemName({ name: it.item })} {it.company && !isInvalidCompany(it.company) ? <span className="text-slate-400 font-bold text-[14px]"> - {it.company}</span> : ''}
+                                 </span>
                             </td>
                             <td className="py-6 px-4 text-center">
                               <span className="text-[13px] font-bold text-slate-500">{it.cat || '—'}</span>

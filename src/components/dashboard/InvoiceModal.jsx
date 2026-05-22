@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Plus, Trash2, Pencil, Package, AlertCircle } from 'lucide-react';
 import ModalWrapper from '../common/ModalWrapper';
 import SmartDateInput from '../SmartDateInput';
-import { formatItemNameWithCompany, isInvalidCompany } from '../../lib/itemFields';
+import { formatItemNameWithCompany, isInvalidCompany, getItemName } from '../../lib/itemFields';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { Combobox } from '../ui/Combobox';
 
 const invoiceSchema = z.object({
   rep: z.string().optional(),
@@ -98,8 +99,27 @@ export default function InvoiceModal({
   }, [watch, setInvoiceForm]);
 
   const [currentInvoiceItem, setCurrentInvoiceItem] = useState({ name: '', selectedItem: null, cat: '', unit: '', qty: '' });
-  const [invoiceSearchActiveIndex, setInvoiceSearchActiveIndex] = useState(-1);
-  const invoiceSearchInputRef = React.useRef(null);
+  const invoiceSearchInputRef = useRef(null);
+
+  const comboboxItems = useMemo(() => {
+    return items.map(i => ({
+      value: i.id.toString(),
+      label: formatItemNameWithCompany(i.name, i.company),
+      name: i.name,
+      company: i.company,
+      cat: i.cat || i.category || '',
+      unit: i.unit || 'كرتونة',
+      id: i.id,
+      stockQty: i.stockQty
+    }));
+  }, [items]);
+
+  const repsItems = useMemo(() => {
+    return repsList.map(r => ({
+      value: r,
+      label: r
+    }));
+  }, [repsList]);
 
   const handleAddInvoiceItemToTable = () => {
     if (!currentInvoiceItem.selectedItem) return toast.error('حدد الصنف أولاً!');
@@ -142,16 +162,21 @@ export default function InvoiceModal({
         {!isVoucherInvoice && (
           <div className="flex flex-col">
             <label className="text-[10px] font-black text-slate-400 mb-1 mr-1 uppercase">المندوب المسجل <span className="text-red-500">*</span></label>
-            <input
-              type="text"
-              list="reps-datalist"
-              {...register('rep')}
-              className={`w-full h-[38px] bg-white border ${errors.rep ? 'border-red-300 ring-2 ring-red-500/10' : 'border-slate-200'} text-slate-800 text-[13px] font-black rounded-xl px-4 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/20 transition-all font-tajawal`}
-              autoComplete="off" id="invoiceRepInput" placeholder="اسم مندوب المبيعات"
+            <Controller
+              control={control}
+              name="rep"
+              render={({ field }) => (
+                <Combobox
+                  items={repsItems}
+                  value={field.value}
+                  onSelect={(item) => field.onChange(item.value)}
+                  placeholder="اختر المندوب..."
+                  searchPlaceholder="ابحث عن المندوب..."
+                  emptyMessage="المندوب غير مسجل."
+                  buttonClassName={`h-[38px] ${errors.rep ? 'border-red-300 ring-2 ring-red-500/10' : 'border-slate-200'}`}
+                />
+              )}
             />
-            <datalist id="reps-datalist">
-              {repsList.map(rep => <option key={rep} value={rep} />)}
-            </datalist>
             {errors.rep && <span className="text-xs text-red-500 font-bold mt-1 flex items-center gap-1"><AlertCircle size={12}/>{errors.rep.message}</span>}
           </div>
         )}
@@ -196,69 +221,25 @@ export default function InvoiceModal({
           <div className="flex flex-wrap items-end gap-2.5">
             <div className="flex-1 min-w-[250px] relative group/item">
               <label className="block text-[10px] font-bold text-slate-400 mb-1.5 mr-1 uppercase h-[15px] leading-[15px]">البحث عن صنف</label>
-              <div className="relative">
-                <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  ref={invoiceSearchInputRef}
-                  type="text"
-                  autoComplete="off"
-                  className="w-full h-[38px] bg-white border border-slate-200 text-slate-800 text-[13px] font-black rounded-xl pr-9 pl-3 outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/30 transition-all font-tajawal placeholder:text-slate-300 placeholder:font-semibold"
-                  placeholder="اكتب اسم الصنف هنا..."
-                  value={currentInvoiceItem.name}
-                  onChange={(e) => {
-                    setCurrentInvoiceItem({...currentInvoiceItem, name: e.target.value, selectedItem: null, cat: '', unit: ''});
-                    setInvoiceSearchActiveIndex(-1);
-                  }}
-                  onKeyDown={(e) => {
-                    const suggestions = items.filter(i => i.name.includes(currentInvoiceItem.name) || (i.company && i.company.includes(currentInvoiceItem.name)));
-                    if (e.key === 'ArrowDown') { e.preventDefault(); setInvoiceSearchActiveIndex(prev => prev < suggestions.length - 1 ? prev + 1 : prev); }
-                    else if (e.key === 'ArrowUp') { e.preventDefault(); setInvoiceSearchActiveIndex(prev => prev > 0 ? prev - 1 : 0); }
-                    else if (e.key === 'Enter') {
-                      e.preventDefault();
-                      if (invoiceSearchActiveIndex >= 0 && suggestions[invoiceSearchActiveIndex]) {
-                        const invItem = suggestions[invoiceSearchActiveIndex];
-                        setCurrentInvoiceItem({ 
-                          ...currentInvoiceItem, 
-                          name: formatItemNameWithCompany(invItem.name, invItem.company), 
-                          selectedItem: invItem, 
-                          cat: invItem.cat || invItem.category || '', 
-                          unit: invItem.unit || 'كرتونة' 
-                        });
-                        setInvoiceSearchActiveIndex(-1);
-                        setTimeout(() => document.getElementById('invoiceQtyInput')?.focus(), 10);
-                      } else if (currentInvoiceItem.selectedItem) {
-                        setTimeout(() => document.getElementById('invoiceQtyInput')?.focus(), 10);
-                      }
-                    }
-                  }}
-                />
-              </div>
-              {currentInvoiceItem.name && !currentInvoiceItem.selectedItem && (
-                <div className="hidden group-focus-within/item:block absolute top-[110%] right-0 w-full max-h-64 overflow-y-auto bg-white rounded-xl shadow-xl border border-slate-100 z-50 p-1.5 backdrop-blur-xl custom-scrollbar">
-                  {items.filter(i => i.name.includes(currentInvoiceItem.name) || (i.company && i.company.includes(currentInvoiceItem.name))).map((invItem, idx) => (
-                    <button key={invItem.id} type="button" className={`w-full text-right px-3 py-2 rounded-lg transition-all ${invoiceSearchActiveIndex === idx ? 'bg-indigo-50 text-indigo-700' : 'hover:bg-slate-50 text-slate-700'}`} onMouseDown={(e) => {
-                      e.preventDefault();
-                      setCurrentInvoiceItem({
-                        ...currentInvoiceItem,
-                        name: formatItemNameWithCompany(invItem.name, invItem.company),
-                        selectedItem: invItem,
-                        cat: invItem.cat || invItem.category || '',
-                        unit: invItem.unit || 'كرتونة'
-                      });
-                      setInvoiceSearchActiveIndex(-1);
-                      setTimeout(() => { document.getElementById('invoiceQtyInput')?.focus(); }, 10);
-                    }}>
-                      <div className="flex justify-between items-center w-full">
-                        <div className="flex flex-col">
-                          <span className="text-xs font-black">{invItem.name}</span>
-                          <span className="text-[9px] font-bold opacity-60">{invItem.company}</span>
-                        </div>
-                        <span className="text-[9px] font-black bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md">رصيد: {invItem.stockQty}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <Combobox
+                ref={invoiceSearchInputRef}
+                items={comboboxItems}
+                value={currentInvoiceItem.selectedItem?.id?.toString() || ""}
+                onSelect={(matchedItem) => {
+                  setCurrentInvoiceItem({
+                    name: matchedItem.label,
+                    selectedItem: matchedItem,
+                    cat: matchedItem.cat,
+                    unit: matchedItem.unit,
+                    qty: currentInvoiceItem.qty
+                  });
+                  setTimeout(() => document.getElementById('invoiceQtyInput')?.focus(), 50);
+                }}
+                placeholder="ابحث واختر الصنف هنا..."
+                searchPlaceholder="اكتب اسم الصنف للبحث..."
+                emptyMessage="الصنف غير موجود."
+                buttonClassName="h-[38px] border-slate-200 focus:border-indigo-500/30"
+              />
             </div>
 
             <div className="w-[85px]">
@@ -327,7 +308,7 @@ export default function InvoiceModal({
                   <tr key={item.id} className="hover:bg-indigo-50/30 transition-all group border-b border-slate-50 last:border-0">
                     <td className="px-6 py-4 text-[11px] font-black text-slate-300 text-center tabular-nums">{idx + 1}</td>
                     <td className="px-6 py-4 text-sm font-black text-slate-700">
-                      {item.name}
+                      {getItemName({ name: item.name })}
                       {item.selectedItem?.company && !isInvalidCompany(item.selectedItem.company) && (
                         <span className="text-slate-400 font-bold text-[11px] mr-2"> - {item.selectedItem.company}</span>
                       )}

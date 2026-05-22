@@ -10,7 +10,7 @@ export const StatCard = React.memo(({
   subtext,
   actionLabel,
   onAction,
-  accentColor = '#10B981',
+  accentColor = '#059669',
   navigateTo,
   
 }) => {
@@ -25,71 +25,71 @@ export const StatCard = React.memo(({
   };
 
   return (
-    <motion.div
-      whileHover={{ y: -6, transition: { duration: 0.3 } }}
-      className="relative h-full flex flex-col justify-between rounded-[24px] overflow-hidden cursor-pointer group shadow-sm hover:shadow-2xl transition-all duration-300 border-2 no-select-click"
-      onClick={handleCardClick}
-      style={{ 
-        willChange: 'transform', 
-        backfaceVisibility: 'hidden', 
-        transform: 'translate3d(0, 0, 0)',
-        background: `linear-gradient(135deg, #ffffff 0%, ${accentColor}0a 100%)`,
-        borderColor: `${accentColor}40`
-      }}
-    >
-      <div className="p-6 pb-4 flex items-start gap-4">
-        <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-500 group-hover:scale-110 group-hover:rotate-6"
-          style={{ 
-            backgroundColor: accentColor + '15', 
-            color: accentColor,
-            boxShadow: `0 8px 24px -6px ${accentColor}40`
-          }}
-        >
-          <Icon size={26} strokeWidth={2} />
-        </div>
-        <div className="flex flex-col justify-center pt-1 z-10">
-          <span className="text-[16px] font-black text-slate-800 font-tajawal mb-1.5 transition-colors">{label}</span>
-          {value !== undefined && value !== null ? (
-            <>
-              <span className="text-[34px] font-black font-tajawal leading-none tracking-tight transition-colors drop-shadow-sm" style={{ color: accentColor }}>
-                {value}
+    <div className="flex flex-col gap-3 h-full">
+      <motion.div
+        whileHover={{ y: -4, transition: { duration: 0.3 } }}
+        className="relative flex-1 flex flex-col justify-center rounded-[24px] overflow-hidden cursor-pointer group shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 no-select-click"
+        onClick={handleCardClick}
+        style={{ 
+          willChange: 'transform', 
+          backfaceVisibility: 'hidden', 
+          transform: 'translate3d(0, 0, 0)',
+          background: `linear-gradient(135deg, ${accentColor}12 0%, ${accentColor}06 50%, #ffffff 100%)`,
+          borderColor: `${accentColor}30`
+        }}
+      >
+        <div className="p-5 flex items-start gap-4">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-500 group-hover:scale-110 group-hover:rotate-6"
+            style={{ 
+              backgroundColor: accentColor + '15', 
+              color: accentColor,
+              boxShadow: `0 8px 24px -6px ${accentColor}40`
+            }}
+          >
+            <Icon size={26} strokeWidth={2} />
+          </div>
+          <div className="flex flex-col justify-center pt-1 z-10">
+            <span className="text-[15px] font-black text-slate-800 font-tajawal mb-1 transition-colors">{label}</span>
+            {value !== undefined && value !== null ? (
+              <>
+                <span className="text-[32px] font-black font-tajawal leading-none tracking-tight transition-colors drop-shadow-sm" style={{ color: accentColor }}>
+                  {value}
+                </span>
+                {subtext && (
+                  <span className="text-[11px] font-bold text-slate-500 font-readex mt-1.5">{subtext}</span>
+                )}
+              </>
+            ) : (
+              <span className="text-[13px] font-bold text-slate-600 font-tajawal leading-relaxed mt-1">
+                {subtext}
               </span>
-              {subtext && (
-                <span className="text-[12px] font-bold text-slate-500 font-readex mt-2">{subtext}</span>
-              )}
-            </>
-          ) : (
-            <span className="text-[14px] font-bold text-slate-600 font-tajawal leading-relaxed mt-1">
-              {subtext}
-            </span>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+
+        <div
+          className="absolute -top-10 -left-10 w-32 h-32 rounded-full opacity-[0.03] group-hover:opacity-[0.08] group-hover:scale-150 transition-all duration-700 pointer-events-none"
+          style={{ backgroundColor: accentColor }}
+        />
+      </motion.div>
 
       {actionLabel && (
-        <div className="px-5 pb-5 mt-auto z-10">
-          <button
-            type="button"
-            className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-[15px] font-black font-tajawal transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
-            style={{ 
-              backgroundColor: accentColor, 
-              color: '#ffffff',
-              boxShadow: `0 6px 16px -4px ${accentColor}80`
-            }}
-            onClick={handleActionClick}
-          >
-            <Plus size={18} strokeWidth={2.5} />
-            {actionLabel}
-          </button>
-        </div>
+        <button
+          type="button"
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-[16px] text-[14px] font-black font-tajawal transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
+          style={{ 
+            backgroundColor: accentColor,
+            color: '#ffffff',
+            boxShadow: `0 4px 12px -4px ${accentColor}60`
+          }}
+          onClick={handleActionClick}
+        >
+          <Plus size={18} strokeWidth={2.5} />
+          {actionLabel}
+        </button>
       )}
-
-      <div
-        className="absolute -top-10 -left-10 w-32 h-32 rounded-full opacity-[0.03] group-hover:opacity-[0.08] group-hover:scale-150 transition-all duration-700 pointer-events-none"
-        style={{ backgroundColor: accentColor }}
-      />
-    </motion.div>
+    </div>
   );
 });
 StatCard.displayName = 'StatCard';
@@ -111,7 +111,7 @@ const StatsCards = React.memo(({
       subtext="صنف مسجل"
       actionLabel="إضافة صنف"
       onAction={onAddItem}
-      accentColor="#10B981"
+      accentColor="#059669" // الأخضر الأنضج
       navigateTo="items"
       
     />
@@ -123,7 +123,7 @@ const StatsCards = React.memo(({
       subtext="إدارة مخزونك الوارد"
       actionLabel="إضافة وارد"
       onAction={onAddStock}
-      accentColor="#3B82F6"
+      accentColor="#4F46E5" // الأزرق (Indigo) الأنضج
       navigateTo="stock-in"
       
     />
@@ -135,7 +135,7 @@ const StatsCards = React.memo(({
       subtext="إصدار وإدارة المبيعات"
       actionLabel="فاتورة جديدة"
       onAction={onAddInvoice}
-      accentColor="#F59E0B"
+      accentColor="#D97706" // الذهبي الأنضج
       navigateTo="stock-out"
       
     />
@@ -147,7 +147,7 @@ const StatsCards = React.memo(({
       subtext="متابعة الأصناف المرتجعة"
       actionLabel="تسجيل مرتجع"
       onAction={onAddReturn}
-      accentColor="#EF4444"
+      accentColor="#DC2626" // الأحمر الأنضج
       navigateTo="returns"
       
     />

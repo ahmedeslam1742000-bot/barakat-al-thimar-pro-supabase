@@ -1,4 +1,5 @@
 import React from 'react';
+import { getItemName, isInvalidCompany } from '../../lib/itemFields';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, CheckCircle2, AlertOctagon, Layers } from 'lucide-react';
 
@@ -103,7 +104,10 @@ export const AlertsColumn = React.memo(function AlertsColumn({
                           </div>
                           <div className="min-w-0">
                             <h4 className="text-[13px] font-black text-slate-800 font-tajawal truncate group-hover/alert:text-[#0F2747] transition-colors">
-                              {item.name} <span className="text-slate-500 font-bold text-[11px] mr-1">- {item.company || 'بدون شركة'}</span>
+                              {getItemName(item)}
+                              {!isInvalidCompany(item.company) && (
+                                <span className="text-slate-500 font-bold text-[11px] mr-1">- {item.company}</span>
+                              )}
                             </h4>
                           </div>
                         </div>

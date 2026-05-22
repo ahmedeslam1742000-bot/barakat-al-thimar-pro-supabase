@@ -9,6 +9,7 @@ import {
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { normalizeArabic } from '../lib/arabicTextUtils';
+import { getItemName, isInvalidCompany } from '../lib/itemFields';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { useDebounce } from '../hooks/useDebounce';
@@ -22,7 +23,8 @@ const PriceItemRow = React.memo(({ item, idx, isViewer, openEditModal }) => {
       </td>
       <td className="px-6 py-2 align-middle">
         <span className="text-[15px] font-black text-slate-800 tracking-tight whitespace-nowrap">
-          {item.name} - {item.company || 'بدون شركة'}
+          {getItemName(item)}
+          {!isInvalidCompany(item.company) && ` - ${item.company}`}
         </span>
       </td>
       <td className="px-6 py-2 text-center align-middle">
@@ -351,8 +353,10 @@ export default function () {
                 {/* Item Info Card */}
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
                   <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">الصنف المختار</p>
-                  <p className="text-lg font-black text-slate-800 tracking-tight">{selectedItem.name}</p>
-                  <p className="text-sm text-slate-500 font-bold mt-0.5">{selectedItem.company}</p>
+                  <p className="text-lg font-black text-slate-800 tracking-tight">{getItemName(selectedItem)}</p>
+                  {!isInvalidCompany(selectedItem.company) && (
+                    <p className="text-sm text-slate-500 font-bold mt-0.5">{selectedItem.company}</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

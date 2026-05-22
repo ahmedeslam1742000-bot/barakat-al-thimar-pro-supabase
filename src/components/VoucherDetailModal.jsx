@@ -7,6 +7,7 @@ import {
   ArrowLeft, Calendar
 } from 'lucide-react';
 import { normalizeArabic } from '../lib/arabicTextUtils';
+import { getItemName, isInvalidCompany } from '../lib/itemFields';
 
 // Format YYYY-MM-DD to DD/MM/YYYY
 const formatVoucherDate = (dateStr) => {
@@ -188,8 +189,8 @@ export function VoucherDetailModal({
                           {lines.map((line, idx) => (
                             <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-50 dark:border-slate-800/50 last:border-0">
                               <td className="px-4 py-2.5 text-center text-slate-400 font-black">{idx + 1}</td>
-                              <td className="px-4 py-2.5 font-black text-slate-800 dark:text-slate-200 border-x border-slate-100 dark:border-slate-800/50 text-[13px]">{(line.item || '').replace(/\s*-\s*-$/, '').trim()}</td>
-                              <td className="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500">{line.company || '—'}</td>
+                              <td className="px-4 py-2.5 font-black text-slate-800 dark:text-slate-200 border-x border-slate-100 dark:border-slate-800/50 text-[13px]">{getItemName({ name: line.item })}</td>
+                              <td className="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500">{!isInvalidCompany(line.company) ? line.company : '—'}</td>
                               <td className="px-4 py-2.5 text-center font-black tabular-nums border-x border-slate-100 dark:border-slate-800/50 text-[14px]">{line.qty}</td>
                               <td className="px-4 py-2.5 text-center text-[11px] font-bold text-slate-500">{line.unit || '—'}</td>
                               <td className="px-4 py-2.5 text-center border-x border-slate-100 dark:border-slate-800/50 text-[11px] font-bold text-slate-500 w-24">
@@ -323,8 +324,8 @@ export function VoucherDetailModal({
                                             
                                             // Extract display name & company from archived item string
                                             const parts = ol.item.split(' - ');
-                                            const rawName = parts[0];
-                                            const rawCompany = parts.length > 1 ? parts[1] : '—';
+                                            const rawName = getItemName({ name: parts[0] });
+                                            const rawCompany = parts.length > 1 && !isInvalidCompany(parts[1]) ? parts[1] : '—';
 
                                             return (
                                               <tr key={oIdx} className={`group transition-all duration-200 border-b border-slate-50 dark:border-slate-800/50 last:border-0 ${

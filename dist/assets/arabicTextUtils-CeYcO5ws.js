@@ -1,0 +1,1 @@
+var e=e=>e.replace(/[\u064B-\u065F]/g,``),t=e=>e.replace(/[أإآٱ]/g,`ا`),n=e=>e.replace(/ة/g,`ه`),r=e=>e.replace(/[ىئ]/g,`ي`),i=e=>e.replace(/لا/g,`لا`),a=e=>e.replace(/\s+/g,` `),o=o=>{if(!o)return``;let s=o.toString().toLowerCase();return s=e(s),s=t(s),s=n(s),s=r(s),s=i(s),s=a(s),s.trim()};export{o as t};

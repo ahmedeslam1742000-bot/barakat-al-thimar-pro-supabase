@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { isInvalidCompany } from '../../lib/itemFields';
 import { 
   TrendingUp, Activity, LayoutGrid, Package, Filter, Calendar, Building2, ChevronDown 
 } from 'lucide-react';
@@ -26,7 +27,7 @@ const AnalyticsSection = ({
           <div className="space-y-1.5">
              <div className="flex justify-between items-center gap-4 text-[10px]">
                <span className="text-slate-400 font-bold">الشركة:</span>
-               <span className="text-slate-700 dark:text-slate-300 font-black">{data.company || '-'}</span>
+               <span className="text-slate-700 dark:text-slate-300 font-black">{!isInvalidCompany(data.company) ? data.company : '—'}</span>
              </div>
              <div className="flex justify-between items-center gap-4 text-[10px]">
                <span className="text-slate-400 font-bold">الكمية:</span>

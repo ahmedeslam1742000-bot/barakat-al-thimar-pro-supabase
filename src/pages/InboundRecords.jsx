@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { formatDate } from '../lib/dateUtils';
 import { useData } from '../contexts/DataContext';
+import { isInvalidCompany } from '../lib/itemFields';
 import { useDebounce } from '../hooks/useDebounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
@@ -464,7 +465,7 @@ export default function () {
                                     <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
                                        <td className="px-3 py-2 text-center text-slate-400 font-bold border-x border-slate-100">{idx + 1}</td>
                                        <td className="px-3 py-2 font-bold text-slate-700 dark:text-slate-300 border-x border-slate-100">{it.item}</td>
-                                       <td className="px-3 py-2 text-slate-500 border-x border-slate-100">{it.company || '-'}</td>
+                                       <td className="px-3 py-2 text-slate-500 border-x border-slate-100">{!isInvalidCompany(it.company) ? it.company : '—'}</td>
                                        <td className="px-3 py-2 text-center font-black text-teal-600 tabular-nums border-x border-slate-100">{it.qty}</td>
                                        <td className="px-3 py-2 text-center tabular-nums border-x border-slate-100">
                                           {it.currentStock !== null

@@ -2,6 +2,7 @@ import React from 'react';
 import { Search, Plus, Trash2, Pencil, RotateCcw, CheckCircle2 } from 'lucide-react';
 import ModalWrapper from '../common/ModalWrapper';
 import SmartDateInput from '../SmartDateInput';
+import { formatItemNameWithCompany, getItemName } from '../../lib/itemFields';
 
 export default function ReturnModal({
   isOpen,
@@ -105,7 +106,7 @@ export default function ReturnModal({
                     e.preventDefault();
                     if (returnSearchActiveIndex >= 0 && suggestions[returnSearchActiveIndex]) {
                       const invItem = suggestions[returnSearchActiveIndex];
-                      setReturnForm({...returnForm, query: `${invItem.name} - ${invItem.company}`, selectedItem: invItem, cat: invItem.cat || invItem.category || '', unit: invItem.unit || 'كرتونة', returnStatus: returnForm.returnStatus || 'سليم' });
+                      setReturnForm({...returnForm, query: formatItemNameWithCompany(invItem.name, invItem.company), selectedItem: invItem, cat: invItem.cat || invItem.category || '', unit: invItem.unit || 'كرتونة', returnStatus: returnForm.returnStatus || 'سليم' });
                       setReturnSearchActiveIndex(-1);
                       setTimeout(() => document.getElementById('returnQtyInput')?.focus(), 10);
                     } else if (returnForm.selectedItem) {
@@ -181,7 +182,7 @@ export default function ReturnModal({
                 returnItems.map((item, idx) => (
                   <tr key={idx} className={`transition-colors group ${item.returnStatus === 'تالف' ? 'bg-red-50/30 hover:bg-red-50' : 'bg-white hover:bg-slate-50'} border-b border-slate-50`}>
                     <td className="px-3 py-2 text-[10px] font-black text-slate-400 text-center tabular-nums">{idx + 1}</td>
-                    <td className="px-3 py-2 text-xs font-black text-slate-800">{item.name || '-'}</td>
+                    <td className="px-3 py-2 text-xs font-black text-slate-800">{getItemName({ name: item.name }) || '-'}</td>
                     <td className="px-3 py-2 text-[10px]"><span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-md font-black">{item.cat}</span></td>
                     <td className="px-3 py-2 text-[10px] font-black text-slate-600">{item.unit}</td>
                     <td className="px-3 py-2 text-xs font-black text-emerald-600 text-center">+{item.qty}</td>
