@@ -26,40 +26,50 @@ export const StatCard = React.memo(({
 
   return (
     <motion.div
-      whileHover={{ y: -4, scale: 1.01, boxShadow: `0 12px 30px -4px ${accentColor}40` }}
-      className="relative flex flex-col justify-between rounded-[24px] cursor-pointer group shadow-sm transition-all duration-300 overflow-hidden no-select-click h-full min-h-[160px]"
+      whileHover={{ y: -4, scale: 1.01 }}
+      className="relative flex flex-col justify-between bg-white dark:bg-[#111C44] rounded-[24px] cursor-pointer group border border-slate-100 dark:border-slate-800/50 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden no-select-click h-full min-h-[160px]"
       onClick={handleCardClick}
-      style={{ background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}cc 100%)` }}
     >
+      {/* Soft Background Gradient Glow */}
+      <div 
+        className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" 
+        style={{ background: `radial-gradient(circle at top right, ${accentColor}15 0%, transparent 70%)` }} 
+      />
+      
       {/* --- Card Content --- */}
-      <div className="p-5 flex flex-col flex-1 relative z-10">
-        <div className="flex items-start justify-between mb-2">
-          <div className="flex flex-col text-white">
-            {value !== undefined && value !== null && (
-              <span className="text-[32px] font-black font-tajawal leading-none tracking-tight drop-shadow-sm mb-1 mt-8">
-                {value}
-              </span>
-            )}
-            <span className="text-[16px] font-black font-tajawal opacity-90 drop-shadow-sm">{label}</span>
+      <div className="p-6 flex flex-col flex-1 relative z-10">
+        <div className="flex items-start justify-between mb-4">
+          <div 
+            className="w-12 h-12 rounded-[16px] flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-3" 
+            style={{ backgroundColor: `${accentColor}15`, color: accentColor }}
+          >
+            <Icon size={24} strokeWidth={2.5} />
           </div>
-          <div className="w-12 h-12 rounded-[14px] flex items-center justify-center shrink-0 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 bg-white/20 backdrop-blur-md border border-white/20 text-white shadow-inner">
-            <Icon size={24} strokeWidth={2} />
-          </div>
+          {value !== undefined && value !== null && (
+             <span className="text-[32px] font-black font-tajawal leading-none tracking-tight text-slate-800 dark:text-white">
+               {value}
+             </span>
+          )}
+        </div>
+        
+        <div className="flex flex-col text-right">
+          <span className="text-[15px] font-black font-tajawal text-slate-800 dark:text-white mb-1">{label}</span>
+          <span className="text-[11px] font-bold font-readex text-slate-400 dark:text-slate-500">{subtext}</span>
         </div>
       </div>
 
-      {/* --- Glass Button Action --- */}
+      {/* --- Soft Action Button --- */}
       {actionLabel && (
-        <div className="px-5 pb-5 relative z-10" onClick={handleActionClick}>
-          <div className="w-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-xl py-2 flex items-center justify-center gap-2 text-[12px] font-black font-tajawal text-white transition-all group/btn">
-            <Plus size={14} strokeWidth={3} className="transition-transform group-hover/btn:rotate-90 duration-300" />
+        <div className="px-6 pb-6 relative z-10" onClick={handleActionClick}>
+          <div 
+            className="w-full rounded-[14px] py-2.5 flex items-center justify-center gap-2 text-[12px] font-black font-tajawal transition-all group/btn" 
+            style={{ backgroundColor: `${accentColor}10`, color: accentColor }}
+          >
+            <Plus size={16} strokeWidth={3} className="transition-transform group-hover/btn:rotate-90 duration-300" />
             {actionLabel}
           </div>
         </div>
       )}
-      
-      {/* Decorative Glow */}
-      <div className="absolute -top-10 -left-10 w-32 h-32 rounded-full bg-white opacity-10 group-hover:opacity-20 group-hover:scale-125 transition-all duration-700 pointer-events-none blur-2xl" />
     </motion.div>
   );
 });
