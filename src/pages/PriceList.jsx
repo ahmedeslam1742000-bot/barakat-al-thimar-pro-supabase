@@ -2,8 +2,8 @@ import { useNavigate } from '@tanstack/react-router';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Search, Pencil, X, CheckCircle, Tags,
-  TrendingUp, TrendingDown, DollarSign, LogOut,
+  Search, Pencil, X, Check, Tags,
+  TrendingUp, TrendingDown, LogOut,
   AlertCircle, LayoutGrid, Snowflake, Box, Thermometer, Package
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
@@ -15,48 +15,139 @@ import { useData } from '../contexts/DataContext';
 import { useDebounce } from '../hooks/useDebounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
-const PriceItemRow = React.memo(({ item, idx, isViewer, openEditModal }) => {
+// ── Inline-editable Row ───────────────────────────────────────────
+const PriceItemRow = React.memo(({ item, idx, isViewer, onSave }) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft]     = useState('');
+  const [saving, setSaving]   = useState(false);
+  const inputRef              = useRef(null);
+
+  const startEdit = () => {
+    if (isViewer) return;
+    setDraft(String(item.price ?? ''));
+    setEditing(true);
+  };
+
+  useEffect(() => {
+    if (editing && inputRef.current) inputRef.current.focus();
+  }, [editing]);
+
+  const cancel = () => {
+    setEditing(false);
+    setDraft('');
+  };
+
+  const save = async () => {
+    const val = Number(draft);
+    if (draft === '' || isNaN(val) || val < 0) {
+      toast.error('يرجى إدخال سعر صحيح');
+      return;
+    }
+    if (val === item.price) { cancel(); return; }
+    setSaving(true);
+    try {
+      await onSave(item, val);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleKey = (e) => {
+    if (e.key === 'Enter')  { e.preventDefault(); save(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+  };
+
   return (
-    <tr className="group hover:bg-indigo-50/10 transition-colors h-[52px]">
+    <tr className={`group transition-colors h-[52px] ${editing ? 'bg-indigo-50/40' : 'hover:bg-indigo-50/10'}`}>
+      {/* م */}
       <td className="px-6 py-2 text-center align-middle">
         <span className="text-[13px] font-bold text-slate-300 tabular-nums">{idx + 1}</span>
       </td>
+
+      {/* الصنف */}
       <td className="px-6 py-2 align-middle">
         <span className="text-[15px] font-black text-slate-800 tracking-tight whitespace-nowrap">
           {getItemName(item)}
           {!isInvalidCompany(item.company) && ` - ${item.company}`}
         </span>
       </td>
+
+      {/* القسم */}
       <td className="px-6 py-2 text-center align-middle">
         <span className="text-[10px] font-black px-2.5 py-1 rounded-lg border bg-slate-50 text-slate-500 border-slate-100">
           {item.cat || 'أخرى'}
         </span>
       </td>
+
+      {/* الوحدة */}
       <td className="px-6 py-2 text-center align-middle">
         <span className="text-[11px] font-bold text-slate-400">{item.unit || 'وحدة'}</span>
       </td>
+
+      {/* السعر السابق */}
       <td className="px-6 py-2 text-center align-middle">
         <div className="flex items-center justify-center text-slate-400 font-bold tabular-nums">
           <span className="text-lg">{item.old_price || 0}</span>
         </div>
       </td>
+
+      {/* السعر الحالي — قابل للتعديل inline */}
       <td className="px-6 py-2 text-center align-middle">
-        <div className="flex items-center justify-center gap-2 text-emerald-600 font-black tabular-nums bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 inline-flex mx-auto">
-          <span className="text-xl">{item.price || 0}</span>
-          {item.price > (item.old_price || 0) ? (
-            <TrendingUp size={14} />
-          ) : item.price < (item.old_price || 0) ? (
-            <TrendingDown size={14} />
-          ) : null}
-        </div>
+        {editing ? (
+          <div className="flex items-center justify-center gap-1">
+            <input
+              ref={inputRef}
+              type="number"
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={handleKey}
+              disabled={saving}
+              className="w-24 h-9 rounded-xl border-2 border-indigo-400 bg-white text-center text-lg font-black text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-300 tabular-nums shadow-md"
+              style={{ MozAppearance: 'textfield' }}
+            />
+            {/* زرار حفظ */}
+            <button
+              onClick={save}
+              disabled={saving}
+              className="w-8 h-8 rounded-lg bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 disabled:opacity-50 transition-all shadow"
+              title="حفظ (Enter)"
+            >
+              {saving
+                ? <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                : <Check size={15} strokeWidth={3} />}
+            </button>
+            {/* زرار إلغاء */}
+            <button
+              onClick={cancel}
+              disabled={saving}
+              className="w-8 h-8 rounded-lg bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-rose-50 hover:text-rose-500 disabled:opacity-50 transition-all shadow"
+              title="إلغاء (Esc)"
+            >
+              <X size={15} strokeWidth={3} />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-center gap-2 text-emerald-600 font-black tabular-nums bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 inline-flex mx-auto">
+            <span className="text-xl">{item.price || 0}</span>
+            {item.price > (item.old_price || 0) ? (
+              <TrendingUp size={14} />
+            ) : item.price < (item.old_price || 0) ? (
+              <TrendingDown size={14} />
+            ) : null}
+          </div>
+        )}
       </td>
+
+      {/* إجراء */}
       <td className="px-6 py-2 text-center align-middle">
-        {!isViewer && (
+        {!isViewer && !editing && (
           <button 
-            onClick={() => openEditModal(item)}
+            onClick={startEdit}
             className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center shadow-sm group/btn mx-auto"
+            title="تعديل السعر"
           >
-            <Pencil size={18} className="group-hover/btn:scale-110 transition-transform" />
+            <Pencil size={16} className="group-hover/btn:scale-110 transition-transform" />
           </button>
         )}
       </td>
@@ -64,34 +155,21 @@ const PriceItemRow = React.memo(({ item, idx, isViewer, openEditModal }) => {
   );
 });
 
-export default function () {
+// ── Main Component ────────────────────────────────────────────────
+export default function PriceList() {
   const navigate = useNavigate();
   const { isViewer } = useAuth();
   const { items, fetchInitialData } = useData();
-  const [searchQuery, setSearchQuery] = useState('');
-  const debouncedSearchQuery = useDebounce(searchQuery, 300);
-  const [loading, setLoading] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
-  const [isSaveConfirmOpen, setIsSaveConfirmOpen] = useState(false);
-  const [newPrice, setNewPrice] = useState('');
-  const [selectedCat, setSelectedCat] = useState('الكل');
-  const inputRef = useRef(null);
-  const parentRef = useRef(null);
-
-  // Refs for current state to avoid closure issues in event listener
-  const stateRef = useRef({ isEditModalOpen, isSaveConfirmOpen, isExitConfirmOpen, newPrice, selectedItem });
-  useEffect(() => {
-    stateRef.current = { isEditModalOpen, isSaveConfirmOpen, isExitConfirmOpen, newPrice, selectedItem };
-  }, [isEditModalOpen, isSaveConfirmOpen, isExitConfirmOpen, newPrice, selectedItem]);
+  const [searchQuery, setSearchQuery]   = useState('');
+  const debouncedSearchQuery            = useDebounce(searchQuery, 300);
+  const [selectedCat, setSelectedCat]   = useState('الكل');
+  const parentRef                       = useRef(null);
 
   const categories = useMemo(() => {
     const cats = ['الكل', ...new Set(items.map(item => item.cat).filter(Boolean))];
     return cats;
   }, [items]);
 
-  // --- FILTERING ---
   const filteredItems = useMemo(() => {
     if (!items || items.length === 0) return [];
     const q = normalizeArabic(debouncedSearchQuery);
@@ -110,108 +188,24 @@ export default function () {
     overscan: 10,
   });
 
-
-  // --- EDIT LOGIC ---
-  const openEditModal = (item) => {
-    if (isViewer) return;
-    setSelectedItem(item);
-    setNewPrice('');
-    setIsEditModalOpen(true);
-  };
-
-  const handleUpdatePrice = () => {
-    const { newPrice } = stateRef.current;
-    if (newPrice === '' || isNaN(newPrice) || Number(newPrice) < 0) {
-      toast.error('يرجى إدخال سعر صحيح');
-      return;
+  // ── Save handler (passed to each row) ──
+  const handleSave = useCallback(async (item, newPrice) => {
+    const { error } = await supabase
+      .from('products')
+      .update({ old_price: item.price || 0, price: newPrice })
+      .eq('id', item.id);
+    if (error) {
+      toast.error(`خطأ: ${error.message}`);
+      throw error;
     }
-    setIsSaveConfirmOpen(true);
-  };
-
-  const performActualUpdate = async () => {
-    const { selectedItem, newPrice } = stateRef.current;
-    
-    if (!selectedItem) {
-      toast.error('لم يتم اختيار صنف');
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('products')
-        .update({ 
-          old_price: selectedItem.price || 0, 
-          price: Number(newPrice) 
-        })
-        .eq('id', selectedItem.id);
-
-      if (error) {
-        toast.error(`خطأ من قاعدة البيانات: ${error.message}`);
-        return;
-      }
-      
-      toast.success(`تم تحديث سعر "${selectedItem.name}" بنجاح`);
-      setIsSaveConfirmOpen(false);
-      setIsEditModalOpen(false);
-      
-      // Update global context gracefully
-      if (fetchInitialData) fetchInitialData();
-    } catch (err) {
-      console.error('Update error:', err);
-      toast.error(err.message || 'حدث خطأ غير متوقع أثناء تحديث السعر');
-    }
-  };
-
-  // --- SHORTCUTS ---
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      const { isEditModalOpen, isSaveConfirmOpen, isExitConfirmOpen, newPrice, selectedItem } = stateRef.current;
-      
-      if (!isEditModalOpen) return;
-
-      if (isSaveConfirmOpen) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          performActualUpdate();
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          setIsSaveConfirmOpen(false);
-        }
-        return;
-      }
-
-      if (isExitConfirmOpen) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          setIsExitConfirmOpen(false);
-          setIsEditModalOpen(false);
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          setIsExitConfirmOpen(false);
-        }
-        return;
-      }
-
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleUpdatePrice();
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        if (newPrice && newPrice !== String(selectedItem?.price)) {
-          setIsExitConfirmOpen(true);
-        } else {
-          setIsEditModalOpen(false);
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []); // Empty dependency array, uses stateRef
+    toast.success(`✅ تم تحديث سعر "${getItemName(item)}" إلى ${newPrice}`);
+    if (fetchInitialData) fetchInitialData();
+  }, [fetchInitialData]);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-6 font-readex h-full overflow-hidden relative" dir="rtl">
       
-      {/* ═══ HEADER SECTION ═══ */}
+      {/* ═══ HEADER ═══ */}
       <div className="shrink-0 flex items-center gap-4 bg-white rounded-[2rem] border border-slate-200 shadow-sm p-4">
         <div className="flex items-center gap-3 px-2">
           <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
@@ -260,11 +254,11 @@ export default function () {
               `}
             >
               <div className={isActive ? 'text-white' : 'text-slate-300'}>
-                {cat === 'الكل' && <LayoutGrid size={18} />}
-                {cat === 'مجمدات' && <Snowflake size={18} />}
-                {cat === 'بلاستيك' && <Box size={18} />}
-                {cat === 'تبريد' && <Thermometer size={18} />}
-                {cat !== 'الكل' && cat !== 'مجمدات' && cat !== 'بلاستيك' && cat !== 'تبريد' && <Package size={18} />}
+                {cat === 'الكل'    && <LayoutGrid size={18} />}
+                {cat === 'مجمدات' && <Snowflake   size={18} />}
+                {cat === 'بلاستيك'&& <Box         size={18} />}
+                {cat === 'تبريد'  && <Thermometer size={18} />}
+                {!['الكل','مجمدات','بلاستيك','تبريد'].includes(cat) && <Package size={18} />}
               </div>
               {cat}
             </button>
@@ -272,15 +266,10 @@ export default function () {
         })}
       </div>
 
-      {/* ═══ PRICES TABLE ═══ */}
+      {/* ═══ TABLE ═══ */}
       <div className="flex-1 overflow-hidden bg-white rounded-[2.5rem] border border-slate-200 shadow-sm flex flex-col">
         <div ref={parentRef} className="flex-1 overflow-auto custom-scrollbar">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-400">
-              <div className="w-12 h-12 border-4 border-slate-100 border-t-indigo-500 rounded-full animate-spin" />
-              <p className="font-bold">جاري تحميل الأسعار...</p>
-            </div>
-          ) : filteredItems.length === 0 ? (
+          {filteredItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-4 text-slate-300">
               <AlertCircle size={48} strokeWidth={1.5} />
               <p className="text-lg font-black">لا توجد أصناف تطابق بحثك</p>
@@ -294,8 +283,8 @@ export default function () {
                   <th className="px-6 py-2 text-center w-32">القسم</th>
                   <th className="px-6 py-2 text-center w-32">الوحدة</th>
                   <th className="px-6 py-2 text-center w-40">السعر السابق</th>
-                  <th className="px-6 py-2 text-center w-40">السعر الحالي</th>
-                  <th className="px-6 py-2 text-center w-28">إجراء</th>
+                  <th className="px-6 py-2 text-center w-52">السعر الحالي</th>
+                  <th className="px-6 py-2 text-center w-24">إجراء</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -308,7 +297,7 @@ export default function () {
                     item={filteredItems[virtualRow.index]} 
                     idx={virtualRow.index} 
                     isViewer={isViewer} 
-                    openEditModal={openEditModal} 
+                    onSave={handleSave}
                   />
                 ))}
                 {rowVirtualizer.getVirtualItems().length > 0 && (
@@ -319,168 +308,6 @@ export default function () {
           )}
         </div>
       </div>
-
-      {/* ═══ EDIT PRICE MODAL ═══ */}
-      <AnimatePresence>
-        {isEditModalOpen && selectedItem && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md" dir="rtl">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-white relative"
-            >
-              {/* Header */}
-              <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
-                    <DollarSign size={24} />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-black text-slate-800 font-tajawal">تحديث السعر</h3>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">تعديل قيمة الصنف في المتجر</p>
-                  </div>
-                </div>
-                <button onClick={() => {
-                  if (newPrice && newPrice !== String(selectedItem.price)) setIsExitConfirmOpen(true);
-                  else setIsEditModalOpen(false);
-                }} className="p-2 text-slate-300 hover:text-rose-500 transition-colors">
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="p-8 space-y-6">
-                {/* Item Info Card */}
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">الصنف المختار</p>
-                  <p className="text-lg font-black text-slate-800 tracking-tight">{getItemName(selectedItem)}</p>
-                  {!isInvalidCompany(selectedItem.company) && (
-                    <p className="text-sm text-slate-500 font-bold mt-0.5">{selectedItem.company}</p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white p-4 rounded-2xl border-2 border-slate-100 flex flex-col items-center">
-                    <span className="text-[10px] text-slate-400 font-black mb-1">السعر الحالي</span>
-                    <span className="text-2xl font-black text-slate-400 tabular-nums">{selectedItem.price || 0}</span>
-                  </div>
-                  <div className="bg-emerald-50 p-4 rounded-2xl border-2 border-emerald-100 flex flex-col items-center">
-                    <span className="text-[10px] text-emerald-600 font-black mb-1">السعر الجديد</span>
-                    <span className="text-2xl font-black text-emerald-600 tabular-nums">{newPrice || selectedItem.price || '0'}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mr-1">أدخل السعر الحديث</label>
-                  <div className="relative group">
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors">
-                      <DollarSign size={20} />
-                    </div>
-                    <input 
-                      autoFocus
-                      type="number"
-                      placeholder="0.00"
-                      value={newPrice}
-                      onChange={e => setNewPrice(e.target.value)}
-                      className="w-full h-14 bg-slate-50 border-2 border-slate-100 rounded-2xl pr-12 pl-4 text-xl font-black outline-none focus:border-indigo-500/30 focus:ring-4 focus:ring-indigo-500/5 transition-all text-center placeholder:text-slate-200"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="px-8 py-6 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-                <button 
-                  onClick={() => {
-                    if (newPrice && newPrice !== String(selectedItem.price)) setIsExitConfirmOpen(true);
-                    else setIsEditModalOpen(false);
-                  }}
-                  className="px-6 py-3 rounded-xl text-sm font-bold text-slate-400 hover:bg-white hover:text-slate-600 transition-all border border-transparent hover:border-slate-200"
-                >
-                  إلغاء (Esc)
-                </button>
-                <button 
-                  onClick={handleUpdatePrice}
-                  className="px-10 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center gap-2 active:scale-95"
-                >
-                  <CheckCircle size={18} />
-                  حفظ السعر (Enter)
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* ═══ GLOBAL OVERLAYS (MODALS ON TOP) ═══ */}
-      <AnimatePresence>
-        {isSaveConfirmOpen && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" dir="rtl">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }} 
-              animate={{ opacity: 1, scale: 1, y: 0 }} 
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] w-full max-w-sm p-8 text-center border border-white relative"
-            >
-              <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-sm border border-emerald-100">
-                <CheckCircle size={40} />
-              </div>
-              <h3 className="text-2xl font-black text-slate-800 mb-2 font-tajawal">تأكيد السعر الجديد</h3>
-              <p className="text-sm text-slate-500 font-bold mb-8">أنت على وشك تغيير السعر إلى <span className="text-emerald-600 font-black text-lg mx-1">{newPrice}</span>. هل أنت متأكد؟</p>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <button 
-                  onClick={() => setIsSaveConfirmOpen(false)}
-                  className="py-4 rounded-2xl text-sm font-black text-slate-400 bg-slate-50 hover:bg-slate-100 transition-all"
-                >
-                  تراجع
-                </button>
-                <button 
-                  onClick={performActualUpdate}
-                  className="py-4 rounded-2xl text-sm font-black text-white bg-emerald-500 shadow-xl shadow-emerald-200 hover:bg-emerald-600 transition-all flex items-center justify-center gap-2"
-                >
-                  <CheckCircle size={18} />
-                  تأكيد الحفظ
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {isExitConfirmOpen && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" dir="rtl">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }} 
-              animate={{ opacity: 1, scale: 1, y: 0 }} 
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-white rounded-[2.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.5)] w-full max-w-sm p-8 text-center border border-white relative"
-            >
-              <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-[2rem] flex items-center justify-center mx-auto mb-6 shadow-sm border border-rose-100">
-                <AlertCircle size={40} />
-              </div>
-              <h3 className="text-2xl font-black text-slate-800 mb-2 font-tajawal">تجاهل التغييرات؟</h3>
-              <p className="text-sm text-slate-500 font-bold mb-8">لقد قمت بتعديل السعر ولم يتم الحفظ بعد. هل تريد الخروج فعلاً؟</p>
-              <div className="grid grid-cols-2 gap-4">
-                <button 
-                  onClick={() => setIsExitConfirmOpen(false)}
-                  className="py-4 rounded-2xl text-sm font-black text-slate-400 bg-slate-50 hover:bg-slate-100 transition-all"
-                >
-                  البقاء
-                </button>
-                <button 
-                  onClick={() => { setIsExitConfirmOpen(false); setIsEditModalOpen(false); }}
-                  className="py-4 rounded-2xl text-sm font-black text-white bg-rose-500 shadow-xl shadow-rose-200 hover:bg-rose-600 transition-all flex items-center justify-center gap-2"
-                >
-                  <X size={18} />
-                  تجاهل الخروج
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
