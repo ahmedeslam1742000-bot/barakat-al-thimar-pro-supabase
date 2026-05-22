@@ -123,7 +123,7 @@ export default function MainLayout({ children }) {
 
       {/* Main Content Area */}
       <main
-        className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out print:mr-0 print:block print:overflow-visible ${isSidebarOpen ? 'lg:mr-56' : 'mr-0'}`}
+        className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out print:mr-0 print:block print:overflow-visible ${isSidebarOpen ? 'lg:mr-64' : 'mr-0'}`}
       >
         {/* Top Navbar / Global Welcome Banner */}
         <header className="print:hidden w-full shrink-0 z-40 px-4 lg:px-6 pt-4 pb-2 transition-all duration-300">
