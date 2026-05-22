@@ -110,8 +110,10 @@ export default function ReceiptVouchers({}) {
   const [expenseForm, setExpenseForm] = useState({ date: new Date().toISOString().split('T')[0], repName: '', amount: '', statement: '' });
   const [expRepSearchQuery, setExpRepSearchQuery] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
-
   const parentRef = React.useRef(null);
+
+  const [isEditJournalOpen, setIsEditJournalOpen] = useState(false);
+  const [editJournalForm, setEditJournalForm] = useState({ id: null, journalNo: '', totalAmount: '' });
 
   // Form State
   const emptyForm = {
@@ -603,10 +605,21 @@ export default function ReceiptVouchers({}) {
     if (!deleteTargetId || loading) return;
     setLoading(true);
     try {
-      const table = deleteTargetType === 'expense' ? 'representative_expenses' : 'receipt_vouchers';
-      const { error } = await supabase.from(table).delete().eq('id', deleteTargetId);
-      if (error) throw error;
-      toast.success(deleteTargetType === 'expense' ? '✅ تم حذف المصروف بنجاح' : '✅ تم حذف السند بنجاح');
+      if (deleteTargetType === 'journal_entry') {
+        const { error: vError } = await supabase.from('receipt_vouchers').update({ is_settled: false, settlement_batch_id: null }).eq('settlement_batch_id', deleteTargetId);
+        if (vError) throw vError;
+        const { error: eError } = await supabase.from('representative_expenses').update({ is_settled: false, settlement_batch_id: null }).eq('settlement_batch_id', deleteTargetId);
+        if (eError) throw eError;
+        const { error } = await supabase.from('journal_entries').delete().eq('id', deleteTargetId);
+        if (error) throw error;
+        toast.success('✅ تم مسح القيد وإرجاع السندات والمصروفات لحالتها السابقة');
+        await fetchJournalEntries();
+      } else {
+        const table = deleteTargetType === 'expense' ? 'representative_expenses' : 'receipt_vouchers';
+        const { error } = await supabase.from(table).delete().eq('id', deleteTargetId);
+        if (error) throw error;
+        toast.success(deleteTargetType === 'expense' ? '✅ تم حذف المصروف بنجاح' : '✅ تم حذف السند بنجاح');
+      }
       await fetchInitialData();
     } catch (err) {
       console.error('❌ confirmDelete error:', err);
@@ -615,6 +628,28 @@ export default function ReceiptVouchers({}) {
       setLoading(false);
       setIsConfirmDeleteOpen(false);
       setDeleteTargetId(null);
+    }
+  };
+
+  const handleEditJournal = async () => {
+    if (!editJournalForm.journalNo || !editJournalForm.totalAmount) {
+      toast.error('يرجى تعبئة جميع الحقول');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('journal_entries')
+        .update({ journal_no: editJournalForm.journalNo, total_amount: Number(editJournalForm.totalAmount) })
+        .eq('id', editJournalForm.id);
+      if (error) throw error;
+      toast.success('تم التعديل بنجاح');
+      setIsEditJournalOpen(false);
+      await fetchJournalEntries();
+    } catch (err) {
+      console.error('❌ Edit Journal error:', err);
+      toast.error('حدث خطأ أثناء التعديل');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -784,28 +819,30 @@ export default function ReceiptVouchers({}) {
           <table className="w-full text-right border-separate border-spacing-0">
             <thead className="sticky top-0 z-10">
               <tr>
-                <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 border-b border-slate-100 dark:border-slate-700 w-12 text-center">
-                  <input 
-                    type="checkbox" 
-                    className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                    checked={
-                      activeTable === 'vouchers' 
-                        ? (filteredVouchers.length > 0 && selectedVoucherIds.length === filteredVouchers.length)
-                        : (filteredExpenses.length > 0 && selectedExpenseIds.length === filteredExpenses.length)
-                    }
-                    onChange={(e) => {
-                      if (activeTable === 'vouchers') {
-                        if (e.target.checked) setSelectedVoucherIds(filteredVouchers.map(v => v.id));
-                        else setSelectedVoucherIds([]);
-                      } else {
-                        if (e.target.checked) setSelectedExpenseIds(filteredExpenses.map(v => v.id));
-                        else setSelectedExpenseIds([]);
+                {activeTable !== 'journal_entries' && (
+                  <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 border-b border-slate-100 dark:border-slate-700 w-12 text-center">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                      checked={
+                        activeTable === 'vouchers' 
+                          ? (filteredVouchers.length > 0 && selectedVoucherIds.length === filteredVouchers.length)
+                          : (filteredExpenses.length > 0 && selectedExpenseIds.length === filteredExpenses.length)
                       }
-                    }}
-                  />
-                </th>
+                      onChange={(e) => {
+                        if (activeTable === 'vouchers') {
+                          if (e.target.checked) setSelectedVoucherIds(filteredVouchers.map(v => v.id));
+                          else setSelectedVoucherIds([]);
+                        } else {
+                          if (e.target.checked) setSelectedExpenseIds(filteredExpenses.map(v => v.id));
+                          else setSelectedExpenseIds([]);
+                        }
+                      }}
+                    />
+                  </th>
+                )}
                 <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 w-16 text-center">م</th>
-                <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">التاريخ</th>
+                <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">{activeTable === 'journal_entries' ? 'تاريخ القيد' : 'التاريخ'}</th>
                 
                 {activeTable === 'vouchers' ? (
                   <>
@@ -815,12 +852,17 @@ export default function ReceiptVouchers({}) {
                     <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 text-center">المبلغ</th>
                     <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 text-center">حالة الإيداع</th>
                   </>
-                ) : (
+                ) : activeTable === 'expenses' ? (
                   <>
                     <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 min-w-[200px]">اسم المستفيد</th>
                     <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 min-w-[300px]">البيان</th>
                     <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 text-center">المبلغ</th>
                     <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 text-center">الحالة</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 text-center">رقم الدفتر</th>
+                    <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 text-center">المبلغ الصافي للقيد</th>
                   </>
                 )}
                 <th className="bg-slate-50/80 dark:bg-slate-800/80 backdrop-blur-md px-6 py-4 text-slate-500 font-black text-[11px] uppercase tracking-wider border-b border-slate-100 dark:border-slate-700 text-center w-24">الإجراء</th>
@@ -895,21 +937,15 @@ export default function ReceiptVouchers({}) {
                   onClick={() => { setSelectedJournalEntry(journal); setIsJournalDetailOpen(true); }}
                   className="animate-fade-in-up group cursor-pointer hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors"
                 >
-                  <td className="px-6 py-5 text-center">
-                    <FileText size={16} className="text-indigo-400 mx-auto" />
-                  </td>
                   <td className="px-6 py-5 text-center text-xs font-black text-slate-400">{idx + 1}</td>
                   <td className="px-6 py-5 text-xs font-bold text-slate-700 dark:text-white">{new Date(journal.created_at).toLocaleDateString('ar-EG')}</td>
-                  <td className="px-6 py-5 text-xs font-black text-indigo-600 dark:text-indigo-400">قيد رقم: {journal.journal_no}</td>
-                  <td className="px-6 py-5 text-xs font-bold text-slate-600 dark:text-slate-300">تسوية عهدة مجمعة</td>
+                  <td className="px-6 py-5 text-center text-xs font-black text-indigo-600 dark:text-indigo-400">{journal.journal_no}</td>
                   <td className="px-6 py-5 text-center text-sm font-black text-indigo-600 dark:text-indigo-400">{journal.total_amount.toLocaleString()} <small className="text-[10px]">ر.س</small></td>
                   <td className="px-6 py-5 text-center">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black border bg-indigo-50 text-indigo-600 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800/50">
-                      <CheckCircle2 size={12} /> مؤرشف
+                    <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={(e) => { e.stopPropagation(); setEditJournalForm({ id: journal.id, journalNo: journal.journal_no, totalAmount: journal.total_amount }); setIsEditJournalOpen(true); }} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all" title="تعديل"><Pencil size={18} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); handleDelete(journal.id, 'journal_entry'); }} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all" title="مسح"><Trash2 size={18} /></button>
                     </div>
-                  </td>
-                  <td className="px-6 py-5 text-center">
-                    <button className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg transition-all"><Eye size={16} /></button>
                   </td>
                 </tr>
               ))}
