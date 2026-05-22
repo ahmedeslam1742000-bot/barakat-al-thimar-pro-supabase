@@ -113,6 +113,7 @@ export default function ReceiptVouchers({}) {
   const parentRef = React.useRef(null);
 
   const [editingJournalForm, setEditingJournalForm] = useState({ journalNo: '', totalAmount: '' });
+  const [isEditingJournal, setIsEditingJournal] = useState(false);
 
   // Form State
   const emptyForm = {
@@ -666,9 +667,10 @@ export default function ReceiptVouchers({}) {
     }
   };
 
-  const openJournalDetail = (journal) => {
+  const openJournalDetail = (journal, isEditing = false) => {
     setSelectedJournalEntry(journal);
     setEditingJournalForm({ journalNo: journal.journal_no, totalAmount: journal.total_amount });
+    setIsEditingJournal(isEditing);
     setIsJournalDetailOpen(true);
   };
 
@@ -953,7 +955,7 @@ export default function ReceiptVouchers({}) {
               )) : journalEntries.map((journal, idx) => (
                 <tr 
                   key={journal.id} 
-                  onClick={() => openJournalDetail(journal)}
+                  onClick={() => openJournalDetail(journal, false)}
                   className="animate-fade-in-up group cursor-pointer hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-colors"
                 >
                   <td className="px-6 py-5 text-center text-xs font-black text-slate-400">{idx + 1}</td>
@@ -962,7 +964,7 @@ export default function ReceiptVouchers({}) {
                   <td className="px-6 py-5 text-center text-sm font-black text-indigo-600 dark:text-indigo-400">{journal.total_amount.toLocaleString()} <small className="text-[10px]">ر.س</small></td>
                   <td className="px-6 py-5 text-center">
                     <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={(e) => { e.stopPropagation(); openJournalDetail(journal); }} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all" title="تعديل"><Pencil size={18} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); openJournalDetail(journal, true); }} className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all" title="تعديل"><Pencil size={18} /></button>
                       <button onClick={(e) => { e.stopPropagation(); handleDelete(journal.id, 'journal_entry'); }} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all" title="مسح"><Trash2 size={18} /></button>
                     </div>
                   </td>
@@ -1582,26 +1584,35 @@ export default function ReceiptVouchers({}) {
 
               <div className="p-10 overflow-y-auto custom-scrollbar bg-slate-50/30 dark:bg-slate-900/20 flex-1 space-y-8 text-right" dir="rtl">
                 
-                {/* Edit Form */}
-                <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row gap-6 justify-center items-end">
-                  <div className="flex-1">
-                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">رقم الدفتر</label>
-                    <input type="text" className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 font-black text-lg outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-center" value={editingJournalForm.journalNo} onChange={e => setEditingJournalForm({...editingJournalForm, journalNo: e.target.value})} />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">إجمالي المبلغ المسجل</label>
-                    <div className="relative">
-                      <input type="number" className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 pl-12 font-black text-lg outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-center text-indigo-600 dark:text-indigo-400" value={editingJournalForm.totalAmount} onChange={e => setEditingJournalForm({...editingJournalForm, totalAmount: e.target.value})} />
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">ر.س</span>
+                {/* Edit Form OR View Header */}
+                {isEditingJournal ? (
+                  <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row gap-6 justify-center items-end">
+                    <div className="flex-1">
+                      <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">رقم الدفتر</label>
+                      <input type="text" className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 font-black text-lg outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-center" value={editingJournalForm.journalNo} onChange={e => setEditingJournalForm({...editingJournalForm, journalNo: e.target.value})} />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-2">إجمالي المبلغ المسجل</label>
+                      <div className="relative">
+                        <input type="number" className="w-full h-12 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 pl-12 font-black text-lg outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-center text-indigo-600 dark:text-indigo-400" value={editingJournalForm.totalAmount} onChange={e => setEditingJournalForm({...editingJournalForm, totalAmount: e.target.value})} />
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">ر.س</span>
+                      </div>
+                    </div>
+                    <div>
+                      <button onClick={handleSaveJournalDetails} disabled={loading} className="h-12 px-8 rounded-2xl font-black text-white bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-lg shadow-indigo-600/20">
+                        {loading ? <Clock size={18} className="animate-spin" /> : <Save size={18} />}
+                        حفظ التعديلات
+                      </button>
                     </div>
                   </div>
-                  <div>
-                    <button onClick={handleSaveJournalDetails} disabled={loading} className="h-12 px-8 rounded-2xl font-black text-white bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-lg shadow-indigo-600/20">
-                      {loading ? <Clock size={18} className="animate-spin" /> : <Save size={18} />}
-                      حفظ التعديلات
-                    </button>
+                ) : (
+                  <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 border border-slate-100 dark:border-slate-700 shadow-sm text-center">
+                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-1">إجمالي المبلغ المسجل</span>
+                    <div className="text-4xl font-black text-indigo-600 dark:text-indigo-400 tabular-nums">
+                      {selectedJournalEntry.total_amount.toLocaleString()} <span className="text-sm">ر.س</span>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="grid grid-cols-1 gap-8">
                   {/* Linked Vouchers */}
@@ -1617,7 +1628,7 @@ export default function ReceiptVouchers({}) {
                             <th className="px-6 py-4 font-black text-slate-400">المندوب</th>
                             <th className="px-6 py-4 font-black text-slate-400">العميل</th>
                             <th className="px-6 py-4 font-black text-slate-400 text-left">المبلغ</th>
-                            <th className="px-6 py-4 font-black text-slate-400 text-center w-16">إزالة</th>
+                            {isEditingJournal && <th className="px-6 py-4 font-black text-slate-400 text-center w-16">إزالة</th>}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
@@ -1629,9 +1640,11 @@ export default function ReceiptVouchers({}) {
                               <td className="px-6 py-4 font-bold text-blue-600">{v.repName}</td>
                               <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-400">{v.customerName}</td>
                               <td className="px-6 py-4 text-left font-black text-emerald-600 tabular-nums">{v.amount.toLocaleString()}</td>
-                              <td className="px-6 py-4 text-center">
-                                <button onClick={() => handleRemoveFromJournal(v.id, 'voucher')} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all" title="إزالة من القيد"><Trash2 size={16} /></button>
-                              </td>
+                              {isEditingJournal && (
+                                <td className="px-6 py-4 text-center">
+                                  <button onClick={() => handleRemoveFromJournal(v.id, 'voucher')} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all" title="إزالة من القيد"><Trash2 size={16} /></button>
+                                </td>
+                              )}
                             </tr>
                           ))}
                         </tbody>
@@ -1651,7 +1664,7 @@ export default function ReceiptVouchers({}) {
                             <th className="px-6 py-4 font-black text-slate-400">المندوب</th>
                             <th className="px-6 py-4 font-black text-slate-400">البيان</th>
                             <th className="px-6 py-4 font-black text-slate-400 text-left">المبلغ</th>
-                            <th className="px-6 py-4 font-black text-slate-400 text-center w-16">إزالة</th>
+                            {isEditingJournal && <th className="px-6 py-4 font-black text-slate-400 text-center w-16">إزالة</th>}
                           </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
@@ -1662,9 +1675,11 @@ export default function ReceiptVouchers({}) {
                                   <td className="px-6 py-4 font-black text-blue-600">{e.repName}</td>
                                   <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-400">{e.statement}</td>
                                   <td className="px-6 py-4 text-left font-black text-rose-600 tabular-nums">-{e.amount.toLocaleString()}</td>
-                                  <td className="px-6 py-4 text-center">
-                                    <button onClick={() => handleRemoveFromJournal(e.id, 'expense')} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all" title="إزالة من القيد"><Trash2 size={16} /></button>
-                                  </td>
+                                  {isEditingJournal && (
+                                    <td className="px-6 py-4 text-center">
+                                      <button onClick={() => handleRemoveFromJournal(e.id, 'expense')} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-all" title="إزالة من القيد"><Trash2 size={16} /></button>
+                                    </td>
+                                  )}
                                 </tr>
                               ))}
                             </tbody>
