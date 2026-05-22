@@ -530,7 +530,8 @@ export default function ReceiptVouchers({}) {
              :root { --primary: #4f46e5; --primary-light: #e0e7ff; --text-main: #1e293b; --text-muted: #64748b; --border-color: #e2e8f0; --bg-light: #f8fafc; }
              * { box-sizing: border-box; }
              body { font-family: 'Cairo', sans-serif; padding: 40px; color: var(--text-main); background-color: #fff; line-height: 1.5; }
-             .header-container { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 3px solid var(--primary-light); }
+             .header-container { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 3px solid var(--primary-light); }
+             .title-wrapper { flex: 1; }
              .section-title { font-size: 18px; font-weight: 800; color: #334155; margin: 30px 0 15px 0; display: flex; align-items: center; gap: 10px; }
              .section-title::before { content: ''; display: inline-block; width: 6px; height: 20px; background-color: var(--primary); border-radius: 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
              table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; }
@@ -545,20 +546,24 @@ export default function ReceiptVouchers({}) {
              .badge-cash { background: #d1fae5; color: #047857; } .badge-card { background: #dbeafe; color: #1d4ed8; } .badge-transfer { background: #f3e8ff; color: #7e22ce; }
              .report-main-title { font-size: 32px; font-weight: 900; color: var(--primary); letter-spacing: -0.5px; text-shadow: 2px 2px 0px rgba(79, 70, 229, 0.1); font-family: 'Cairo', sans-serif; position: relative; display: inline-block; }
              .report-main-title::after { content: ''; position: absolute; bottom: -4px; right: 0; width: 50%; height: 4px; background-color: var(--primary); border-radius: 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-             .meta-info { text-align: left; }
-             .meta-item { font-size: 14px; color: var(--text-muted); }
-             .meta-item span { font-weight: 800; color: var(--text-main); margin-right: 8px; background-color: var(--bg-light); padding: 4px 12px; border-radius: 8px; border: 1px solid var(--border-color); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+             .meta-info { text-align: left; min-width: 250px; display: flex; flex-direction: column; gap: 8px; }
+             .meta-item { display: flex; align-items: center; justify-content: flex-start; gap: 10px; font-size: 14px; font-weight: 700; color: var(--text-muted); }
+             .meta-item span { font-weight: 900; color: var(--text-main); background-color: var(--bg-light); padding: 4px 12px; border-radius: 8px; border: 1px solid var(--border-color); -webkit-print-color-adjust: exact; print-color-adjust: exact; display: inline-block; white-space: nowrap; }
              @media print { body { padding: 0; } table { break-inside: auto; } tr { break-inside: avoid; page-break-inside: avoid; } }
           </style>
         </head>
         <body>
           <div class="header-container">
-            <div>
+            <div class="title-wrapper">
               <div class="report-main-title">${title}</div>
             </div>
             <div class="meta-info">
-              <div class="meta-item">تاريخ الإصدار: <span>${new Date().toLocaleDateString('ar-SA')}</span></div>
-              ${journalEntry ? `<div class="meta-item" style="margin-top: 8px;">تاريخ القيد: <span>${new Date(journalEntry.created_at).toLocaleDateString('ar-SA')}</span></div>` : ''}
+              <div class="meta-item">تاريخ الطباعة: <span>${new Date().toLocaleDateString('ar-EG')}</span></div>
+              ${journalEntry ? `
+                <div class="meta-item">تاريخ القيد: <span>${new Date(journalEntry.created_at).toLocaleDateString('ar-EG')}</span></div>
+                <div class="meta-item">رقم الدفتر: <span style="color: var(--primary);">${journalEntry.journal_no}</span></div>
+                <div class="meta-item">إجمالي القيد: <span style="color: #e11d48;">${Number(journalEntry.total_amount).toLocaleString()} ر.س</span></div>
+              ` : ''}
             </div>
           </div>
           
