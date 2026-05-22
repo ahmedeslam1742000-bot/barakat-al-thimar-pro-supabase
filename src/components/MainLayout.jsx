@@ -124,58 +124,88 @@ export default function MainLayout({ children }) {
       <main
         className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out print:mr-0 print:block print:overflow-visible ${isSidebarOpen ? 'lg:mr-56' : 'mr-0'}`}
       >
-        {/* Top Navbar - Transparent & Modern */}
-        <header className="print:hidden w-full h-16 shrink-0 z-40 flex items-center justify-between px-6 lg:px-8 transition-all duration-300 pt-2">
-          <div className="flex items-center gap-4">
-            {!isSidebarOpen && (
-              <button 
-                onClick={() => setIsSidebarOpen(true)}
-                className="p-2 text-slate-500 hover:text-primary dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all shadow-sm"
-              >
-                <Menu size={20} />
-              </button>
-            )}
-          </div>
-          
-          {/* Middle: Spacer */}
-          <div className="flex-1"></div>
-          
-          <div className="flex items-center bg-white dark:bg-[#111C44] rounded-full p-2 shadow-sm border border-slate-100 dark:border-slate-800 gap-1 lg:gap-2">
-            {/* Quick Actions Group */}
-            <div className="flex items-center gap-1">
-              {/* Audio Toggle */}
-              <button 
-                onClick={toggleMute}
-                className="p-2 text-slate-400 hover:text-primary dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-full transition-all group"
-                title="كتم الصوت"
-              >
-                {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-              </button>
-              
-              {/* Theme Toggle */}
-              <button 
-                onClick={toggleTheme}
-                className="p-2 text-slate-400 hover:text-primary dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-full transition-all"
-                title={isDarkMode ? "الوضع المضيء" : "الوضع المظلم"}
-              >
-                {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-              </button>
+        {/* Top Navbar / Global Welcome Banner */}
+        <header className="print:hidden w-full shrink-0 z-40 px-4 lg:px-6 pt-4 pb-2 transition-all duration-300">
+          <div className="relative bg-white dark:bg-[#111C44] rounded-[24px] shadow-sm p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border border-slate-100 dark:border-slate-800/50 overflow-hidden">
+            
+            {/* Soft Background Accent */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+
+            {/* Right Side (RTL) - Greeting & Wave */}
+            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-4">
+              {!isSidebarOpen && (
+                <button 
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="p-2 text-slate-500 hover:text-primary dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all shadow-sm shrink-0"
+                >
+                  <Menu size={20} />
+                </button>
+              )}
+              <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-500/10 rounded-[16px] flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-500/20">
+                <span className="text-2xl">👋</span>
+              </div>
+              <div>
+                <h1 className="text-[20px] md:text-[24px] font-black text-slate-800 dark:text-white font-tajawal leading-tight tracking-tight">
+                  {new Date().getHours() < 12 ? 'صباح الخير' : 'مساء الخير'}، <span className="text-emerald-600 dark:text-emerald-400">{currentUser?.name || currentUser?.username || 'يا بطل'}</span>!
+                </h1>
+              </div>
             </div>
 
-            {/* Notification Bell */}
-            <div className="relative" ref={alertsRef}>
-              <button 
-                onClick={() => setIsAlertsOpen(!isAlertsOpen)}
-                className={`p-2 rounded-full transition-all relative ${isAlertsOpen ? 'bg-primary/10 dark:bg-emerald-500/10 text-primary dark:text-emerald-400' : 'text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-900'}`}
+            {/* Left Side (RTL) - Actions & Icons */}
+            <div className="relative z-10 flex flex-wrap items-center gap-3 self-start md:self-auto shrink-0">
+              
+              {/* Date */}
+              <div className="hidden lg:flex items-center gap-2.5 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                <Clock size={16} className="text-emerald-500" />
+                <span className="text-[12px] font-bold text-slate-600 dark:text-slate-300 tabular-nums">
+                  {new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </span>
+              </div>
+
+              {/* Morning Briefing Button */}
+              <button
+                onClick={() => window.dispatchEvent(new Event('openMorningBrief'))}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-[14px] text-[13px] font-black shadow-lg shadow-emerald-500/20 transition-all font-tajawal"
               >
-                <Bell size={18} />
-                {criticalItems.length > 0 && (
-                  <span className="absolute top-1 left-1 flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 text-white text-[8px] font-black items-center justify-center border border-white dark:border-slate-950"></span>
-                  </span>
-                )}
+                <Timer size={16} className="text-emerald-100" />
+                الموجز الصباحي
               </button>
+
+              {/* Icons Pill */}
+              <div className="flex items-center bg-slate-50 dark:bg-[#111C44] rounded-2xl p-1 shadow-sm border border-slate-100 dark:border-slate-800 gap-1">
+                
+                {/* Theme Toggle */}
+                <button 
+                  onClick={toggleTheme}
+                  className="p-2 text-slate-400 hover:text-primary dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-900 rounded-xl transition-all"
+                  title={isDarkMode ? "الوضع المضيء" : "الوضع المظلم"}
+                >
+                  {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                </button>
+
+                {/* Audio Toggle */}
+                <button 
+                  onClick={toggleMute}
+                  className="p-2 text-slate-400 hover:text-primary dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-900 rounded-xl transition-all group"
+                  title="كتم الصوت"
+                >
+                  {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                </button>
+
+                {/* Notification Bell */}
+                <div className="relative" ref={alertsRef}>
+                  <button 
+                    onClick={() => setIsAlertsOpen(!isAlertsOpen)}
+                    className={`p-2 rounded-xl transition-all relative ${isAlertsOpen ? 'bg-white dark:bg-emerald-500/10 text-primary dark:text-emerald-400 shadow-sm' : 'text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-white dark:hover:bg-slate-900'}`}
+                  >
+                    <Bell size={18} />
+                    {criticalItems.length > 0 && (
+                      <span className="absolute top-1 left-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 text-white text-[8px] font-black items-center justify-center border border-white dark:border-slate-950"></span>
+                      </span>
+                    )}
+                  </button>
 
               {/* Alerts Dropdown */}
               <AnimatePresence>
@@ -263,6 +293,8 @@ export default function MainLayout({ children }) {
                   </motion.div>
                 )}
               </AnimatePresence>
+            </div>
+              </div>
             </div>
           </div>
         </header>

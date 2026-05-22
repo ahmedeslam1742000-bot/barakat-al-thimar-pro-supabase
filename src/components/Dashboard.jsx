@@ -233,6 +233,12 @@ export default function Dashboard({}) {
   }, [isItemModalOpen, isStockInModalOpen, isTransactionDetailOpen, isVoucherDetailOpen]);
 
   useEffect(() => {
+    const handleOpenMorningBrief = () => setIsMorningBriefOpen(true);
+    window.addEventListener('openMorningBrief', handleOpenMorningBrief);
+    return () => window.removeEventListener('openMorningBrief', handleOpenMorningBrief);
+  }, []);
+
+  useEffect(() => {
     const handleConfirmKeys = (e) => {
       if (showInvoiceExitConfirm) {
         if (e.key === 'Enter') { e.preventDefault(); performInvoiceReset(); }
