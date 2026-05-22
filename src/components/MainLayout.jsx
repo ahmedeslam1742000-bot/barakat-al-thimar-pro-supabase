@@ -114,7 +114,7 @@ export default function MainLayout({ children }) {
   }, []);
 
   return (
-    <div className="h-screen print:h-auto overflow-hidden bg-slate-50 print:bg-white text-slate-800 flex font-readex transition-colors duration-300" dir="rtl">
+    <div className="h-screen print:h-auto overflow-hidden bg-[#F4F7FE] dark:bg-[#0B1437] text-slate-800 flex font-readex transition-colors duration-300" dir="rtl">
       <Sidebar 
         isSidebarOpen={isSidebarOpen} 
         setIsSidebarOpen={setIsSidebarOpen}
@@ -124,51 +124,46 @@ export default function MainLayout({ children }) {
       <main
         className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out print:mr-0 print:block print:overflow-visible ${isSidebarOpen ? 'lg:mr-56' : 'mr-0'}`}
       >
-        {/* Top Navbar - Elevated design with breathing room */}
-        <header className="print:hidden w-full h-14 bg-white/80 dark:bg-slate-950/80 border-b border-slate-100/80 dark:border-slate-900/50 backdrop-blur-2xl shadow-[0_2px_20px_rgba(0,0,0,0.02)] dark:shadow-[0_2px_30px_rgba(0,0,0,0.15)] shrink-0 z-40 flex items-center justify-between px-4 sm:px-6 transition-all duration-300">
-          <div className="flex items-center gap-3">
+        {/* Top Navbar - Transparent & Modern */}
+        <header className="print:hidden w-full h-20 shrink-0 z-40 flex items-center justify-between px-6 lg:px-8 transition-all duration-300 pt-4">
+          <div className="flex items-center gap-4">
             {!isSidebarOpen && (
               <button 
                 onClick={() => setIsSidebarOpen(true)}
-                className="p-2 text-slate-400 hover:text-primary dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-xl transition-all"
+                className="p-2 text-slate-500 hover:text-primary dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all"
               >
-                <Menu size={18} />
+                <Menu size={20} />
               </button>
             )}
             
-            {/* Logo area when sidebar is closed */}
-            {!isSidebarOpen && (
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 via-primary to-slate-900 rounded-xl flex items-center justify-center text-white shadow-md">
-                  <Warehouse size={15} />
-                </div>
-                <h1 className="text-sm font-black font-tajawal hidden sm:block tracking-tight text-slate-800 dark:text-white">بركة الثمار</h1>
-              </div>
-            )}
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-0.5">الصفحات / لوحة القيادة</span>
+              <h1 className="text-2xl font-black font-tajawal tracking-tight text-[#2B3674] dark:text-white">لوحة القيادة</h1>
+            </div>
           </div>
           
           {/* Middle: Spacer */}
           <div className="flex-1"></div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center bg-white dark:bg-[#111C44] rounded-full p-2 shadow-sm border border-slate-100 dark:border-slate-800 gap-1 lg:gap-2">
             {/* Quick Actions Group */}
-            <div className="hidden md:flex items-center gap-1 border-l border-slate-100 dark:border-slate-900 ml-3 pl-3">
+            <div className="flex items-center gap-1">
               {/* Audio Toggle */}
               <button 
                 onClick={toggleMute}
-                className="p-2 text-slate-400 hover:text-primary dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-xl transition-all group"
+                className="p-2 text-slate-400 hover:text-primary dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-full transition-all group"
                 title="كتم الصوت"
               >
-                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
               </button>
               
               {/* Theme Toggle */}
               <button 
                 onClick={toggleTheme}
-                className="p-2 text-slate-400 hover:text-primary dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-xl transition-all"
+                className="p-2 text-slate-400 hover:text-primary dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-full transition-all"
                 title={isDarkMode ? "الوضع المضيء" : "الوضع المظلم"}
               >
-                {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+                {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
               </button>
             </div>
 
@@ -176,15 +171,13 @@ export default function MainLayout({ children }) {
             <div className="relative" ref={alertsRef}>
               <button 
                 onClick={() => setIsAlertsOpen(!isAlertsOpen)}
-                className={`p-2 rounded-xl transition-all relative ${isAlertsOpen ? 'bg-primary/10 dark:bg-emerald-500/10 text-primary dark:text-emerald-400 shadow-inner border border-primary/10 dark:border-emerald-500/10' : 'text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-900'}`}
+                className={`p-2 rounded-full transition-all relative ${isAlertsOpen ? 'bg-primary/10 dark:bg-emerald-500/10 text-primary dark:text-emerald-400' : 'text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-900'}`}
               >
                 <Bell size={18} />
                 {criticalItems.length > 0 && (
-                  <span className="absolute top-1 left-1 flex h-4 w-4">
+                  <span className="absolute top-1 left-1 flex h-3 w-3">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 text-white text-[8px] font-black items-center justify-center border border-white dark:border-slate-950">
-                      {criticalItems.length}
-                    </span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 text-white text-[8px] font-black items-center justify-center border border-white dark:border-slate-950"></span>
                   </span>
                 )}
               </button>
@@ -234,25 +227,14 @@ export default function MainLayout({ children }) {
             </div>
 
             {/* Profile Menu */}
-            <div className="relative mr-1" ref={profileRef}>
+            <div className="relative" ref={profileRef}>
               <button 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className={`flex items-center gap-2.5 p-1 pl-2.5 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-full transition-all border border-transparent ${isProfileOpen ? 'bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800' : ''}`}
+                className={`flex items-center gap-2.5 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-full transition-all border border-transparent ${isProfileOpen ? 'bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800' : ''}`}
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 via-primary to-slate-900 flex items-center justify-center text-white text-[10px] font-black shadow-md border-2 border-white dark:border-slate-950 ring-2 ring-emerald-500/10 group-hover:ring-emerald-500/30 transition-all">
+                <div className="w-10 h-10 rounded-full bg-[#11047A] dark:bg-emerald-500 flex items-center justify-center text-white text-[14px] font-black shadow-sm transition-all">
                   {currentUser?.email?.charAt(0).toUpperCase() || 'A'}
                 </div>
-                <div className="hidden sm:flex flex-col items-start leading-none text-right">
-                  <span className="text-[11px] font-black text-slate-800 dark:text-white truncate max-w-[80px]">{currentUser?.fullName || currentUser?.username || currentUser?.email?.split('@')[0]}</span>
-                  <span className={`text-[8px] uppercase tracking-wider font-extrabold mt-0.5 ${
-                    currentUser?.role === 'Admin' ? 'text-emerald-500' : 
-                    currentUser?.role === 'Storekeeper' ? 'text-blue-500' : 'text-slate-400 dark:text-slate-500'
-                  }`}>
-                    {currentUser?.role === 'Admin' ? 'مدير عام' : 
-                     currentUser?.role === 'Storekeeper' ? 'أمين مستودع' : 'مراقب'}
-                  </span>
-                </div>
-                <ChevronDown size={12} className={`text-slate-400 transition-transform duration-300 ${isProfileOpen ? 'rotate-180' : ''}`} />
               </button>
 
               <AnimatePresence>
@@ -265,7 +247,7 @@ export default function MainLayout({ children }) {
                   >
                     <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50">
                       <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">المستخدم الحالي</p>
-                      <p className="text-xs font-black truncate text-primary dark:text-emerald-400">{currentUser?.email}</p>
+                      <p className="text-xs font-black truncate text-[#2B3674] dark:text-emerald-400">{currentUser?.email}</p>
                     </div>
                     <div className="p-1">
                       <button 
@@ -300,7 +282,7 @@ export default function MainLayout({ children }) {
         )}
 
         {/* Page Content */}
-        <div className="flex-1 flex flex-col min-h-0 bg-slate-50/30 dark:bg-slate-950/20 print:bg-white p-4 sm:p-6 lg:p-8 print:p-0 overflow-hidden print:overflow-visible print:block">
+        <div className="flex-1 flex flex-col min-h-0 bg-transparent p-4 sm:p-6 lg:px-8 lg:pb-8 print:p-0 overflow-hidden print:overflow-visible print:block">
           <div className="w-full flex-1 flex flex-col min-h-0 print:block">
             {children}
           </div>

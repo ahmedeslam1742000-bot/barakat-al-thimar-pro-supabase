@@ -25,76 +25,42 @@ export const StatCard = React.memo(({
   };
 
   return (
-    <div className="flex flex-col gap-3.5 h-full">
-      <motion.div
-        whileHover={{ 
-          y: -4, 
-          scale: 1.01,
-          boxShadow: `0 12px 30px -4px ${accentColor}18, 0 4px 12px -2px ${accentColor}08`,
-          borderColor: `${accentColor}60`
-        }}
-        className="relative flex-1 flex flex-col justify-center rounded-[24px] cursor-pointer group shadow-sm transition-all duration-300 border border-slate-200/50 bg-white/80 backdrop-blur-xl no-select-click"
-        onClick={handleCardClick}
-        style={{ 
-          willChange: 'transform, box-shadow, border-color', 
-          backfaceVisibility: 'hidden', 
-          transform: 'translate3d(0, 0, 0)'
-        }}
-      >
-        <div className="p-5 flex items-start gap-4">
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3"
-            style={{ 
-              backgroundColor: accentColor + '10', 
-              color: accentColor,
-              border: `1px solid ${accentColor}25`,
-              boxShadow: `0 8px 20px -6px ${accentColor}30`
-            }}
-          >
-            <Icon size={26} strokeWidth={2} />
-          </div>
-          <div className="flex flex-col justify-center pt-1 z-10">
-            <span className="text-[15px] font-black text-slate-800 font-tajawal mb-1 transition-colors group-hover:text-slate-900">{label}</span>
-            {value !== undefined && value !== null ? (
-              <>
-                <span className="text-[32px] font-black font-tajawal leading-none tracking-tight transition-colors drop-shadow-sm" style={{ color: accentColor }}>
-                  {value}
-                </span>
-                {subtext && (
-                  <span className="text-[11px] font-bold text-slate-500 font-readex mt-1.5">{subtext}</span>
-                )}
-              </>
-            ) : (
-              <span className="text-[13px] font-bold text-slate-600 font-tajawal leading-relaxed mt-1">
-                {subtext}
+    <motion.div
+      whileHover={{ y: -4, scale: 1.01, boxShadow: `0 12px 30px -4px ${accentColor}40` }}
+      className="relative flex flex-col justify-between rounded-[24px] cursor-pointer group shadow-sm transition-all duration-300 overflow-hidden no-select-click h-full min-h-[160px]"
+      onClick={handleCardClick}
+      style={{ background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}cc 100%)` }}
+    >
+      {/* --- Card Content --- */}
+      <div className="p-5 flex flex-col flex-1 relative z-10">
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex flex-col text-white">
+            {value !== undefined && value !== null && (
+              <span className="text-[32px] font-black font-tajawal leading-none tracking-tight drop-shadow-sm mb-1 mt-8">
+                {value}
               </span>
             )}
+            <span className="text-[16px] font-black font-tajawal opacity-90 drop-shadow-sm">{label}</span>
+          </div>
+          <div className="w-12 h-12 rounded-[14px] flex items-center justify-center shrink-0 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 bg-white/20 backdrop-blur-md border border-white/20 text-white shadow-inner">
+            <Icon size={24} strokeWidth={2} />
           </div>
         </div>
+      </div>
 
-        <div
-          className="absolute -top-10 -left-10 w-32 h-32 rounded-full opacity-[0.03] group-hover:opacity-[0.07] group-hover:scale-125 transition-all duration-700 pointer-events-none"
-          style={{ backgroundColor: accentColor, filter: 'blur(20px)' }}
-        />
-      </motion.div>
-
+      {/* --- Glass Button Action --- */}
       {actionLabel && (
-        <motion.button
-          whileHover={{ y: -2, scale: 1.01, boxShadow: `0 8px 20px -4px ${accentColor}50` }}
-          whileTap={{ y: 0, scale: 0.98 }}
-          type="button"
-          className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-[16px] text-[13px] font-black font-tajawal text-white transition-all duration-300 group/btn"
-          style={{ 
-            background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}e5 100%)`,
-            boxShadow: `0 4px 12px -4px ${accentColor}40`
-          }}
-          onClick={handleActionClick}
-        >
-          <Plus size={16} strokeWidth={3} className="transition-transform group-hover/btn:rotate-90 duration-300" />
-          {actionLabel}
-        </motion.button>
+        <div className="px-5 pb-5 relative z-10" onClick={handleActionClick}>
+          <div className="w-full bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-xl py-2 flex items-center justify-center gap-2 text-[12px] font-black font-tajawal text-white transition-all group/btn">
+            <Plus size={14} strokeWidth={3} className="transition-transform group-hover/btn:rotate-90 duration-300" />
+            {actionLabel}
+          </div>
+        </div>
       )}
-    </div>
+      
+      {/* Decorative Glow */}
+      <div className="absolute -top-10 -left-10 w-32 h-32 rounded-full bg-white opacity-10 group-hover:opacity-20 group-hover:scale-125 transition-all duration-700 pointer-events-none blur-2xl" />
+    </motion.div>
   );
 });
 StatCard.displayName = 'StatCard';

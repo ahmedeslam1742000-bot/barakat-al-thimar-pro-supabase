@@ -116,27 +116,26 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: 300, opacity: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="print:hidden fixed inset-y-0 right-0 z-50 h-full w-56 bg-white/85 dark:bg-slate-950/80 backdrop-blur-3xl shadow-[0_0_40px_rgba(0,0,0,0.03)] dark:shadow-[0_0_50px_rgba(0,0,0,0.3)] border-l border-slate-100/80 dark:border-slate-900/50 flex flex-col font-readex transition-all duration-300"
+          className="print:hidden fixed inset-y-0 right-0 z-50 h-full w-64 bg-white dark:bg-[#111C44] shadow-none border-l border-slate-100/50 dark:border-slate-800/50 flex flex-col font-readex transition-all duration-300"
         >
           {/* Brand Area */}
-          <div className="h-16 flex items-center justify-between px-5 border-b border-slate-100/80 dark:border-slate-900/50 shrink-0 bg-white/40 dark:bg-slate-950/40 backdrop-blur-md">
+          <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100/50 dark:border-slate-800/50 shrink-0 bg-transparent">
             <div className="flex items-center gap-3">
               <motion.div 
                 whileHover={{ scale: 1.05, rotate: 5 }}
-                className="w-9 h-9 bg-gradient-to-br from-emerald-500 via-primary to-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/10 border border-white/20"
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-primary dark:text-emerald-400"
               >
-                <Warehouse size={18} className="text-white drop-shadow-md" />
+                <Warehouse size={22} className="drop-shadow-sm" strokeWidth={2.5} />
               </motion.div>
-              <div className="flex flex-col text-right">
-                <span className="font-tajawal font-black text-sm text-slate-800 dark:text-white tracking-tight leading-none">بركة الثمار</span>
-                <span className="text-[8px] text-emerald-500 font-extrabold tracking-widest uppercase mt-0.5">PRO</span>
+              <div className="flex flex-col text-right mt-1">
+                <span className="font-tajawal font-black text-lg text-primary dark:text-white tracking-tight leading-none uppercase">بركة الثمار</span>
               </div>
             </div>
             <button
               onClick={() => setIsSidebarOpen(false)}
               className="lg:hidden p-1.5 text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-all"
             >
-              <X size={14} />
+              <X size={16} />
             </button>
           </div>
 
@@ -155,21 +154,21 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
                     onClick={() => group.isStatic ? handleStaticClick(group.view) : toggleGroup(group.id)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-300 group/btn relative font-semibold text-xs tracking-tight border
                       ${isActive
-                        ? 'bg-gradient-to-l from-primary/10 to-primary/5 dark:from-emerald-500/10 dark:to-emerald-500/5 text-primary dark:text-emerald-400 border-primary/20 dark:border-emerald-500/20 shadow-md shadow-primary/5 dark:shadow-emerald-500/5'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/60 hover:text-primary dark:hover:text-emerald-400 border-transparent'}
+                        ? 'bg-gradient-to-l from-emerald-500/10 to-emerald-500/5 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 shadow-sm shadow-emerald-500/5'
+                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/60 hover:text-emerald-600 dark:hover:text-emerald-400 border-transparent'}
                     `}
                   >
                     {/* Active Indicator Pill */}
                     {isActive && (
                       <motion.div
                         layoutId="activeIndicator"
-                        className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-gradient-to-b from-emerald-400 to-primary rounded-l-full shadow-[0_0_10px_rgba(52,211,153,0.5)]"
+                        className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-gradient-to-b from-emerald-400 to-emerald-600 rounded-l-full shadow-[0_0_8px_rgba(52,211,153,0.4)]"
                       ></motion.div>
                     )}
 
                     <div className="flex items-center gap-2.5">
-                      <div className={`p-1.5 rounded-lg transition-all duration-300 shadow-sm ${isActive ? 'bg-primary/20 dark:bg-emerald-500/20' : 'bg-slate-50 dark:bg-slate-900 group-hover/btn:bg-primary/10 dark:group-hover/btn:bg-emerald-500/10'}`}>
-                        <Icon size={16} className={`drop-shadow ${isActive ? 'text-primary dark:text-emerald-400' : 'text-slate-400 group-hover/btn:text-primary dark:group-hover/btn:text-emerald-400'} transition-colors duration-300`} />
+                      <div className={`p-1.5 rounded-lg transition-all duration-300 shadow-sm ${isActive ? 'bg-emerald-500/20 dark:bg-emerald-500/20' : 'bg-slate-50 dark:bg-slate-900 group-hover/btn:bg-emerald-500/10 dark:group-hover/btn:bg-emerald-500/10'}`}>
+                        <Icon size={16} className={`drop-shadow-sm ${isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 group-hover/btn:text-emerald-600 dark:group-hover/btn:text-emerald-400'} transition-colors duration-300`} />
                       </div>
                       <span className={`font-tajawal text-xs text-right ${isActive ? 'font-black' : 'font-bold'}`}>{group.label}</span>
                     </div>
@@ -177,7 +176,7 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
                     {!group.isStatic && (
                       <ChevronDown
                         size={12}
-                        className={`transition-transform duration-300 ${isOpen ? 'rotate-180 text-primary dark:text-emerald-400' : 'text-slate-400'}`}
+                        className={`transition-transform duration-300 ${isOpen ? 'rotate-180 text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}
                       />
                     )}
                   </button>
@@ -201,15 +200,15 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
                                   onClick={() => handleSubItemClick(sub.view)}
                                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200 text-[11px] font-bold tracking-tight relative
                                     ${isSubActive
-                                      ? 'bg-gradient-to-l from-primary/10 to-primary/5 dark:from-emerald-500/10 dark:to-emerald-500/5 text-primary dark:text-emerald-400 border border-primary/10 dark:border-emerald-500/10 shadow-sm'
-                                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/40 hover:text-primary dark:hover:text-emerald-400'}
+                                      ? 'bg-gradient-to-l from-emerald-500/10 to-emerald-500/5 text-emerald-600 dark:text-emerald-400 border border-emerald-500/10 shadow-sm'
+                                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/40 hover:text-emerald-600 dark:hover:text-emerald-400'}
                                   `}
                                 >
                                   <span className="text-right flex-1 font-tajawal">{sub.label}</span>
                                   {isSubActive && (
                                     <motion.div 
                                       layoutId={`subActiveDot-${group.id}`}
-                                      className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-emerald-400 to-primary ml-1 shadow-[0_0_8px_rgba(52,211,153,0.6)]"
+                                      className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 ml-1 shadow-[0_0_8px_rgba(52,211,153,0.6)]"
                                     />
                                   )}
                                 </button>
@@ -231,8 +230,8 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
                 onClick={() => navigate({ to: '/settings' })}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-300 font-bold text-xs border ${
                   activePath === '/settings'
-                    ? 'bg-gradient-to-r from-primary to-slate-800 text-white shadow-lg shadow-primary/20 border-transparent'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/60 hover:text-primary dark:hover:text-emerald-400 border-transparent'
+                    ? 'bg-gradient-to-r from-emerald-500 to-emerald-700 text-white shadow-lg shadow-emerald-500/20 border-transparent'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/60 hover:text-emerald-600 dark:hover:text-emerald-400 border-transparent'
                 }`}
               >
                 <div className={`p-1 rounded-md transition-colors ${activePath === '/settings' ? 'bg-white/10' : 'bg-slate-100/50 dark:bg-slate-900/50'}`}>

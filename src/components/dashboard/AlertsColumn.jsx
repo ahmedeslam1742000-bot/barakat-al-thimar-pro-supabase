@@ -28,23 +28,20 @@ export const AlertsColumn = React.memo(function AlertsColumn({
   return (
     <motion.div
       variants={cardVariants}
-      className="flex flex-col bg-white/80 backdrop-blur-xl rounded-[24px] border border-slate-200/50 shadow-sm overflow-hidden h-full"
+      className="flex flex-col bg-white dark:bg-[#111C44] rounded-[24px] border border-slate-100 dark:border-slate-800/50 shadow-sm overflow-hidden h-full"
     >
-      {/* Top Accent Gradient Bar */}
-      <div className="h-1.5 w-full bg-gradient-to-r from-amber-500 to-rose-500 shrink-0"></div>
-
-      <div className="flex items-center justify-between px-6 py-4.5 border-b border-slate-100 shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="w-8.5 h-8.5 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
-            <AlertTriangle size={15} className="animate-pulse" />
+      <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800/50 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 flex items-center justify-center text-amber-500 dark:text-amber-400">
+            <AlertTriangle size={18} />
           </div>
           <div className="text-right">
-            <h3 className="text-sm font-black text-[#0F2747] font-tajawal leading-tight">تنبيهات المخزن</h3>
-            <p className="text-[10px] text-slate-400 font-readex font-bold">{finalAlerts.length} صنف</p>
+            <h3 className="text-[15px] font-black text-slate-800 dark:text-white font-tajawal leading-tight mb-0.5">تنبيهات المخزن</h3>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 font-readex font-bold">{finalAlerts.length} صنف</p>
           </div>
         </div>
         <select
-          className="text-[10px] bg-slate-50/80 hover:bg-slate-100 border border-slate-200 text-slate-650 rounded-lg px-2.5 py-1.5 outline-none font-black font-tajawal shadow-sm transition-all"
+          className="text-[11px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-lg px-3 py-2 outline-none font-black font-tajawal hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors"
           value={alertCatFilter}
           onChange={e => setAlertCatFilter(e.target.value)}
         >
@@ -53,9 +50,9 @@ export const AlertsColumn = React.memo(function AlertsColumn({
         </select>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar px-5 py-3">
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-5 py-4">
         {finalAlerts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-slate-300">
+          <div className="flex flex-col items-center justify-center py-12 text-slate-300 dark:text-slate-600">
             <CheckCircle2 size={32} strokeWidth={1.2} className="mb-2" />
             <p className="text-xs font-semibold">المخزون آمن</p>
           </div>
@@ -99,8 +96,8 @@ export const AlertsColumn = React.memo(function AlertsColumn({
                     transition={{ duration: 0.3, delay: idx * 0.03 }}
                     className={`group/alert relative p-4 rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden ${
                       isCritical
-                        ? 'border-red-150 bg-red-500/5 hover:bg-red-500/10 hover:border-red-300 animate-urgent-pulse shadow-sm shadow-red-500/5'
-                        : 'border-slate-100 bg-white/60 hover:bg-white hover:border-slate-350 hover:shadow-md hover:shadow-slate-100/60 shadow-sm'
+                        ? 'border-red-200 dark:border-red-900/50 bg-red-500/5 dark:bg-red-500/5 hover:bg-red-500/10 hover:border-red-300 dark:hover:border-red-800 animate-urgent-pulse shadow-sm shadow-red-500/5'
+                        : 'border-slate-100 dark:border-slate-800 bg-white/60 dark:bg-slate-800/30 hover:bg-white dark:hover:bg-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md hover:shadow-slate-100/60 shadow-sm'
                     }`}
                   >
                     <div className="absolute top-0 right-0 w-1 h-full opacity-0 group-hover/alert:opacity-100 transition-opacity" style={{ backgroundColor: barColor }} />
@@ -111,10 +108,10 @@ export const AlertsColumn = React.memo(function AlertsColumn({
                             {icon}
                           </div>
                           <div className="min-w-0">
-                            <h4 className="text-[13px] font-black text-slate-800 font-tajawal truncate group-hover/alert:text-[#0F2747] transition-colors">
+                            <h4 className="text-[13px] font-black text-slate-800 dark:text-white font-tajawal truncate group-hover/alert:text-[#0F2747] dark:group-hover/alert:text-white transition-colors">
                               {getItemName(item)}
                               {!isInvalidCompany(item.company) && (
-                                <span className="text-slate-500 font-bold text-[11px] mr-1">- {item.company}</span>
+                                <span className="text-slate-500 dark:text-slate-400 font-bold text-[11px] mr-1">- {item.company}</span>
                               )}
                             </h4>
                           </div>
@@ -126,7 +123,7 @@ export const AlertsColumn = React.memo(function AlertsColumn({
                           </div>
                         </div>
                       </div>
-                      <div className="relative w-full h-[5px] bg-slate-100 rounded-full overflow-hidden">
+                      <div className="relative w-full h-[5px] bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${stockPct}%` }}

@@ -45,25 +45,22 @@ export const MovementsColumn = React.memo(function MovementsColumn({
   return (
     <motion.div
       variants={cardVariants}
-      className="flex flex-col bg-white/80 backdrop-blur-xl rounded-[24px] border border-slate-200/50 shadow-sm overflow-hidden h-full"
+      className="flex flex-col bg-white dark:bg-[#111C44] rounded-[24px] shadow-sm overflow-hidden h-full border border-slate-100 dark:border-slate-800/50"
     >
-      {/* Top Accent Gradient Bar */}
-      <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 to-indigo-600 shrink-0"></div>
-
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
+      <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800/50 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500">
-            <History size={15} />
+          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-500 dark:text-blue-400">
+            <History size={18} />
           </div>
           <div className="text-right">
-            <h3 className="text-sm font-bold text-[#0F2747] font-tajawal leading-tight">آخر الحركات</h3>
-            <p className="text-[10px] text-slate-400 font-readex font-medium">{finalTransactions.length} حركة</p>
+            <h3 className="text-[15px] font-black text-slate-800 dark:text-white font-tajawal leading-tight mb-0.5">آخر الحركات</h3>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 font-readex font-bold">{finalTransactions.length} حركة مسجلة</p>
           </div>
         </div>
         <select 
           value={movementTypeFilter}
           onChange={(e) => setMovementTypeFilter(e.target.value)}
-          className="text-[10px] bg-slate-50 border border-slate-200 text-slate-500 rounded-lg px-2.5 py-1.5 outline-none font-black font-tajawal shadow-sm"
+          className="text-[11px] bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-lg px-3 py-2 outline-none font-black font-tajawal hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer transition-colors"
         >
           <option value="الكل">كل الأنواع</option>
           <option value="وارد">وارد</option>
@@ -75,14 +72,14 @@ export const MovementsColumn = React.memo(function MovementsColumn({
         </select>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar px-5 py-3">
+      <div className="flex-1 overflow-y-auto custom-scrollbar px-6 py-5">
         {finalTransactions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-300">
+          <div className="flex flex-col items-center justify-center py-16 text-slate-300 dark:text-slate-600">
             <History size={36} strokeWidth={1.2} className="mb-3" />
             <p className="text-xs font-semibold">لم يتم تسجيل حركات</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="relative before:absolute before:right-[19px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-100 dark:before:bg-slate-800 space-y-5">
             {finalTransactions.slice(0, 50).map((tx, idx) => {
               let actionTitle = '';
               let actionColor = 'text-slate-600';
@@ -101,50 +98,50 @@ export const MovementsColumn = React.memo(function MovementsColumn({
                 actionTitle = (tx.type === FUNCTIONAL_OUTBOUND_TYPE || tx.type === 'outward' || tx.type === 'Issue') ? 'سند إخراج (ملغي)' : 
                               (tx.type === FUNCTIONAL_INBOUND_TYPE || tx.type === 'in' || tx.type === 'Restock') ? 'سند إدخال (ملغي)' : 'حركة ملغاة';
                 actionColor = 'text-slate-400';
-                actionBg = 'bg-slate-50';
-                actionIcon = <AlertTriangle size={14} className="text-rose-500 animate-pulse" />;
+                actionBg = 'bg-slate-100';
+                actionIcon = <AlertTriangle size={14} className="text-rose-500" />;
               } else if (isFunctionalOut) {
                 if (tx.isInvoice) {
                   actionTitle = 'فاتورة سند';
                   actionColor = 'text-blue-600';
-                  actionBg = 'bg-blue-50';
+                  actionBg = 'bg-blue-100';
                   actionIcon = <FileText size={14} />;
                 } else if (tx.isTransfer) {
                   actionTitle = 'تحويل مخزني';
                   actionColor = 'text-emerald-600';
-                  actionBg = 'bg-emerald-50';
+                  actionBg = 'bg-emerald-100';
                   actionIcon = <Box size={14} />;
                 } else {
                   actionTitle = 'سند إخراج';
                   actionColor = 'text-rose-600';
-                  actionBg = 'bg-rose-50';
+                  actionBg = 'bg-rose-100';
                   actionIcon = <FileOutput size={14} />;
                 }
               } else if (isFunctionalIn) {
                 actionTitle = 'سند إدخال';
                 actionColor = 'text-indigo-600';
-                actionBg = 'bg-indigo-50';
+                actionBg = 'bg-indigo-100';
                 actionIcon = <FileInput size={14} />;
               } else if (isInbound) {
                 const isAdj = type === 'adjust_in';
                 actionTitle = isAdj ? 'سند إدخال (تعديل)' : 'وارد';
                 actionColor = isAdj ? 'text-slate-500' : 'text-emerald-600';
-                actionBg = isAdj ? 'bg-slate-50' : 'bg-emerald-50';
+                actionBg = isAdj ? 'bg-slate-100' : 'bg-emerald-100';
                 actionIcon = isAdj ? <Pencil size={14} /> : <ArrowDownLeft size={14} />;
               } else if (isReturn) {
                 actionTitle = 'مرتجع';
                 actionColor = 'text-amber-600';
-                actionBg = 'bg-amber-50';
+                actionBg = 'bg-amber-100';
                 actionIcon = <RotateCcw size={14} />;
               } else if (isOutbound) {
                 actionTitle = tx.isInvoice ? 'صادر - فاتورة' : 'صادر';
                 actionColor = 'text-blue-600';
-                actionBg = 'bg-blue-50';
+                actionBg = 'bg-blue-100';
                 actionIcon = <ArrowUpRight size={14} />;
               } else {
                 actionTitle = tx.type || 'حركة مخزنية';
                 actionColor = 'text-slate-600';
-                actionBg = 'bg-slate-50';
+                actionBg = 'bg-slate-100';
                 actionIcon = <FileCheck size={14} />;
               }
 
@@ -156,17 +153,6 @@ export const MovementsColumn = React.memo(function MovementsColumn({
               const txDate = tx.timestamp ? new Date(tx.timestamp) : new Date();
               const formattedDate = txDate.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric', year: 'numeric' });
 
-              let indicatorColor = '#94a3b8'; // slate-400
-              if (isCancelled) indicatorColor = '#cbd5e1';
-              else if (isFunctionalOut) {
-                if (tx.isInvoice) indicatorColor = '#3b82f6'; // blue-500
-                else if (tx.isTransfer) indicatorColor = '#10b981'; // emerald-500
-                else indicatorColor = '#ef4444'; // rose-500
-              } else if (isFunctionalIn) indicatorColor = '#6366f1'; // indigo-500
-              else if (isInbound) indicatorColor = type === 'adjust_in' ? '#64748b' : '#10b981';
-              else if (isReturn) indicatorColor = '#f59e0b'; // amber-500
-              else if (isOutbound) indicatorColor = '#3b82f6';
-
               return (
                 <motion.div 
                   key={tx.id}
@@ -174,20 +160,19 @@ export const MovementsColumn = React.memo(function MovementsColumn({
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: idx * 0.03 }}
                   onClick={() => onTransactionClick(tx)}
-                  className="group relative flex items-center gap-4 p-3.5 rounded-2xl border border-slate-100 bg-white/60 hover:bg-white hover:border-slate-300 hover:shadow-md hover:shadow-slate-100/60 transition-all duration-300 cursor-pointer overflow-hidden no-select-click"
+                  className="group relative flex items-start gap-4 cursor-pointer no-select-click"
                 >
-                  <div className="absolute top-0 right-0 w-[4px] h-full opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: indicatorColor }} />
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-110 ${actionBg} ${actionColor}`}>
+                  <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center shrink-0 shadow-sm border-4 border-white dark:border-[#111C44] transition-transform group-hover:scale-110 ${actionBg} ${actionColor}`}>
                     {actionIcon}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className={`text-[10px] font-black font-tajawal uppercase tracking-wider ${actionColor}`}>{actionTitle}</p>
-                      <p className="text-[9px] font-bold text-slate-400 font-readex tabular-nums">{formattedDate}</p>
+                  <div className="flex-1 bg-slate-50/80 dark:bg-slate-800/50 rounded-xl p-3 border border-slate-100 dark:border-slate-800 group-hover:bg-white dark:group-hover:bg-slate-800 group-hover:border-slate-200 dark:group-hover:border-slate-700 group-hover:shadow-sm transition-all duration-300 mt-1">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className={`text-[11px] font-black font-tajawal uppercase tracking-wider ${actionColor}`}>{actionTitle}</p>
+                      <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 font-readex tabular-nums">{formattedDate}</p>
                     </div>
                     <div className="flex items-center justify-between">
-                      <p className="text-[13px] font-black text-[#0F2747] font-tajawal truncate pr-1">{primaryName}</p>
-                      {secondaryName && <p className="text-[10px] font-bold text-slate-400 font-tajawal bg-slate-100 px-2 py-0.5 rounded-lg shrink-0">{secondaryName}</p>}
+                      <p className="text-[13px] font-black text-slate-800 dark:text-white font-tajawal truncate pr-1">{primaryName}</p>
+                      {secondaryName && <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 font-tajawal bg-slate-200/50 dark:bg-slate-700/50 px-2.5 py-0.5 rounded-md shrink-0">{secondaryName}</p>}
                     </div>
                   </div>
                 </motion.div>

@@ -25,19 +25,16 @@ export const VoucherStatusColumn = React.memo(function VoucherStatusColumn({
   return (
     <motion.div
       variants={cardVariants}
-      className="flex flex-col bg-white/80 backdrop-blur-xl rounded-[24px] border border-slate-200/50 shadow-sm overflow-hidden h-full"
+      className="flex flex-col bg-white dark:bg-[#111C44] rounded-[24px] border border-slate-100 dark:border-slate-800/50 shadow-sm overflow-hidden h-full"
     >
-      {/* Top Accent Gradient Bar */}
-      <div className="h-1.5 w-full bg-gradient-to-r from-indigo-500 to-purple-650 shrink-0"></div>
-
-      <div className="flex items-center justify-between px-6 py-4.5 border-b border-slate-100 shrink-0">
+      <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800/50 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-8.5 h-8.5 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-650">
-            <LayoutDashboard size={15} className="animate-pulse" />
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-500 dark:text-indigo-400">
+            <LayoutDashboard size={18} />
           </div>
           <div className="text-right">
-            <h3 className="text-sm font-black text-[#0F2747] font-tajawal leading-tight">حالة السندات</h3>
-            <p className="text-[10px] text-slate-400 font-readex font-bold">{pendingVouchers.length} قيد الانتظار</p>
+            <h3 className="text-[15px] font-black text-slate-800 dark:text-white font-tajawal leading-tight mb-0.5">حالة السندات</h3>
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 font-readex font-bold">{pendingVouchers.length} قيد الانتظار</p>
           </div>
         </div>
       </div>
@@ -58,7 +55,7 @@ export const VoucherStatusColumn = React.memo(function VoucherStatusColumn({
                 <div
                   key={`${voucher.id}-${voucher.batchId}`}
                   onClick={() => onVoucherClick(voucher)}
-                  className="p-3.5 rounded-2xl border border-slate-100 bg-white/60 cursor-pointer hover:bg-white hover:border-slate-300 hover:shadow-md hover:shadow-slate-100/60 transition-all duration-300 no-select-click"
+                  className="p-3.5 rounded-2xl border border-slate-100 dark:border-slate-800 bg-white/60 dark:bg-slate-800/30 cursor-pointer hover:bg-white dark:hover:bg-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-md hover:shadow-slate-100/60 transition-all duration-300 no-select-click"
                   style={{ borderRight: `3px solid ${sideColor}` }}
                 >
                   <div className="flex items-start gap-3">
@@ -70,27 +67,27 @@ export const VoucherStatusColumn = React.memo(function VoucherStatusColumn({
                       }}
                       className="shrink-0 mt-0.5 cursor-pointer"
                     >
-                      <div className="w-5 h-5 rounded-md border-2 border-slate-300 flex items-center justify-center hover:border-emerald-600 hover:scale-105 active:scale-95 transition-all bg-white shadow-sm">
+                      <div className="w-5 h-5 rounded-md border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center hover:border-emerald-600 dark:hover:border-emerald-500 hover:scale-105 active:scale-95 transition-all bg-white dark:bg-slate-800 shadow-sm">
                         {isCompleted && (
                           <div className="w-2.5 h-2.5 rounded-[3px] bg-emerald-500 shadow-sm" />
                         )}
                       </div>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-[12px] font-black text-[#0F2747] font-tajawal leading-tight truncate">
+                      <h4 className="text-[12px] font-black text-slate-800 dark:text-white font-tajawal leading-tight truncate">
                         {voucher.isTransfer ? 'تحويل مخزني' : (voucher.kind === 'in' ? 'سند إدخال' : 'سند إخراج')} - {voucher.clientName}
                       </h4>
                       {isCompleted && invoiceDate ? (
-                        <p className="text-[9px] text-emerald-650 font-readex mt-1 truncate font-medium">
+                        <p className="text-[9px] text-emerald-600 dark:text-emerald-500 font-readex mt-1 truncate font-medium">
                           تم إصدار الفاتورة بتاريخ: {cleanInvoiceDate(invoiceDate)}
                         </p>
                       ) : (
                         <div className="flex flex-col gap-1.5 mt-1">
-                          <p className="text-[9.5px] text-slate-400 font-readex font-medium truncate">
+                          <p className="text-[9.5px] text-slate-400 dark:text-slate-500 font-readex font-medium truncate">
                             {dayName} - {dateStr}
                           </p>
                           {voucher.line_note && (
-                            <p className="text-[9px] font-black text-indigo-600 font-tajawal truncate bg-indigo-500/5 px-2 py-0.5 rounded-lg border border-indigo-150/10 w-fit max-w-full">
+                            <p className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 font-tajawal truncate bg-indigo-500/5 dark:bg-indigo-500/10 px-2 py-0.5 rounded-lg border border-indigo-150/10 dark:border-indigo-500/20 w-fit max-w-full">
                               {voucher.line_note.split(/\[تعديل بعد الفوترة\]|\[تعديل حديث\]|\[تم تعديله\]|\[تم إصدار الفاتورة|\[إضافة مراجعة\]|\[مستند رقم|\[نوع:|<!--/)[0].trim()}
                             </p>
                           )}
@@ -107,9 +104,9 @@ export const VoucherStatusColumn = React.memo(function VoucherStatusColumn({
           {completedVouchers.length > 0 && (
             <>
               <div className="flex items-center gap-2 mt-4 mb-2">
-                <div className="h-px flex-1 bg-slate-200/60"></div>
-                <span className="text-[10px] font-bold text-slate-400 font-readex uppercase tracking-wider">سندات تمت فوترتها</span>
-                <div className="h-px flex-1 bg-slate-200/60"></div>
+                <div className="h-px flex-1 bg-slate-200/60 dark:bg-slate-800"></div>
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 font-readex uppercase tracking-wider">سندات تمت فوترتها</span>
+                <div className="h-px flex-1 bg-slate-200/60 dark:bg-slate-800"></div>
               </div>
               <AnimatePresence>
                 {completedVouchers.slice(0, 10).map((voucher) => {
@@ -122,7 +119,7 @@ export const VoucherStatusColumn = React.memo(function VoucherStatusColumn({
                     <div
                       key={`${voucher.id}-${voucher.batchId}`}
                       onClick={() => onVoucherClick(voucher)}
-                      className="p-3.5 rounded-2xl border border-emerald-100 bg-emerald-50/20 cursor-pointer hover:bg-emerald-50/40 hover:border-emerald-350 hover:shadow-md hover:shadow-slate-100/60 transition-all duration-300 no-select-click"
+                      className="p-3.5 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50/20 dark:bg-emerald-500/5 cursor-pointer hover:bg-emerald-50/40 dark:hover:bg-emerald-500/10 hover:border-emerald-300 dark:hover:border-emerald-800 hover:shadow-md hover:shadow-slate-100/60 transition-all duration-300 no-select-click"
                       style={{ borderRight: '3px solid #10b981' }}
                     >
                       <div className="flex items-start gap-3">
@@ -134,15 +131,15 @@ export const VoucherStatusColumn = React.memo(function VoucherStatusColumn({
                           </div>
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h4 className="text-[12px] font-black text-[#0F2747] font-tajawal leading-tight truncate">
+                          <h4 className="text-[12px] font-black text-slate-800 dark:text-white font-tajawal leading-tight truncate">
                             {voucher.isTransfer ? 'تحويل مخزني' : (voucher.kind === 'in' ? 'سند إدخال' : 'سند إخراج')} - {voucher.clientName}
                           </h4>
                           {invoiceDate ? (
-                            <p className="text-[9px] text-emerald-650 font-readex mt-1 truncate font-medium">
+                            <p className="text-[9px] text-emerald-600 dark:text-emerald-500 font-readex mt-1 truncate font-medium">
                               تم إصدار الفاتورة بتاريخ: {cleanInvoiceDate(invoiceDate)}
                             </p>
                           ) : (
-                            <p className="text-[9.5px] text-slate-400 font-readex font-medium mt-1 truncate">
+                            <p className="text-[9.5px] text-slate-400 dark:text-slate-500 font-readex font-medium mt-1 truncate">
                               {dayName} - {dateStr}
                             </p>
                           )}
@@ -159,9 +156,9 @@ export const VoucherStatusColumn = React.memo(function VoucherStatusColumn({
           {cancelledVouchers.length > 0 && (
             <>
               <div className="flex items-center gap-2 mt-5 mb-2.5">
-                <div className="h-px flex-1 bg-rose-100/60"></div>
-                <span className="text-[10px] font-bold text-rose-400 font-readex uppercase tracking-wider">سندات ملغاة</span>
-                <div className="h-px flex-1 bg-rose-100/60"></div>
+                <div className="h-px flex-1 bg-rose-100/60 dark:bg-rose-900/30"></div>
+                <span className="text-[10px] font-bold text-rose-400 dark:text-rose-500 font-readex uppercase tracking-wider">سندات ملغاة</span>
+                <div className="h-px flex-1 bg-rose-100/60 dark:bg-rose-900/30"></div>
               </div>
               <AnimatePresence>
                 {cancelledVouchers.slice(0, 5).map((voucher) => (
@@ -170,7 +167,7 @@ export const VoucherStatusColumn = React.memo(function VoucherStatusColumn({
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
                     onClick={() => onVoucherClick(voucher)}
-                    className="p-3.5 rounded-2xl border border-rose-100 bg-rose-50/10 cursor-pointer hover:bg-rose-50/20 hover:border-rose-250 transition-all duration-300 opacity-70 group"
+                    className="p-3.5 rounded-2xl border border-rose-100 dark:border-rose-900/30 bg-rose-50/10 dark:bg-rose-500/5 cursor-pointer hover:bg-rose-50/20 dark:hover:bg-rose-500/10 hover:border-rose-200 dark:hover:border-rose-800 transition-all duration-300 opacity-70 hover:opacity-100 group"
                     style={{ borderRight: '3px solid #ef4444' }}
                   >
                     <div className="flex items-center gap-3">
@@ -178,10 +175,10 @@ export const VoucherStatusColumn = React.memo(function VoucherStatusColumn({
                          <AlertTriangle size={12} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-[12px] font-black text-slate-500 font-tajawal truncate line-through decoration-rose-350">
+                        <h4 className="text-[12px] font-black text-slate-500 dark:text-slate-400 font-tajawal truncate line-through decoration-rose-300 dark:decoration-rose-800">
                           {voucher.kind === 'in' ? 'سند إدخال' : 'سند إخراج'} - {voucher.clientName}
                         </h4>
-                        <p className="text-[8.5px] text-rose-450 font-medium mt-0.5">تم إلغاء هذا السند وإرجاع الكميات</p>
+                        <p className="text-[8.5px] text-rose-500 dark:text-rose-400 font-medium mt-0.5">تم إلغاء هذا السند وإرجاع الكميات</p>
                       </div>
                     </div>
                   </motion.div>
