@@ -520,7 +520,7 @@ export default function ReceiptVouchers({}) {
              .section-title { font-size: 18px; font-weight: 800; color: #334155; margin: 30px 0 15px 0; display: flex; align-items: center; gap: 10px; }
              .section-title::before { content: ''; display: inline-block; width: 6px; height: 20px; background-color: var(--primary); border-radius: 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
              table { width: 100%; border-collapse: separate; border-spacing: 0; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; }
-             th, td { padding: 10px 8px; text-align: right; font-size: 11px; }
+             th, td { padding: 10px 8px; text-align: center; font-size: 11px; }
              th { background-color: var(--bg-light); font-weight: 800; color: #475569; border-bottom: 2px solid var(--border-color); white-space: nowrap; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
              td { border-bottom: 1px solid var(--border-color); color: #334155; }
              tbody tr:last-child td { border-bottom: none; }
