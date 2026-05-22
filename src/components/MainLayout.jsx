@@ -25,7 +25,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { supabase } from '../lib/supabaseClient';
 import Sidebar from './Sidebar';
 import { normalizeArabic } from '../lib/arabicTextUtils';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useLocation } from '@tanstack/react-router';
 
 export default function MainLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -34,6 +34,8 @@ export default function MainLayout({ children }) {
   const { isMuted, toggleMute } = useAudio();
   const { settings } = useSettings();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isDashboard = location.pathname === '/';
   
   const [criticalItems, setCriticalItems] = useState([]);
   const [allItems, setAllItems] = useState([]);
@@ -125,52 +127,61 @@ export default function MainLayout({ children }) {
       <main
         className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out print:mr-0 print:block print:overflow-visible ${isSidebarOpen ? 'lg:mr-64' : 'mr-0'}`}
       >
-        {/* Top Navbar / Global Welcome Banner */}
         <header className="print:hidden w-full shrink-0 z-40 px-4 lg:px-6 pt-4 pb-2 transition-all duration-300">
-          <div className="relative bg-white dark:bg-[#111C44] rounded-[24px] shadow-sm p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border border-slate-100 dark:border-slate-800/50 overflow-hidden">
+          <div className={`relative ${isDashboard ? 'bg-white dark:bg-[#111C44] rounded-[24px] shadow-sm p-4 md:p-6 border border-slate-100 dark:border-slate-800/50 overflow-hidden flex-col md:flex-row md:items-center' : 'flex-row items-center'} flex justify-between gap-4`}>
             
-            {/* Soft Background Accent */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+            {/* Soft Background Accent (Only Dashboard) */}
+            {isDashboard && (
+              <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+            )}
 
             {/* Right Side (RTL) - Greeting & Wave */}
             <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-4">
               {!isSidebarOpen && (
                 <button 
                   onClick={() => setIsSidebarOpen(true)}
-                  className="p-2 text-slate-500 hover:text-primary dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-all shadow-sm shrink-0"
+                  className="p-2 text-slate-500 hover:text-primary dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-800 rounded-xl transition-all shadow-sm shrink-0"
                 >
                   <Menu size={20} />
                 </button>
               )}
-              <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-500/10 rounded-[16px] flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-500/20">
-                <span className="text-2xl">👋</span>
-              </div>
-              <div>
-                <h1 className="text-[20px] md:text-[24px] font-black text-slate-800 dark:text-white font-tajawal leading-tight tracking-tight">
-                  {new Date().getHours() < 12 ? 'صباح الخير' : 'مساء الخير'}، <span className="text-emerald-600 dark:text-emerald-400">{currentUser?.name || currentUser?.username || 'يا بطل'}</span>!
-                </h1>
-              </div>
+              {isDashboard && (
+                <>
+                  <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-500/10 rounded-[16px] flex items-center justify-center shrink-0 border border-emerald-100 dark:border-emerald-500/20">
+                    <span className="text-2xl">👋</span>
+                  </div>
+                  <div>
+                    <h1 className="text-[20px] md:text-[24px] font-black text-slate-800 dark:text-white font-tajawal leading-tight tracking-tight">
+                      {new Date().getHours() < 12 ? 'صباح الخير' : 'مساء الخير'}، <span className="text-emerald-600 dark:text-emerald-400">{currentUser?.name || currentUser?.username || 'يا بطل'}</span>!
+                    </h1>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Left Side (RTL) - Actions & Icons */}
-            <div className="relative z-10 flex flex-wrap items-center gap-3 self-start md:self-auto shrink-0">
+            <div className={`relative z-10 flex flex-wrap items-center gap-3 ${isDashboard ? 'self-start md:self-auto' : ''} shrink-0`}>
               
-              {/* Date */}
-              <div className="hidden lg:flex items-center gap-2.5 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
-                <Clock size={16} className="text-emerald-500" />
-                <span className="text-[12px] font-bold text-slate-600 dark:text-slate-300 tabular-nums">
-                  {new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                </span>
-              </div>
+              {isDashboard && (
+                <>
+                  {/* Date */}
+                  <div className="hidden lg:flex items-center gap-2.5 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-700/50">
+                    <Clock size={16} className="text-emerald-500" />
+                    <span className="text-[12px] font-bold text-slate-600 dark:text-slate-300 tabular-nums">
+                      {new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    </span>
+                  </div>
 
-              {/* Morning Briefing Button */}
-              <button
-                onClick={() => window.dispatchEvent(new Event('openMorningBrief'))}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-[14px] text-[13px] font-black shadow-lg shadow-emerald-500/20 transition-all font-tajawal"
-              >
-                <Timer size={16} className="text-emerald-100" />
-                الموجز الصباحي
-              </button>
+                  {/* Morning Briefing Button */}
+                  <button
+                    onClick={() => window.dispatchEvent(new Event('openMorningBrief'))}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-[14px] text-[13px] font-black shadow-lg shadow-emerald-500/20 transition-all font-tajawal"
+                  >
+                    <Timer size={16} className="text-emerald-100" />
+                    الموجز الصباحي
+                  </button>
+                </>
+              )}
 
               {/* Icons Pill */}
               <div className="flex items-center bg-slate-50 dark:bg-[#111C44] rounded-2xl p-1 shadow-sm border border-slate-100 dark:border-slate-800 gap-1">
