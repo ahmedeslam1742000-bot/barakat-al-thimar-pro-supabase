@@ -45,9 +45,12 @@ export const MovementsColumn = React.memo(function MovementsColumn({
   return (
     <motion.div
       variants={cardVariants}
-      className="flex flex-col bg-white rounded-[24px] border border-slate-100/80 shadow-sm overflow-hidden"
+      className="flex flex-col bg-white/80 backdrop-blur-xl rounded-[24px] border border-slate-200/50 shadow-sm overflow-hidden h-full"
     >
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50 shrink-0">
+      {/* Top Accent Gradient Bar */}
+      <div className="h-1.5 w-full bg-gradient-to-r from-blue-500 to-indigo-600 shrink-0"></div>
+
+      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-500">
             <History size={15} />
@@ -153,6 +156,17 @@ export const MovementsColumn = React.memo(function MovementsColumn({
               const txDate = tx.timestamp ? new Date(tx.timestamp) : new Date();
               const formattedDate = txDate.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric', year: 'numeric' });
 
+              let indicatorColor = '#94a3b8'; // slate-400
+              if (isCancelled) indicatorColor = '#cbd5e1';
+              else if (isFunctionalOut) {
+                if (tx.isInvoice) indicatorColor = '#3b82f6'; // blue-500
+                else if (tx.isTransfer) indicatorColor = '#10b981'; // emerald-500
+                else indicatorColor = '#ef4444'; // rose-500
+              } else if (isFunctionalIn) indicatorColor = '#6366f1'; // indigo-500
+              else if (isInbound) indicatorColor = type === 'adjust_in' ? '#64748b' : '#10b981';
+              else if (isReturn) indicatorColor = '#f59e0b'; // amber-500
+              else if (isOutbound) indicatorColor = '#3b82f6';
+
               return (
                 <motion.div 
                   key={tx.id}
@@ -160,15 +174,16 @@ export const MovementsColumn = React.memo(function MovementsColumn({
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: idx * 0.03 }}
                   onClick={() => onTransactionClick(tx)}
-                  className="group relative flex items-center gap-4 p-3.5 rounded-2xl border border-slate-50 bg-white hover:bg-slate-50 hover:shadow-lg hover:shadow-slate-200/20 transition-all duration-300 cursor-pointer overflow-hidden no-select-click"
+                  className="group relative flex items-center gap-4 p-3.5 rounded-2xl border border-slate-100 bg-white/60 hover:bg-white hover:border-slate-300 hover:shadow-md hover:shadow-slate-100/60 transition-all duration-300 cursor-pointer overflow-hidden no-select-click"
                 >
+                  <div className="absolute top-0 right-0 w-[4px] h-full opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: indicatorColor }} />
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-110 ${actionBg} ${actionColor}`}>
                     {actionIcon}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
                       <p className={`text-[10px] font-black font-tajawal uppercase tracking-wider ${actionColor}`}>{actionTitle}</p>
-                      <p className="text-[9px] font-bold text-slate-300 font-readex tabular-nums">{formattedDate}</p>
+                      <p className="text-[9px] font-bold text-slate-400 font-readex tabular-nums">{formattedDate}</p>
                     </div>
                     <div className="flex items-center justify-between">
                       <p className="text-[13px] font-black text-[#0F2747] font-tajawal truncate pr-1">{primaryName}</p>

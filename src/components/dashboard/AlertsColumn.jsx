@@ -1,7 +1,7 @@
 import React from 'react';
 import { getItemName, isInvalidCompany } from '../../lib/itemFields';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, CheckCircle2, AlertOctagon, Layers } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, AlertOctagon } from 'lucide-react';
 
 /**
  * AlertsColumn - Displays inventory alerts and low stock items.
@@ -28,20 +28,23 @@ export const AlertsColumn = React.memo(function AlertsColumn({
   return (
     <motion.div
       variants={cardVariants}
-      className="flex flex-col bg-white rounded-[24px] border border-slate-100/80 shadow-sm overflow-hidden"
+      className="flex flex-col bg-white/80 backdrop-blur-xl rounded-[24px] border border-slate-200/50 shadow-sm overflow-hidden h-full"
     >
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-50 shrink-0">
+      {/* Top Accent Gradient Bar */}
+      <div className="h-1.5 w-full bg-gradient-to-r from-amber-500 to-rose-500 shrink-0"></div>
+
+      <div className="flex items-center justify-between px-6 py-4.5 border-b border-slate-100 shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-500">
-            <AlertTriangle size={15} />
+          <div className="w-8.5 h-8.5 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+            <AlertTriangle size={15} className="animate-pulse" />
           </div>
           <div className="text-right">
-            <h3 className="text-sm font-bold text-[#0F2747] font-tajawal leading-tight">تنبيهات المخزن</h3>
-            <p className="text-[10px] text-slate-400 font-readex font-medium">{finalAlerts.length} صنف</p>
+            <h3 className="text-sm font-black text-[#0F2747] font-tajawal leading-tight">تنبيهات المخزن</h3>
+            <p className="text-[10px] text-slate-400 font-readex font-bold">{finalAlerts.length} صنف</p>
           </div>
         </div>
         <select
-          className="text-[10px] font-medium text-slate-500 outline-none cursor-pointer hover:text-slate-600 transition-colors border border-slate-100 rounded-lg px-2.5 py-1.5 bg-white hover:bg-slate-50"
+          className="text-[10px] bg-slate-50/80 hover:bg-slate-100 border border-slate-200 text-slate-650 rounded-lg px-2.5 py-1.5 outline-none font-black font-tajawal shadow-sm transition-all"
           value={alertCatFilter}
           onChange={e => setAlertCatFilter(e.target.value)}
         >
@@ -57,7 +60,7 @@ export const AlertsColumn = React.memo(function AlertsColumn({
             <p className="text-xs font-semibold">المخزون آمن</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             <AnimatePresence>
               {finalAlerts.map((item, idx) => {
                 let statusColor, iconColor, icon, barColor, urgencyLabel, urgencyBg;
@@ -67,23 +70,24 @@ export const AlertsColumn = React.memo(function AlertsColumn({
                   icon = <AlertOctagon size={12} />;
                   barColor = '#EF4444';
                   urgencyLabel = 'حرج';
-                  urgencyBg = 'bg-red-50 text-red-600';
+                  urgencyBg = 'bg-red-500/10 text-red-650';
                 } else if (item.stockQty >= 70 && item.stockQty <= 100) {
                   statusColor = '#F59E0B';
                   iconColor = 'text-amber-500';
                   icon = <AlertTriangle size={12} />;
                   barColor = '#F59E0B';
                   urgencyLabel = 'تحذير';
-                  urgencyBg = 'bg-amber-50 text-amber-600';
+                  urgencyBg = 'bg-amber-500/10 text-amber-700';
                 } else {
                   statusColor = '#10B981';
                   iconColor = 'text-emerald-500';
                   icon = <CheckCircle2 size={12} />;
                   barColor = '#10B981';
                   urgencyLabel = 'آمن';
-                  urgencyBg = 'bg-emerald-50 text-emerald-600';
+                  urgencyBg = 'bg-emerald-500/10 text-emerald-750';
                 }
                 const stockPct = Math.min((item.stockQty / 200) * 100, 100);
+                const isCritical = item.stockQty < 70;
                 
                 return (
                   <motion.div
@@ -93,7 +97,11 @@ export const AlertsColumn = React.memo(function AlertsColumn({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.3, delay: idx * 0.03 }}
-                    className="group/alert relative p-4 rounded-2xl border border-slate-50 bg-white hover:bg-slate-50/50 hover:shadow-md hover:shadow-slate-200/20 transition-all duration-300 cursor-pointer overflow-hidden"
+                    className={`group/alert relative p-4 rounded-2xl border transition-all duration-300 cursor-pointer overflow-hidden ${
+                      isCritical
+                        ? 'border-red-150 bg-red-500/5 hover:bg-red-500/10 hover:border-red-300 animate-urgent-pulse shadow-sm shadow-red-500/5'
+                        : 'border-slate-100 bg-white/60 hover:bg-white hover:border-slate-350 hover:shadow-md hover:shadow-slate-100/60 shadow-sm'
+                    }`}
                   >
                     <div className="absolute top-0 right-0 w-1 h-full opacity-0 group-hover/alert:opacity-100 transition-opacity" style={{ backgroundColor: barColor }} />
                     <div className="flex flex-col gap-3">
@@ -118,7 +126,7 @@ export const AlertsColumn = React.memo(function AlertsColumn({
                           </div>
                         </div>
                       </div>
-                      <div className="relative w-full h-[4px] bg-slate-100 rounded-full overflow-hidden">
+                      <div className="relative w-full h-[5px] bg-slate-100 rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${stockPct}%` }}

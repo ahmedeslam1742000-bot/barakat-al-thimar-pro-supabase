@@ -25,32 +25,36 @@ export const StatCard = React.memo(({
   };
 
   return (
-    <div className="flex flex-col gap-3 h-full">
+    <div className="flex flex-col gap-3.5 h-full">
       <motion.div
-        whileHover={{ y: -4, transition: { duration: 0.3 } }}
-        className="relative flex-1 flex flex-col justify-center rounded-[24px] overflow-hidden cursor-pointer group shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 no-select-click"
+        whileHover={{ 
+          y: -4, 
+          scale: 1.01,
+          boxShadow: `0 12px 30px -4px ${accentColor}18, 0 4px 12px -2px ${accentColor}08`,
+          borderColor: `${accentColor}60`
+        }}
+        className="relative flex-1 flex flex-col justify-center rounded-[24px] cursor-pointer group shadow-sm transition-all duration-300 border border-slate-200/50 bg-white/80 backdrop-blur-xl no-select-click"
         onClick={handleCardClick}
         style={{ 
-          willChange: 'transform', 
+          willChange: 'transform, box-shadow, border-color', 
           backfaceVisibility: 'hidden', 
-          transform: 'translate3d(0, 0, 0)',
-          background: `linear-gradient(135deg, ${accentColor}12 0%, ${accentColor}06 50%, #ffffff 100%)`,
-          borderColor: `${accentColor}30`
+          transform: 'translate3d(0, 0, 0)'
         }}
       >
         <div className="p-5 flex items-start gap-4">
           <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-500 group-hover:scale-110 group-hover:rotate-6"
+            className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3"
             style={{ 
-              backgroundColor: accentColor + '15', 
+              backgroundColor: accentColor + '10', 
               color: accentColor,
-              boxShadow: `0 8px 24px -6px ${accentColor}40`
+              border: `1px solid ${accentColor}25`,
+              boxShadow: `0 8px 20px -6px ${accentColor}30`
             }}
           >
             <Icon size={26} strokeWidth={2} />
           </div>
           <div className="flex flex-col justify-center pt-1 z-10">
-            <span className="text-[15px] font-black text-slate-800 font-tajawal mb-1 transition-colors">{label}</span>
+            <span className="text-[15px] font-black text-slate-800 font-tajawal mb-1 transition-colors group-hover:text-slate-900">{label}</span>
             {value !== undefined && value !== null ? (
               <>
                 <span className="text-[32px] font-black font-tajawal leading-none tracking-tight transition-colors drop-shadow-sm" style={{ color: accentColor }}>
@@ -69,25 +73,26 @@ export const StatCard = React.memo(({
         </div>
 
         <div
-          className="absolute -top-10 -left-10 w-32 h-32 rounded-full opacity-[0.03] group-hover:opacity-[0.08] group-hover:scale-150 transition-all duration-700 pointer-events-none"
-          style={{ backgroundColor: accentColor }}
+          className="absolute -top-10 -left-10 w-32 h-32 rounded-full opacity-[0.03] group-hover:opacity-[0.07] group-hover:scale-125 transition-all duration-700 pointer-events-none"
+          style={{ backgroundColor: accentColor, filter: 'blur(20px)' }}
         />
       </motion.div>
 
       {actionLabel && (
-        <button
+        <motion.button
+          whileHover={{ y: -2, scale: 1.01, boxShadow: `0 8px 20px -4px ${accentColor}50` }}
+          whileTap={{ y: 0, scale: 0.98 }}
           type="button"
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 rounded-[16px] text-[14px] font-black font-tajawal transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
+          className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-[16px] text-[13px] font-black font-tajawal text-white transition-all duration-300 group/btn"
           style={{ 
-            backgroundColor: accentColor,
-            color: '#ffffff',
-            boxShadow: `0 4px 12px -4px ${accentColor}60`
+            background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}e5 100%)`,
+            boxShadow: `0 4px 12px -4px ${accentColor}40`
           }}
           onClick={handleActionClick}
         >
-          <Plus size={18} strokeWidth={2.5} />
+          <Plus size={16} strokeWidth={3} className="transition-transform group-hover/btn:rotate-90 duration-300" />
           {actionLabel}
-        </button>
+        </motion.button>
       )}
     </div>
   );

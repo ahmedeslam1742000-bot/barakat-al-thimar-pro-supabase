@@ -24,7 +24,7 @@ module.exports = {
         ring: "hsl(var(--ring))",
         background: {
           DEFAULT: "hsl(var(--background))",
-          light: '#F8FAFC',
+          light: '#F8FAFD',
           dark: '#0B1220',
         },
         foreground: "hsl(var(--foreground))",
@@ -32,7 +32,7 @@ module.exports = {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
           light: '#1E3A5F',
-          dark: '#0A1A31',
+          dark: '#0A1628',
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -62,11 +62,36 @@ module.exports = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Premium Design System
+        navy: {
+          50: '#F0F4FA',
+          100: '#D9E2F0',
+          200: '#B3C5E0',
+          300: '#7A9CC4',
+          400: '#4A73A0',
+          500: '#1E3A5F',
+          600: '#162D4A',
+          700: '#0F2747',
+          800: '#0A1A31',
+          900: '#0A1628',
+          950: '#060E1A',
+        },
+        gold: {
+          50: '#FFFBF0',
+          100: '#FFF3D4',
+          200: '#FFE5A0',
+          300: '#FFD166',
+          400: '#F5A623',
+          500: '#D4941A',
+          600: '#B37A12',
+          700: '#8C5E0D',
+        },
         surface: {
           light: '#FFFFFF',
           dark: '#1F2937',
           header: '#111827',
           elevated: '#243244',
+          glass: 'rgba(255,255,255,0.75)',
         },
         text: {
           primary: {
@@ -87,6 +112,16 @@ module.exports = {
           warning: '#F59E0B',
           danger: '#EF4444',
         },
+      },
+      boxShadow: {
+        'glass': '0 4px 30px rgba(0, 0, 0, 0.04)',
+        'glass-lg': '0 8px 40px rgba(0, 0, 0, 0.06)',
+        'glow-green': '0 0 20px rgba(22, 163, 74, 0.15)',
+        'glow-blue': '0 0 20px rgba(30, 58, 95, 0.12)',
+        'glow-gold': '0 0 20px rgba(245, 166, 35, 0.15)',
+        'glow-red': '0 0 20px rgba(220, 38, 38, 0.12)',
+        'card-hover': '0 12px 40px -8px rgba(15, 23, 42, 0.08)',
+        'premium': '0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03)',
       },
       fontFamily: {
         tajawal: ['Tajawal', 'sans-serif'],

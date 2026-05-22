@@ -116,28 +116,31 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: 300, opacity: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="print:hidden fixed inset-y-0 right-0 z-50 h-full w-48 bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl shadow-2xl shadow-primary/10 border-l border-slate-100 dark:border-slate-800 flex flex-col font-readex transition-all duration-300"
+          className="print:hidden fixed inset-y-0 right-0 z-50 h-full w-56 bg-white/85 dark:bg-slate-950/80 backdrop-blur-3xl shadow-[0_0_40px_rgba(0,0,0,0.03)] dark:shadow-[0_0_50px_rgba(0,0,0,0.3)] border-l border-slate-100/80 dark:border-slate-900/50 flex flex-col font-readex transition-all duration-300"
         >
           {/* Brand Area */}
-          <div className="h-20 flex items-center justify-between px-5 border-b border-slate-100 shrink-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-emerald-400 rounded-xl flex items-center justify-center shadow-xl shadow-primary/20 border border-white/10">
-                <Warehouse size={22} className="text-white drop-shadow-lg" />
-              </div>
-              <div className="flex flex-col text-right ml-1.5">
-                <span className="font-tajawal font-extrabold text-base text-slate-900 dark:text-white tracking-tight leading-none drop-shadow">بركة الثمار</span>
-                <span className="text-[9px] text-emerald-500 font-bold tracking-widest uppercase mt-0.5 drop-shadow">PRO</span>
+          <div className="h-16 flex items-center justify-between px-5 border-b border-slate-100/80 dark:border-slate-900/50 shrink-0 bg-white/40 dark:bg-slate-950/40 backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <motion.div 
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                className="w-9 h-9 bg-gradient-to-br from-emerald-500 via-primary to-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/10 border border-white/20"
+              >
+                <Warehouse size={18} className="text-white drop-shadow-md" />
+              </motion.div>
+              <div className="flex flex-col text-right">
+                <span className="font-tajawal font-black text-sm text-slate-800 dark:text-white tracking-tight leading-none">بركة الثمار</span>
+                <span className="text-[8px] text-emerald-500 font-extrabold tracking-widest uppercase mt-0.5">PRO</span>
               </div>
             </div>
             <button
               onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-all"
+              className="lg:hidden p-1.5 text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-all"
             >
-              <X size={16} />
+              <X size={14} />
             </button>
           </div>
 
-          <nav className="flex-1 overflow-y-auto py-4 px-2.5 space-y-0.5 custom-scrollbar" dir="rtl">
+          <nav className="flex-1 overflow-y-auto py-5 px-3 space-y-1.5 custom-scrollbar" dir="rtl">
             {menuGroups.filter(g => g.isStatic ? canAccess(g.view) : g.subItems.some(s => canAccess(s.view))).map((group) => {
               const Icon = group.icon;
               const isActive = isGroupActive(group);
@@ -147,34 +150,34 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
               const allowedSubItems = group.subItems ? group.subItems.filter(s => canAccess(s.view)) : [];
 
               return (
-                <div key={group.id} className="flex flex-col rounded-xl overflow-hidden mb-0.5 shadow-none group/sidebar transition-all duration-300">
+                <div key={group.id} className="flex flex-col rounded-xl overflow-hidden mb-0.5 transition-all duration-300">
                   <button
                     onClick={() => group.isStatic ? handleStaticClick(group.view) : toggleGroup(group.id)}
-                    className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all duration-300 group/btn relative font-bold text-sm tracking-tight shadow-none border border-transparent backdrop-blur-xl
+                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-300 group/btn relative font-semibold text-xs tracking-tight border
                       ${isActive
-                        ? 'bg-gradient-to-l from-primary/10 to-white/60 dark:from-primary/20 dark:to-slate-900/60 text-primary shadow-lg border-primary/10'
-                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100/60 dark:hover:bg-slate-800/40 hover:text-primary border-transparent'}
+                        ? 'bg-gradient-to-l from-primary/10 to-primary/5 dark:from-emerald-500/10 dark:to-emerald-500/5 text-primary dark:text-emerald-400 border-primary/20 dark:border-emerald-500/20 shadow-md shadow-primary/5 dark:shadow-emerald-500/5'
+                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900/60 hover:text-primary dark:hover:text-emerald-400 border-transparent'}
                     `}
                   >
-                    {/* Active Indicator Bar */}
+                    {/* Active Indicator Pill */}
                     {isActive && (
                       <motion.div
                         layoutId="activeIndicator"
-                        className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-primary to-emerald-400 rounded-l-full shadow-lg"
+                        className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-gradient-to-b from-emerald-400 to-primary rounded-l-full shadow-[0_0_10px_rgba(52,211,153,0.5)]"
                       ></motion.div>
                     )}
 
                     <div className="flex items-center gap-2.5">
-                      <div className={`p-1.5 rounded-lg transition-colors duration-300 shadow-sm ${isActive ? 'bg-primary/20' : 'bg-slate-100/60 dark:bg-slate-800/40 group-hover/btn:bg-primary/10'}`}>
-                        <Icon size={18} className={`drop-shadow ${isActive ? 'text-primary' : 'text-slate-400 group-hover/btn:text-primary'} transition-colors duration-300`} />
+                      <div className={`p-1.5 rounded-lg transition-all duration-300 shadow-sm ${isActive ? 'bg-primary/20 dark:bg-emerald-500/20' : 'bg-slate-50 dark:bg-slate-900 group-hover/btn:bg-primary/10 dark:group-hover/btn:bg-emerald-500/10'}`}>
+                        <Icon size={16} className={`drop-shadow ${isActive ? 'text-primary dark:text-emerald-400' : 'text-slate-400 group-hover/btn:text-primary dark:group-hover/btn:text-emerald-400'} transition-colors duration-300`} />
                       </div>
-                      <span className={`font-tajawal text-sm text-right ${isActive ? 'font-extrabold' : 'font-bold'}`}>{group.label}</span>
+                      <span className={`font-tajawal text-xs text-right ${isActive ? 'font-black' : 'font-bold'}`}>{group.label}</span>
                     </div>
 
                     {!group.isStatic && (
                       <ChevronDown
                         size={12}
-                        className={`transition-transform duration-300 ${isOpen ? 'rotate-180 text-primary' : 'text-slate-400'}`}
+                        className={`transition-transform duration-300 ${isOpen ? 'rotate-180 text-primary dark:text-emerald-400' : 'text-slate-400'}`}
                       />
                     )}
                   </button>
@@ -189,22 +192,25 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
                           transition={{ duration: 0.2, ease: "easeInOut" }}
                           className="overflow-hidden"
                         >
-                          <div className="flex flex-col py-0.5 mt-0.5 pr-10 space-y-0.5">
+                          <div className="flex flex-col py-1.5 pr-8 space-y-1 relative border-r border-slate-100 dark:border-slate-900 mr-5">
                             {allowedSubItems.map((sub) => {
                               const isSubActive = activePath === getPath(sub.view);
                               return (
                                 <button
                                   key={sub.id}
                                   onClick={() => handleSubItemClick(sub.view)}
-                                  className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg transition-all duration-200 text-xs font-bold tracking-tight
+                                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all duration-200 text-[11px] font-bold tracking-tight relative
                                     ${isSubActive
-                                      ? 'bg-gradient-to-l from-primary/10 to-white/60 dark:from-primary/20 dark:to-slate-900/60 text-primary shadow border border-primary/10'
-                                      : 'text-slate-500 dark:text-slate-300 hover:bg-slate-100/60 dark:hover:bg-slate-800/40 hover:text-primary border-transparent'}
+                                      ? 'bg-gradient-to-l from-primary/10 to-primary/5 dark:from-emerald-500/10 dark:to-emerald-500/5 text-primary dark:text-emerald-400 border border-primary/10 dark:border-emerald-500/10 shadow-sm'
+                                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/40 hover:text-primary dark:hover:text-emerald-400'}
                                   `}
                                 >
                                   <span className="text-right flex-1 font-tajawal">{sub.label}</span>
                                   {isSubActive && (
-                                    <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-primary to-emerald-400 ml-1.5 shadow-[0_0_6px_rgba(15,39,71,0.4)]"></div>
+                                    <motion.div 
+                                      layoutId={`subActiveDot-${group.id}`}
+                                      className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-emerald-400 to-primary ml-1 shadow-[0_0_8px_rgba(52,211,153,0.6)]"
+                                    />
                                   )}
                                 </button>
                               );
@@ -219,41 +225,44 @@ export default function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
             })}
           </nav>
 
-          <div className="p-4 border-t border-slate-100 shrink-0 space-y-1.5 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl">
+          <div className="p-4 border-t border-slate-100/85 dark:border-slate-900/50 shrink-0 space-y-1.5 bg-white/40 dark:bg-slate-950/40 backdrop-blur-md">
             {isAdmin && (
               <button
                 onClick={() => navigate({ to: '/settings' })}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-300 font-medium text-xs ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-300 font-bold text-xs border ${
                   activePath === '/settings'
-                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                    : 'text-slate-500 hover:bg-slate-100/50'
+                    ? 'bg-gradient-to-r from-primary to-slate-800 text-white shadow-lg shadow-primary/20 border-transparent'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/60 hover:text-primary dark:hover:text-emerald-400 border-transparent'
                 }`}
               >
-                <div className={`p-1 rounded-md ${activePath === '/settings' ? 'bg-white/10' : ''}`}>
-                  <Settings size={16} />
+                <div className={`p-1 rounded-md transition-colors ${activePath === '/settings' ? 'bg-white/10' : 'bg-slate-100/50 dark:bg-slate-900/50'}`}>
+                  <Settings size={14} />
                 </div>
-                <span>الإعدادات</span>
+                <span className="font-tajawal">الإعدادات</span>
               </button>
             )}
 
             <button
               onClick={logout}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-300 font-medium text-xs text-rose-500 hover:bg-rose-50 group"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-300 font-bold text-xs text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 group"
             >
-              <div className="p-1 rounded-md bg-rose-50 group-hover:bg-rose-100 transition-colors">
-                <LogOut size={16} />
+              <div className="p-1 rounded-md bg-rose-50 dark:bg-rose-950/50 group-hover:bg-rose-100 dark:group-hover:bg-rose-900/50 transition-colors">
+                <LogOut size={14} />
               </div>
-              <span>تسجيل الخروج</span>
+              <span className="font-tajawal">تسجيل الخروج</span>
             </button>
 
-            <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between px-1.5">
+            <div className="mt-3 pt-3 border-t border-slate-100/80 dark:border-slate-900/50 flex items-center justify-between px-1">
               <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.6)]"></div>
-                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                </span>
+                <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider font-tajawal">
                   متصل الآن
                 </span>
               </div>
-              <span className="text-[8px] font-medium text-slate-300">الإصدار 2.4.0</span>
+              <span className="text-[9px] font-bold text-slate-300 dark:text-slate-600">الإصدار 2.4.0</span>
             </div>
           </div>
         </motion.aside>

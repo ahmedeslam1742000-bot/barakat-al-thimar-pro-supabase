@@ -122,15 +122,15 @@ export default function MainLayout({ children }) {
 
       {/* Main Content Area */}
       <main
-        className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out print:mr-0 print:block print:overflow-visible ${isSidebarOpen ? 'lg:mr-48' : 'mr-0'}`}
+        className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ease-in-out print:mr-0 print:block print:overflow-visible ${isSidebarOpen ? 'lg:mr-56' : 'mr-0'}`}
       >
-        {/* Top Navbar - Slimmer and more functional */}
-        <header className="print:hidden w-full h-12 bg-white border-b border-slate-100 shrink-0 z-40 flex items-center justify-between px-4 sm:px-6 transition-all duration-300">
+        {/* Top Navbar - Elevated design with breathing room */}
+        <header className="print:hidden w-full h-14 bg-white/80 dark:bg-slate-950/80 border-b border-slate-100/80 dark:border-slate-900/50 backdrop-blur-2xl shadow-[0_2px_20px_rgba(0,0,0,0.02)] dark:shadow-[0_2px_30px_rgba(0,0,0,0.15)] shrink-0 z-40 flex items-center justify-between px-4 sm:px-6 transition-all duration-300">
           <div className="flex items-center gap-3">
             {!isSidebarOpen && (
               <button 
                 onClick={() => setIsSidebarOpen(true)}
-                className="p-1.5 text-slate-400 hover:text-primary hover:bg-slate-50 rounded-lg transition-all"
+                className="p-2 text-slate-400 hover:text-primary dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-xl transition-all"
               >
                 <Menu size={18} />
               </button>
@@ -139,10 +139,10 @@ export default function MainLayout({ children }) {
             {/* Logo area when sidebar is closed */}
             {!isSidebarOpen && (
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center text-white shadow-sm">
-                  <Warehouse size={16} />
+                <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 via-primary to-slate-900 rounded-xl flex items-center justify-center text-white shadow-md">
+                  <Warehouse size={15} />
                 </div>
-                <h1 className="text-base font-bold font-tajawal hidden sm:block tracking-tight">بركة الثمار</h1>
+                <h1 className="text-sm font-black font-tajawal hidden sm:block tracking-tight text-slate-800 dark:text-white">بركة الثمار</h1>
               </div>
             )}
           </div>
@@ -150,16 +150,25 @@ export default function MainLayout({ children }) {
           {/* Middle: Spacer */}
           <div className="flex-1"></div>
           
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-2">
             {/* Quick Actions Group */}
-            <div className="hidden md:flex items-center gap-1 border-l border-slate-100 ml-2 pl-2">
+            <div className="hidden md:flex items-center gap-1 border-l border-slate-100 dark:border-slate-900 ml-3 pl-3">
               {/* Audio Toggle */}
               <button 
                 onClick={toggleMute}
-                className="p-2 text-slate-400 hover:text-primary hover:bg-slate-50 rounded-lg transition-all group"
+                className="p-2 text-slate-400 hover:text-primary dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-xl transition-all group"
                 title="كتم الصوت"
               >
                 {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              </button>
+              
+              {/* Theme Toggle */}
+              <button 
+                onClick={toggleTheme}
+                className="p-2 text-slate-400 hover:text-primary dark:hover:text-emerald-400 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-xl transition-all"
+                title={isDarkMode ? "الوضع المضيء" : "الوضع المظلم"}
+              >
+                {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
               </button>
             </div>
 
@@ -167,12 +176,15 @@ export default function MainLayout({ children }) {
             <div className="relative" ref={alertsRef}>
               <button 
                 onClick={() => setIsAlertsOpen(!isAlertsOpen)}
-                className={`p-2 rounded-lg transition-all ${isAlertsOpen ? 'bg-primary/10 text-primary shadow-inner' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-50'}`}
+                className={`p-2 rounded-xl transition-all relative ${isAlertsOpen ? 'bg-primary/10 dark:bg-emerald-500/10 text-primary dark:text-emerald-400 shadow-inner border border-primary/10 dark:border-emerald-500/10' : 'text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-900'}`}
               >
                 <Bell size={18} />
                 {criticalItems.length > 0 && (
-                  <span className="absolute top-1.5 left-1.5 w-3.5 h-3.5 bg-rose-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center border-2 border-white">
-                    {criticalItems.length}
+                  <span className="absolute top-1 left-1 flex h-4 w-4">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500 text-white text-[8px] font-black items-center justify-center border border-white dark:border-slate-950">
+                      {criticalItems.length}
+                    </span>
                   </span>
                 )}
               </button>
@@ -181,36 +193,38 @@ export default function MainLayout({ children }) {
               <AnimatePresence>
                 {isAlertsOpen && (
                   <motion.div 
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                    className="absolute left-0 mt-3 w-80 bg-white border border-slate-100 shadow-2xl rounded-2xl overflow-hidden z-50"
+                    initial={{ opacity: 0, y: 10 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute left-0 mt-3 w-80 bg-white/95 dark:bg-slate-900/95 border border-slate-100 dark:border-slate-850 shadow-2xl rounded-2xl overflow-hidden z-50 backdrop-blur-xl"
                   >
-                    <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                      <span className="font-bold text-sm">التنبيهات</span>
-                      <span className="bg-rose-50 text-rose-600 text-[10px] px-2.5 py-1 rounded-full font-black border border-rose-100 shadow-sm">
+                    <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/50">
+                      <span className="font-tajawal font-black text-sm text-slate-800 dark:text-white">التنبيهات</span>
+                      <span className="bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-[10px] px-2.5 py-1 rounded-full font-black border border-rose-100 dark:border-rose-900/50 shadow-sm">
                         {criticalItems.length} تنبيه حرج
                       </span>
                     </div>
                     <div className="max-h-80 overflow-y-auto custom-scrollbar">
                       {criticalItems.length > 0 ? (
                         criticalItems.map((item, idx) => (
-                          <div key={idx} className="p-4 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0 flex items-start gap-3 group/alert">
-                            <div className="mt-0.5 p-2 bg-rose-50 rounded-xl group-hover/alert:bg-rose-100 transition-colors">
-                              <AlertOctagon size={16} className="text-rose-500" />
+                          <div key={idx} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-950/40 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-0 flex items-start gap-3 group/alert">
+                            <div className="mt-0.5 p-2 bg-rose-50 dark:bg-rose-950/50 rounded-xl group-hover/alert:bg-rose-100 dark:group-hover/alert:bg-rose-900/50 transition-colors">
+                              <AlertOctagon size={16} className="text-rose-500 dark:text-rose-400" />
                             </div>
                             <div className="flex-1">
-                              <p className="text-sm font-black text-slate-800 group-hover/alert:text-rose-600 transition-colors">{item.name}</p>
-                              <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                                المخزون الحالي: <span className="font-black text-rose-600 bg-rose-50 px-1.5 rounded">{item.stock_qty} {item.unit}</span>
+                              <p className="text-xs font-black text-slate-800 dark:text-white group-hover/alert:text-rose-600 dark:group-hover/alert:text-rose-400 transition-colors">{item.name}</p>
+                              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+                                المخزون الحالي: <span className="font-black text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 px-1.5 rounded">{item.stock_qty} {item.unit}</span>
                               </p>
                             </div>
                           </div>
                         ))
                       ) : (
                         <div className="p-10 text-center">
-                          <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <Bell size={24} className="text-slate-200" />
+                          <div className="w-12 h-12 bg-slate-50 dark:bg-slate-950 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <Bell size={24} className="text-slate-200 dark:text-slate-800" />
                           </div>
-                          <p className="text-sm font-medium text-slate-400">لا توجد تنبيهات حالية</p>
+                          <p className="text-xs font-bold text-slate-400 dark:text-slate-500">لا توجد تنبيهات حالية</p>
                         </div>
                       )}
                     </div>
@@ -223,16 +237,16 @@ export default function MainLayout({ children }) {
             <div className="relative mr-1" ref={profileRef}>
               <button 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className={`flex items-center gap-2 p-1 pl-2 hover:bg-slate-50 rounded-full transition-all border border-transparent ${isProfileOpen ? 'bg-slate-50 border-slate-100' : ''}`}
+                className={`flex items-center gap-2.5 p-1 pl-2.5 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-full transition-all border border-transparent ${isProfileOpen ? 'bg-slate-50 dark:bg-slate-900 border-slate-100 dark:border-slate-800' : ''}`}
               >
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-slate-800 flex items-center justify-center text-white text-[10px] font-bold shadow-md border border-white/20">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 via-primary to-slate-900 flex items-center justify-center text-white text-[10px] font-black shadow-md border-2 border-white dark:border-slate-950 ring-2 ring-emerald-500/10 group-hover:ring-emerald-500/30 transition-all">
                   {currentUser?.email?.charAt(0).toUpperCase() || 'A'}
                 </div>
-                <div className="hidden sm:flex flex-col items-start ml-1 leading-none text-right">
-                  <span className="text-[10px] font-black text-slate-800 truncate max-w-[80px]">{currentUser?.fullName || currentUser?.username || currentUser?.email?.split('@')[0]}</span>
-                  <span className={`text-[8px] uppercase tracking-widest font-black ${
+                <div className="hidden sm:flex flex-col items-start leading-none text-right">
+                  <span className="text-[11px] font-black text-slate-800 dark:text-white truncate max-w-[80px]">{currentUser?.fullName || currentUser?.username || currentUser?.email?.split('@')[0]}</span>
+                  <span className={`text-[8px] uppercase tracking-wider font-extrabold mt-0.5 ${
                     currentUser?.role === 'Admin' ? 'text-emerald-500' : 
-                    currentUser?.role === 'Storekeeper' ? 'text-blue-500' : 'text-slate-400'
+                    currentUser?.role === 'Storekeeper' ? 'text-blue-500' : 'text-slate-400 dark:text-slate-500'
                   }`}>
                     {currentUser?.role === 'Admin' ? 'مدير عام' : 
                      currentUser?.role === 'Storekeeper' ? 'أمين مستودع' : 'مراقب'}
@@ -244,27 +258,29 @@ export default function MainLayout({ children }) {
               <AnimatePresence>
                 {isProfileOpen && (
                   <motion.div 
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                    className="absolute left-0 mt-3 w-56 bg-white border border-slate-100 shadow-2xl rounded-xl overflow-hidden z-50"
+                    initial={{ opacity: 0, y: 10 }} 
+                    animate={{ opacity: 1, y: 0 }} 
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute left-0 mt-3 w-56 bg-white/95 dark:bg-slate-900/95 border border-slate-100 dark:border-slate-850 shadow-2xl rounded-xl overflow-hidden z-50 backdrop-blur-xl"
                   >
-                    <div className="p-4 border-b border-slate-100 bg-slate-50/50">
-                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">المستخدم الحالي</p>
-                      <p className="text-xs font-black truncate text-primary">{currentUser?.email}</p>
+                    <div className="p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50">
+                      <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">المستخدم الحالي</p>
+                      <p className="text-xs font-black truncate text-primary dark:text-emerald-400">{currentUser?.email}</p>
                     </div>
                     <div className="p-1">
                       <button 
                         onClick={() => { navigate({ to: '/settings' }); setIsProfileOpen(false); }}
-                        className="w-full flex items-center gap-3 px-3 py-2 text-sm text-slate-600 font-bold hover:bg-slate-50 rounded-lg transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-xs text-slate-600 dark:text-slate-350 font-bold hover:bg-slate-50 dark:hover:bg-slate-950/50 rounded-lg transition-colors"
                       >
-                        <Settings size={16} className="text-slate-400" />
-                        إعدادات الحساب
+                        <Settings size={14} className="text-slate-400 dark:text-slate-500" />
+                        <span className="font-tajawal">إعدادات الحساب</span>
                       </button>
                       <button 
                         onClick={logout}
-                        className="w-full flex items-center gap-3 px-3 py-2 text-sm text-rose-500 font-bold hover:bg-rose-50 rounded-lg transition-colors"
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-xs text-rose-500 font-bold hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors"
                       >
-                        <LogOut size={16} />
-                        تسجيل الخروج
+                        <LogOut size={14} />
+                        <span className="font-tajawal">تسجيل الخروج</span>
                       </button>
                     </div>
                   </motion.div>
@@ -278,13 +294,13 @@ export default function MainLayout({ children }) {
         {settings?.systemFrozen && (
           <div className="print:hidden shrink-0 flex items-center gap-3 px-6 py-2.5 bg-rose-600 text-white text-xs font-black z-30 shadow-lg shadow-rose-600/20">
             <AlertOctagon size={16} className="animate-pulse" />
-            <span className="flex-1">النظام مجمَّد — جميع عمليات الإدخال معطّلة حتى يتم إلغاء التجميد من صفحة الإعدادات</span>
-            <button type="button" onClick={() => navigate({ to: '/settings' })} className="shrink-0 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg transition-colors border border-white/20">الإعدادات</button>
+            <span className="flex-1 font-tajawal">النظام مجمَّد — جميع عمليات الإدخال معطّلة حتى يتم إلغاء التجميد من صفحة الإعدادات</span>
+            <button type="button" onClick={() => navigate({ to: '/settings' })} className="shrink-0 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg transition-colors border border-white/20 font-tajawal">الإعدادات</button>
           </div>
         )}
 
         {/* Page Content */}
-        <div className="flex-1 flex flex-col min-h-0 bg-slate-50/30 print:bg-white p-4 sm:p-6 lg:p-8 print:p-0 overflow-hidden print:overflow-visible print:block">
+        <div className="flex-1 flex flex-col min-h-0 bg-slate-50/30 dark:bg-slate-950/20 print:bg-white p-4 sm:p-6 lg:p-8 print:p-0 overflow-hidden print:overflow-visible print:block">
           <div className="w-full flex-1 flex flex-col min-h-0 print:block">
             {children}
           </div>
