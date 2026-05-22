@@ -520,7 +520,6 @@ export default function ReceiptVouchers({}) {
     }
 
     const netAmount = totalVouchers - totalExpenses;
-    const title = hasSelection ? 'تقرير تسوية وتوريد' : 'تقرير السندات والمصروفات';
 
     const html = `
       <html dir="rtl">
