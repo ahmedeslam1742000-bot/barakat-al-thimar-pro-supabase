@@ -26,52 +26,57 @@ export const StatCard = React.memo(({
 
   return (
     <div className="flex flex-col gap-3 h-full">
+      {/* ── الكارت الرئيسي ── */}
       <motion.div
-        whileHover={{ y: -4, scale: 1.01 }}
-        className="relative flex flex-col justify-center bg-white dark:bg-[#111C44] rounded-[24px] cursor-pointer group border border-slate-100 dark:border-slate-800/50 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden no-select-click flex-1 min-h-[130px]"
+        whileHover={{ y: -3, scale: 1.01 }}
+        className="relative flex flex-col justify-between bg-white dark:bg-[#111C44] rounded-[20px] cursor-pointer group border border-slate-200 dark:border-slate-700 shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden no-select-click flex-1 min-h-[130px]"
         onClick={handleCardClick}
+        style={{ isolation: 'isolate' }}
       >
-        {/* Soft Background Gradient Glow */}
-        <div 
-          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" 
-          style={{ background: `radial-gradient(circle at top right, ${accentColor}15 0%, transparent 70%)` }} 
+        {/* شريط لوني علوي */}
+        <div
+          className="absolute top-0 right-0 left-0 h-1 rounded-t-[20px]"
+          style={{ backgroundColor: accentColor }}
         />
-        
-        {/* --- Card Content --- */}
-        <div className="p-6 flex flex-col flex-1 relative z-10">
-          <div className="flex items-start justify-between mb-4">
-            <div 
-              className="w-12 h-12 rounded-[16px] flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-3" 
-              style={{ backgroundColor: `${accentColor}15`, color: accentColor }}
-            >
-              <Icon size={24} strokeWidth={2.5} />
-            </div>
-            {value !== undefined && value !== null && (
-               <span className="text-[32px] font-black font-tajawal leading-none tracking-tight text-slate-800 dark:text-white">
-                 {value}
-               </span>
-            )}
+
+        {/* محتوى الكارت */}
+        <div className="p-5 flex items-center justify-between gap-4 mt-1">
+          {/* أيقونة على اليمين */}
+          <div
+            className="w-14 h-14 rounded-[16px] flex items-center justify-center shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:-rotate-6 shadow-sm"
+            style={{ backgroundColor: `${accentColor}18`, color: accentColor }}
+          >
+            <Icon size={26} strokeWidth={2.5} />
           </div>
-          
-          <div className="flex flex-col text-right">
-            <span className="text-[15px] font-black font-tajawal text-slate-800 dark:text-white mb-1">{label}</span>
-            <span className="text-[11px] font-bold font-readex text-slate-400 dark:text-slate-500">{subtext}</span>
+
+          {/* النص على اليسار */}
+          <div className="flex flex-col items-end text-right flex-1">
+            {value !== undefined && value !== null && (
+              <span className="text-[30px] font-black font-tajawal leading-none text-slate-800 dark:text-white mb-1">
+                {value}
+              </span>
+            )}
+            <span className="text-[15px] font-black font-tajawal text-slate-700 dark:text-slate-100">{label}</span>
+            <span className="text-[11px] font-semibold font-readex text-slate-400 dark:text-slate-400 mt-0.5">{subtext}</span>
           </div>
         </div>
       </motion.div>
 
-      {/* --- Detached Action Button --- */}
+      {/* ── زر الإجراء المنفصل ── */}
       {actionLabel && (
-        <motion.div 
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+        <motion.button
+          whileHover={{ scale: 1.03, y: -1 }}
+          whileTap={{ scale: 0.97 }}
           onClick={handleActionClick}
-          className="w-full rounded-[16px] py-3 px-4 flex items-center justify-center gap-2 text-[13px] font-black font-tajawal cursor-pointer text-white shadow-sm hover:shadow-md transition-all group/btn shrink-0" 
-          style={{ backgroundColor: accentColor, boxShadow: `0 4px 14px 0 ${accentColor}30` }}
+          className="w-full rounded-[14px] py-3 px-4 flex items-center justify-center gap-2 text-[13px] font-black font-tajawal cursor-pointer text-white shrink-0 transition-all duration-200"
+          style={{
+            backgroundColor: accentColor,
+            boxShadow: `0 6px 20px -4px ${accentColor}55`,
+          }}
         >
-          <Plus size={16} strokeWidth={3} className="transition-transform group-hover/btn:rotate-90 duration-300" />
+          <Plus size={16} strokeWidth={3} className="transition-transform group-hover:rotate-90 duration-300" />
           {actionLabel}
-        </motion.div>
+        </motion.button>
       )}
     </div>
   );
@@ -95,45 +100,41 @@ const StatsCards = React.memo(({
       subtext="صنف مسجل"
       actionLabel="إضافة صنف"
       onAction={onAddItem}
-      accentColor="#059669" // الأخضر الأنضج
+      accentColor="#059669"
       navigateTo="items"
-      
     />
 
-    {/* ── كارت 2: الوارد → صفحة المخزون ── */}
+    {/* ── كارت 2: الوارد ── */}
     <StatCard
       icon={Truck}
       label="الوارد"
       subtext="إدارة مخزونك الوارد"
       actionLabel="إضافة وارد"
       onAction={onAddStock}
-      accentColor="#4F46E5" // الأزرق (Indigo) الأنضج
+      accentColor="#4F46E5"
       navigateTo="stock-in"
-      
     />
 
-    {/* ── كارت 3: الفواتير → صفحة الفواتير ── */}
+    {/* ── كارت 3: الفواتير ── */}
     <StatCard
       icon={TrendingUp}
       label="الفواتير"
       subtext="إصدار وإدارة المبيعات"
       actionLabel="فاتورة جديدة"
       onAction={onAddInvoice}
-      accentColor="#D97706" // الذهبي الأنضج
+      accentColor="#D97706"
       navigateTo="stock-out"
-      
     />
 
-    {/* ── كارت 4: المرتجعات → صفحة المرتجعات ── */}
+    {/* ── كارت 4: المرتجعات ── */}
     <StatCard
       icon={RotateCcw}
       label="المرتجعات"
       subtext="متابعة الأصناف المرتجعة"
       actionLabel="تسجيل مرتجع"
       onAction={onAddReturn}
-      accentColor="#DC2626" // الأحمر الأنضج
+      accentColor="#DC2626"
       navigateTo="returns"
-      
     />
   </div>
 ));
