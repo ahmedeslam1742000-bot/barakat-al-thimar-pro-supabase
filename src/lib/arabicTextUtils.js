@@ -49,23 +49,7 @@ export const fuzzyMatch = (str1, str2, threshold = 0.7) => {
   };
 };
 
-/**
- * Find similar items using fuzzy matching
- * Returns items that closely match the search query
- */
-export const findSimilarItems = (query, items, fieldName = 'name', threshold = 0.6) => {
-  if (!query || !items?.length) return [];
-  
-  return items
-    .map(item => {
-      const value = item[fieldName] || '';
-      const { similarity } = fuzzyMatch(query, value, threshold);
-      return { ...item, similarity, matchValue: value };
-    })
-    .filter(item => item.similarity >= threshold)
-    .sort((a, b) => b.similarity - a.similarity)
-    .slice(0, 5);
-};
+
 
 /**
  * Check for near-duplicates with fuzzy matching

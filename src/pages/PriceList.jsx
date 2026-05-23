@@ -10,7 +10,8 @@ import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { useAuth } from '../contexts/AuthContext';
-import { useData } from '../contexts/DataContext';
+import { useQueryClient } from '@tanstack/react-query';
+import { useItemsQuery } from '../hooks/useAppQueries';
 import { useDebounce } from '../hooks/useDebounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
@@ -65,7 +66,8 @@ const PriceItemRow = React.memo(({ item, idx, isViewer, openEditModal }) => {
 export default function () {
   const navigate = useNavigate();
   const { isViewer } = useAuth();
-  const { items, fetchInitialData } = useData();
+  const queryClient = useQueryClient();
+  const { data: items = [] } = useItemsQuery();
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   const [loading, setLoading] = useState(false);
@@ -153,7 +155,7 @@ export default function () {
       setIsEditModalOpen(false);
       
       // Update global context gracefully
-      if (fetchInitialData) fetchInitialData();
+      queryClient.invalidateQueries({ queryKey: ['products'] });
     } catch (err) {
       console.error('Update error:', err);
       toast.error(err.message || 'حدث خطأ غير متوقع أثناء تحديث السعر');

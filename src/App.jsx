@@ -1,7 +1,7 @@
 import React, { useState, Suspense, lazy, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
 import MainLayout from './components/MainLayout';
-import Placeholder from './components/Placeholder';
+
 import Login from './components/Login';
 
 const Dashboard = lazy(() => import('./components/Dashboard'));

@@ -1,1 +1,0 @@
-var e=e=>e?new Date(e).toISOString().split(`T`)[0]:``;export{e as t};

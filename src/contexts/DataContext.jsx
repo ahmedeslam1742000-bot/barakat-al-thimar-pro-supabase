@@ -9,7 +9,7 @@ import {
   useComputedData 
 } from '../hooks/useAppQueries';
 
-export const DataContext = createContext(null);
+const DataContext = createContext(null);
 
 export function useData() {
   const context = useContext(DataContext);

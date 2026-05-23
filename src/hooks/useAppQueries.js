@@ -152,7 +152,7 @@ export function useItemsQuery(enabled = true) {
         .from('products')
         .select('id, name, company, cat, unit, stock_qty, damaged_qty, search_key, created_at, price, old_price')
         .order('name')
-        .limit(500);
+        .limit(3000);
       if (error) throw error;
       return data.map(normalizeItem);
     },
@@ -174,7 +174,7 @@ export function useTransactionsQuery(enabled = true) {
         .from('transactions')
         .select('id, type, timestamp, item, company, qty, unit, cat, supplier, beneficiary, loc, location, rep, recipient, reference_number, batch_id, is_summary, item_id, notes, status')
         .order('timestamp', { ascending: false })
-        .limit(300);
+        .limit(2000);
       if (error) throw error;
       return data.map(processTx);
     },
@@ -191,7 +191,7 @@ export function useReceiptVouchersQuery(enabled = true) {
         .from('receipt_vouchers')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(300);
+        .limit(1000);
       if (error) throw error;
       return data.map(normalizeVoucher);
     },
@@ -208,7 +208,7 @@ export function useRepExpensesQuery(enabled = true) {
         .from('representative_expenses')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(200);
+        .limit(1000);
       if (error) throw error;
       return data.map(normalizeExpense);
     },

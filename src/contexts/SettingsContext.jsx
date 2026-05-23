@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
-export const DEFAULT_SETTINGS = {
+const DEFAULT_SETTINGS = {
   // ─── 1. Default Values
   orgEmoji:        '🌿',
   orgName:         'مؤسسة بركة الثمار',

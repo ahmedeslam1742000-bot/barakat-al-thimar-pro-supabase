@@ -22,7 +22,7 @@ const cleanInvoiceDate = (dateStr) => {
   return formatVoucherDate(datePart);
 };
 
-export function VoucherDetailModal({
+export const VoucherDetailModal = React.memo(function VoucherDetailModal({
   isOpen,
   onClose,
   voucher,
@@ -61,7 +61,58 @@ export function VoucherDetailModal({
     }).filter(Boolean).sort((a,b) => new Date(b.at) - new Date(a.at));
   };
 
-  const historyEntries = parseHistory(voucher.line_note);
+  const preparedHistoryEntries = React.useMemo(() => {
+    if (!voucher?.line_note) return [];
+    const entries = parseHistory(voucher.line_note);
+    if (!entries.length) return entries;
+    
+    // pre-normalize current lines for O(1) matching inside loop
+    const currentLinesNorm = lines.map(cl => ({
+      ...cl,
+      normBase: normalizeArabic((cl.item || '').split(' - ')[0].trim())
+    }));
+
+    return entries.map((entry) => {
+      const oldClient = entry.clientName || entry.recipient || entry.client;
+      const oldCode = entry.voucherCode || entry.code;
+      const oldNotes = entry.notes || entry.line_note;
+      
+      const currentClient = voucher.clientName || voucher.recipient;
+      const currentCode = voucher.voucherCode;
+      const currentNotes = cleanNote(voucher.line_note);
+
+      const hasOldClient = oldClient && normalizeArabic(oldClient) !== normalizeArabic(currentClient);
+      const hasOldCode = oldCode && normalizeArabic(oldCode) !== normalizeArabic(currentCode);
+      const hasOldNotes = oldNotes && normalizeArabic(cleanNote(oldNotes)) !== normalizeArabic(currentNotes);
+      const hasMetaChanges = hasOldClient || hasOldCode || hasOldNotes;
+      
+      const prepLines = (entry.lines || []).map(ol => {
+         const olBaseName = normalizeArabic(ol.item.split(' - ')[0].trim());
+         const currentMatch = currentLinesNorm.find(cl => cl.normBase === olBaseName);
+         
+         const isRemoved = !currentMatch;
+         const isChanged = !isRemoved && Number(currentMatch.qty) !== Number(ol.qty);
+         const isUnchanged = !isRemoved && !isChanged;
+         
+         const parts = ol.item.split(' - ');
+         const rawName = parts[0];
+         const rawCompany = parts.length > 1 ? parts[1] : '—';
+         
+         return {
+           ...ol, currentMatch, isRemoved, isChanged, isUnchanged, rawName, rawCompany
+         };
+      });
+
+      return {
+        ...entry,
+        oldClient, oldCode, oldNotes,
+        hasMetaChanges, hasOldClient, hasOldCode, hasOldNotes,
+        prepLines
+      };
+    });
+  }, [voucher?.line_note, voucher?.clientName, voucher?.recipient, voucher?.voucherCode, lines]);
+
+  const historyEntries = preparedHistoryEntries;
   const isEdited = historyEntries.length > 0;
 
   // Render Table Row
@@ -265,41 +316,26 @@ export function VoucherDetailModal({
                         {historyEntries.length > 0 ? (
                             <div className="flex-1 overflow-y-auto custom-scrollbar">
                                 {historyEntries.map((entry, idx) => {
-                                  // Determine if meta data changed in this history entry
-                                  const oldClient = entry.clientName || entry.recipient || entry.client;
-                                  const oldCode = entry.voucherCode || entry.code;
-                                  const oldNotes = entry.notes || entry.line_note;
-                                  
-                                  const currentClient = voucher.clientName || voucher.recipient;
-                                  const currentCode = voucher.voucherCode;
-                                  const currentNotes = cleanNote(voucher.line_note);
-
-                                  const hasOldClient = oldClient && normalizeArabic(oldClient) !== normalizeArabic(currentClient);
-                                  const hasOldCode = oldCode && normalizeArabic(oldCode) !== normalizeArabic(currentCode);
-                                  const hasOldNotes = oldNotes && normalizeArabic(cleanNote(oldNotes)) !== normalizeArabic(currentNotes);
-                                  
-                                  const hasMetaChanges = hasOldClient || hasOldCode || hasOldNotes;
-
                                   // Only display the first entry (most recent archive) as full view to mimic side-by-side
                                   if (idx !== 0) return null;
 
                                   return (
                                     <div key={idx} className="flex flex-col h-full">
-                                      {hasMetaChanges && (
+                                      {entry.hasMetaChanges && (
                                         <div className="flex gap-4 mb-6 bg-slate-50/80 dark:bg-slate-800/80 p-4 rounded-xl border border-slate-100 dark:border-slate-700 h-[72px] items-center">
                                             <div className="flex-1 min-w-0">
                                                 <span className="text-[8px] font-black text-slate-400 block mb-1 uppercase tracking-widest">المستلم القديم</span>
-                                                <p className={`text-[13px] font-black truncate ${hasOldClient ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>{oldClient || '—'}</p>
+                                                <p className={`text-[13px] font-black truncate ${entry.hasOldClient ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>{entry.oldClient || '—'}</p>
                                             </div>
                                             <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
                                             <div className="flex-1 min-w-0 text-center">
                                                 <span className="text-[8px] font-black text-slate-400 block mb-1 uppercase tracking-widest">رقم السند القديم</span>
-                                                <p className={`text-[13px] font-black tabular-nums ${hasOldCode ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>{oldCode || '—'}</p>
+                                                <p className={`text-[13px] font-black tabular-nums ${entry.hasOldCode ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>{entry.oldCode || '—'}</p>
                                             </div>
                                             <div className="w-px h-8 bg-slate-200 dark:bg-slate-700" />
                                             <div className="flex-[2] min-w-0">
                                                 <span className="text-[8px] font-black text-slate-400 block mb-1 uppercase tracking-widest">الملاحظات القديمة</span>
-                                                <p className={`text-[13px] font-bold truncate ${hasOldNotes ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>{cleanNote(oldNotes)}</p>
+                                                <p className={`text-[13px] font-bold truncate ${entry.hasOldNotes ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500'}`}>{cleanNote(entry.oldNotes)}</p>
                                             </div>
                                         </div>
                                       )}
@@ -307,24 +343,8 @@ export function VoucherDetailModal({
                                       <table className="w-full text-right border-collapse text-sm">
                                         <TableHeader isMain={false} />
                                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                          {(entry.lines || []).map((ol, oIdx) => {
-                                            // Normalize the base item name (ignore company suffix after ' - ') for flexible matching
-                                            const olBaseName = normalizeArabic(ol.item.split(' - ')[0].trim());
-                                            
-                                            // Match current line by base name only (flexible match)
-                                            const currentMatch = lines.find(cl => {
-                                              const clBase = normalizeArabic((cl.item || '').split(' - ')[0].trim());
-                                              return clBase === olBaseName;
-                                            });
-                                            
-                                            const isRemoved = !currentMatch;
-                                            const isChanged = !isRemoved && Number(currentMatch.qty) !== Number(ol.qty);
-                                            const isUnchanged = !isRemoved && !isChanged;
-                                            
-                                            // Extract display name & company from archived item string
-                                            const parts = ol.item.split(' - ');
-                                            const rawName = parts[0];
-                                            const rawCompany = parts.length > 1 ? parts[1] : '—';
+                                          {(entry.prepLines || []).map((ol, oIdx) => {
+                                            const { currentMatch, isRemoved, isChanged, isUnchanged, rawName, rawCompany } = ol;
 
                                             return (
                                               <tr key={oIdx} className={`group transition-all duration-200 border-b border-slate-50 dark:border-slate-800/50 last:border-0 ${
@@ -393,4 +413,4 @@ export function VoucherDetailModal({
       </motion.div>
     </AnimatePresence>
   );
-}
+});

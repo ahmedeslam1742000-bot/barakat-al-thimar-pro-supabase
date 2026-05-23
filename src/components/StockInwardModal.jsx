@@ -10,7 +10,7 @@ import {
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { useAudio } from '../contexts/AudioContext';
-import { useData } from '../contexts/DataContext';
+import { useItemsQuery } from '../hooks/useAppQueries';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { formatDate } from '../lib/dateUtils';
 import { isInvalidCompany } from '../lib/itemFields';
@@ -35,7 +35,7 @@ const PremiumInput = React.forwardRef(({ className, isError, ...props }, ref) =>
 export default function StockInwardModal({ isOpen, onClose, onSaveSuccess }) {
   const { playSuccess, playWarning } = useAudio();
   // ─── Items from global DataContext (no independent fetch needed) ───
-  const { items } = useData();
+  const { data: items = [] } = useItemsQuery();
   const [loading, setLoading] = useState(false);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
 
