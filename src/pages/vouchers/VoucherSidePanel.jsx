@@ -12,7 +12,7 @@ import {
    Memoized row for the desktop table.
 ═══════════════════════════════════════════════════════════════════ */
 
-export const VoucherGroupRow = React.memo(function VoucherGroupRow({
+const VoucherGroupRow = React.memo(function VoucherGroupRow({
   group, idx, kind, expandedGroupId, isExporting, isViewer, theme, headerPartyLabel,
   triggerExport, openEditGroup, openDeleteGroup, setExpandedGroupId, onResetStatus
 }) {
@@ -127,7 +127,7 @@ export const VoucherGroupRow = React.memo(function VoucherGroupRow({
    Memoized expanded details section.
 ═══════════════════════════════════════════════════════════════════ */
 
-export const VoucherGroupDetails = React.memo(function VoucherGroupDetails({
+const VoucherGroupDetails = React.memo(function VoucherGroupDetails({
   group, kind, isViewer, theme, openEdit, openDelete,
 }) {
   const [showHistory, setShowHistory] = React.useState(false);

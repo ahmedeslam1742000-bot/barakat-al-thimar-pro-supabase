@@ -10,7 +10,7 @@ import {
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
-import { useData } from '../contexts/DataContext';
+import { useItemsQuery } from '../hooks/useAppQueries';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { formatItemNameWithCompany } from '../lib/itemFields';
 import {
@@ -28,7 +28,7 @@ export default function () {
   const navigate = useNavigate({ from: '/items' });
   const { q: searchQuery, category: activeCategory } = useSearch({ from: '/items' });
   const { isViewer } = useAuth();
-  const { items } = useData();
+  const { data: items = [] } = useItemsQuery();
   
   const setSearchQuery = (val) => navigate({ search: prev => ({ ...prev, q: val }), replace: true });
   const setActiveCategory = (val) => navigate({ search: prev => ({ ...prev, category: val }), replace: true });

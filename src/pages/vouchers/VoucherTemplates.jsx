@@ -8,7 +8,7 @@ import React from 'react';
    Converted to standalone component.
 ═══════════════════════════════════════════════════════════════════ */
 
-export function SigBox({ label, accentHex }) {
+function SigBox({ label, accentHex }) {
   return (
     <div style={{ textAlign: 'center', border: `1.5px solid ${accentHex}40`, borderRadius: '12px', padding: '14px 20px' }}>
       <div style={{ fontSize: '11px', fontWeight: 900, color: '#374151', marginBottom: '10px' }}>{label}</div>

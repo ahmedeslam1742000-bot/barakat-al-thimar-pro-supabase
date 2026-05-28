@@ -7,7 +7,7 @@ import {
 import { supabase } from '../lib/supabaseClient';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAuth } from '../contexts/AuthContext';
-import { useData } from '../contexts/DataContext';
+import { useItemsQuery } from '../hooks/useAppQueries';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { useDebounce } from '../hooks/useDebounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -52,7 +52,7 @@ const InventoryItemRow = React.memo(({ item, idx, lowStockThreshold }) => {
 
 export default function () {
   const navigate = useNavigate();
-  const { items } = useData();
+  const { data: items = [] } = useItemsQuery();
   const [searchTerm, setSearchTerm] = useState('');
   const [catFilter, setCatFilter] = useState('الكل');
   const { isViewer } = useAuth();

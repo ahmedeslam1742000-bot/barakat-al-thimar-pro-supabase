@@ -10,7 +10,7 @@ import {
   Database, AlertTriangle
 } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
-import { useData } from '../contexts/DataContext';
+import { useItemsQuery } from '../hooks/useAppQueries';
 import { toast } from 'sonner';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { isInvalidCompany } from '../lib/itemFields';
@@ -26,7 +26,7 @@ const getCatIcon = (cat) => categoryIcons[cat] || <Package size={16} className="
 
 export default function () {
   const navigate = useNavigate();
-  const { items } = useData();
+  const { data: items = [] } = useItemsQuery();
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('الكل');

@@ -10,7 +10,7 @@ import {
 } from '../hooks/useAppQueries';
 import { useSettings } from './SettingsContext';
 
-export const DataContext = createContext(null);
+const DataContext = createContext(null);
 
 export function useData() {
   const context = useContext(DataContext);

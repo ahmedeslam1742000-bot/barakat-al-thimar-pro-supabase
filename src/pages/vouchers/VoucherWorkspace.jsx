@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabaseClient';
 import { getItemName, getCompany, getCategory, getUnit, formatItemDisplay } from '../../lib/itemFields';
 import { toast } from 'sonner';
@@ -136,7 +137,8 @@ export default function VoucherWorkspace({ kind }) {
   const { playSuccess, playWarning } = useAudio();
   const { currentUser, isViewer } = useAuth();
   const { settings } = useSettings();
-  const { items, dbTransactionsList: transactions, fetchInitialData } = useData();
+  const queryClient = useQueryClient();
+  const { items, dbTransactionsList: transactions } = useData();
 
   // --- STATE ---
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -363,13 +365,9 @@ export default function VoucherWorkspace({ kind }) {
       toast.success(editingGroupId ? 'تم تحديث السند بنجاح ✅' : 'تم حفظ السند بنجاح ✅');
       closeAddModal();
       
-      if (fetchInitialData) fetchInitialData();
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       
-      {
-          // Force a refresh of the list
-          setLoading(true);
-          setTimeout(() => setLoading(false), 500);
-      }
     } catch (err) {
       console.error('executeSave error:', err);
       toast.error('فشل في حفظ السند: ' + (err.message || 'خطأ غير معروف'));
@@ -410,8 +408,13 @@ export default function VoucherWorkspace({ kind }) {
   const handleDeleteGroupSubmit = async () => {
     setLoading(true);
     const { error } = await supabase.from('transactions').delete().eq('batch_id', groupToDelete.groupId);
-    if (error) toast.error(error.message);
-    else toast.success('تم حذف السند بنجاح');
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('تم حذف السند بنجاح');
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    }
     setIsDeleteGroupOpen(false);
     setLoading(false);
   };
