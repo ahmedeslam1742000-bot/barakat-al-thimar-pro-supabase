@@ -52,6 +52,18 @@ const KIND_CONFIG = {
     sessionFields: [{ key: 'rep', label: 'اسم المستفيد', required: true, placeholder: 'مثال: أحمد محمد' }],
     pdfTitle: 'إيصال عهدة — سند إخراج',
   },
+  in: {
+    txType: 'سند إدخال',
+    codePrefix: '',
+    counterKey: 'in',
+    pageTitle: 'سند إدخال بضاعة',
+    pageSubtitle: 'إثبات دخول بضاعة للمستودع وتحديث الأرصدة.',
+    modalTitle: 'سند إدخال بضاعة',
+    accent: 'emerald',
+    Icon: Upload, // Wait, Upload is imported on line 3, which is fine
+    sessionFields: [{ key: 'supplier', label: 'اسم المورد', required: true, placeholder: 'مثال: شركة التوريدات' }],
+    pdfTitle: 'إيصال توريد — سند إدخال',
+  }
 };
 
 function accentTheme(accent) {
@@ -71,7 +83,7 @@ const LabelClass = 'block text-[10px] font-black text-slate-400 dark:text-slate-
 
 function emptySession(kind) {
   const base = { date: formatDate(new Date()), voucher_no: '', attachment: null };
-  return { ...base, rep: '', line_note: '', outwardType: 'sale' };
+  return { ...base, rep: '', supplier: '', line_note: '', outwardType: 'sale' };
 }
 
 async function allocateVoucherCode(kind) {
@@ -191,7 +203,8 @@ export default function VoucherWorkspace({ kind }) {
       return {
         ...g,
         date: repLine?.date || formatDate(repLine?.timestamp),
-        rep: repLine?.rep,
+        rep: kind === 'in' ? repLine?.supplier : repLine?.rep,
+        supplier: repLine?.supplier,
         line_note: repLine?.notes || '',
         attachment: repLine?.attachment || null,
         voucherCode: (repLine?.reference_number || '').replace(/^[A-Z]+-\d+-/g, '').replace(/^[A-Z]+-/g, ''),
@@ -200,14 +213,14 @@ export default function VoucherWorkspace({ kind }) {
         lastTs: Math.max(...g.lines.map(l => new Date(l.timestamp).getTime() || 0))
       };
     }).sort((a, b) => b.lastTs - a.lastTs);
-  }, [voucherTxs]);
+  }, [voucherTxs, kind]);
 
   const debouncedSearch = useDebounce(filterSearch, 300);
   const filteredGroups = useMemo(() => {
     return voucherGroups.filter((g) => {
       if (debouncedSearch.trim()) {
         const q = normalizeArabic(debouncedSearch);
-        const match = normalizeArabic(g.rep || '').includes(q) || 
+        const match = normalizeArabic(g.rep || g.supplier || '').includes(q) || 
                       normalizeArabic(g.voucherCode || '').includes(q) || 
                       g.lines.some(l => normalizeArabic(l.item || '').includes(q));
         if (!match) return false;
@@ -370,7 +383,9 @@ export default function VoucherWorkspace({ kind }) {
     setEditingLineIds(group.lines.map(l => l.id));
     setPreservedVoucherCode(group.voucherCode);
     setSession({
-      rep: group.rep || '',
+      rep: kind === 'outward' ? group.rep : '',
+      supplier: kind === 'in' ? group.supplier : '',
+      [cfg.sessionFields[0].key]: (kind === 'in' ? group.supplier : group.rep) || '',
       date: group.date,
       voucher_no: group.voucherCode,
       line_note: cleanNote(group.line_note)

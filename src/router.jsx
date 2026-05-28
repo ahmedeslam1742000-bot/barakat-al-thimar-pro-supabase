@@ -35,6 +35,26 @@ function AccessDenied() {
   );
 }
 
+function GlobalErrorComponent({ error }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-[70vh] text-center px-4" dir="rtl">
+      <div className="w-20 h-20 bg-rose-100 dark:bg-rose-500/10 rounded-full flex items-center justify-center text-rose-600 mb-6">
+        <ShieldOff size={40} />
+      </div>
+      <h2 className="text-2xl font-black text-slate-800 dark:text-white mb-2 font-tajawal">حدث خطأ غير متوقع</h2>
+      <p className="text-slate-500 dark:text-slate-400 max-w-md font-readex mb-6">
+        عذراً، واجه التطبيق مشكلة غير متوقعة أثناء معالجة الصفحة.
+      </p>
+      <button 
+        onClick={() => window.location.reload()}
+        className="px-6 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold font-tajawal transition-all shadow-sm"
+      >
+        إعادة تحميل التطبيق
+      </button>
+    </div>
+  );
+}
+
 function SuspenseWrapper({ children }) {
   return (
     <Suspense fallback={
@@ -177,4 +197,7 @@ const routeTree = rootRoute.addChildren([
   settingsRoute,
 ]);
 
-export const router = createRouter({ routeTree });
+export const router = createRouter({ 
+  routeTree,
+  defaultErrorComponent: GlobalErrorComponent
+});

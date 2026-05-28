@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useContext, useMemo, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { 
   useItemsQuery, 
@@ -8,6 +8,7 @@ import {
   useRepsQuery, 
   useComputedData 
 } from '../hooks/useAppQueries';
+import { useSettings } from './SettingsContext';
 
 export const DataContext = createContext(null);
 
@@ -21,6 +22,8 @@ export function useData() {
 
 export function DataProvider({ children, currentUser }) {
   const queryClient = useQueryClient();
+  const { settings } = useSettings();
+  const lowStockThreshold = settings?.lowStockThreshold ?? 50;
   
   const { data: items = [], refetch: fetchItems } = useItemsQuery(!!currentUser);
   const { data: dbTransactionsList = [], refetch: fetchTrans } = useTransactionsQuery(!!currentUser);
@@ -28,32 +31,46 @@ export function DataProvider({ children, currentUser }) {
   const { data: repExpenses = [], refetch: fetchExpenses } = useRepExpensesQuery(!!currentUser);
   const { data: repsList = [], refetch: fetchReps } = useRepsQuery(!!currentUser);
 
-  const computed = useComputedData(dbTransactionsList, items);
+  const computed = useComputedData(dbTransactionsList, items, lowStockThreshold);
 
-  const fetchInitialData = () => {
+  const fetchInitialData = useCallback(() => {
     fetchItems();
     fetchTrans();
     fetchReceipts();
     fetchExpenses();
     fetchReps();
-  };
+  }, [fetchItems, fetchTrans, fetchReceipts, fetchExpenses, fetchReps]);
 
   // Polyfills for legacy state setters to update React Query cache directly for Optimistic UI
-  const setItems = (updater) => {
-    queryClient.setQueryData(['products'], typeof updater === 'function' ? updater(items) : updater);
-  };
-  const setDbTransactionsList = (updater) => {
-    queryClient.setQueryData(['transactions'], typeof updater === 'function' ? updater(dbTransactionsList) : updater);
-  };
-  const setReceiptVouchers = (updater) => {
-    queryClient.setQueryData(['receipt_vouchers'], typeof updater === 'function' ? updater(receiptVouchers) : updater);
-  };
-  const setRepExpenses = (updater) => {
-    queryClient.setQueryData(['representative_expenses'], typeof updater === 'function' ? updater(repExpenses) : updater);
-  };
-  const setRepsList = (updater) => {
-    queryClient.setQueryData(['reps'], typeof updater === 'function' ? updater(repsList) : updater);
-  };
+  const setItems = useCallback((updater) => {
+    queryClient.setQueryData(['products'], (old) => 
+      typeof updater === 'function' ? updater(old) : updater
+    );
+  }, [queryClient]);
+
+  const setDbTransactionsList = useCallback((updater) => {
+    queryClient.setQueryData(['transactions'], (old) => 
+      typeof updater === 'function' ? updater(old) : updater
+    );
+  }, [queryClient]);
+
+  const setReceiptVouchers = useCallback((updater) => {
+    queryClient.setQueryData(['receipt_vouchers'], (old) => 
+      typeof updater === 'function' ? updater(old) : updater
+    );
+  }, [queryClient]);
+
+  const setRepExpenses = useCallback((updater) => {
+    queryClient.setQueryData(['representative_expenses'], (old) => 
+      typeof updater === 'function' ? updater(old) : updater
+    );
+  }, [queryClient]);
+
+  const setRepsList = useCallback((updater) => {
+    queryClient.setQueryData(['reps'], (old) => 
+      typeof updater === 'function' ? updater(old) : updater
+    );
+  }, [queryClient]);
 
   const value = useMemo(() => ({
     items, setItems,
@@ -70,13 +87,13 @@ export function DataProvider({ children, currentUser }) {
     cancelledVouchers: computed.cancelledVouchers,
     morningBriefData: computed.morningBriefData,
   }), [
-    items,
-    dbTransactionsList,
-    repsList,
-    receiptVouchers,
-    repExpenses,
+    items, setItems,
+    dbTransactionsList, setDbTransactionsList,
+    repsList, setRepsList,
+    receiptVouchers, setReceiptVouchers,
+    repExpenses, setRepExpenses,
+    fetchInitialData,
     computed,
-    // Note: Setters and fetchInitialData are stable enough or bound to queryClient, so they don't break memo much
   ]);
 
   return (

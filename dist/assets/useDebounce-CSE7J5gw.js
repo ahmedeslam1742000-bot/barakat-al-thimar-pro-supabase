@@ -1,1 +1,0 @@
-import{o as e}from"./chunk-zsgVPwQN.js";import{s as t}from"./createLucideIcon-D_UqXPLx.js";var n=e(t()),r=(e,t=300)=>{let[r,i]=(0,n.useState)(e);return(0,n.useEffect)(()=>{let n=setTimeout(()=>{i(e)},t);return()=>{clearTimeout(n)}},[e,t]),r};export{r as t};

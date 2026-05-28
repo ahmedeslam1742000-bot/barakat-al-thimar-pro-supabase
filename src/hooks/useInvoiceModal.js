@@ -260,12 +260,7 @@ export function useInvoiceModal({
     playSuccess, performInvoiceReset, fetchInitialData, setLoading,
   ]);
 
-  // Bypass the unrendered confirmation modal
-  useEffect(() => {
-    if (showInvoiceSaveConfirm) {
-      performInvoiceSave();
-    }
-  }, [showInvoiceSaveConfirm, performInvoiceSave]);
+
 
   // ─── Public API ───────────────────────────────────────────────────────
   return {

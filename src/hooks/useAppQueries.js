@@ -247,7 +247,7 @@ export function useRepsQuery(enabled = true) {
  *   morningBriefData: { atRiskItems: any[], totalQty: number }
  * }}
  */
-export function useComputedData(dbTransactionsList = [], items = []) {
+export function useComputedData(dbTransactionsList = [], items = [], lowStockThreshold = 50) {
   const voucherTransactionsMemo = useMemo(() => {
     if (!dbTransactionsList || dbTransactionsList.length === 0) return [];
     const outboundTx = dbTransactionsList
@@ -305,9 +305,9 @@ export function useComputedData(dbTransactionsList = [], items = []) {
       group.lines.push({ ...tx, quantity: Number(tx.qty || 0), timestamp: txDate });
 
       const txIsInvoiced =
-        tx.status === 'مفوتر' ||
-        tx.invoiced === true ||
-        (tx.notes && (tx.notes.includes('[تمت الفوترة]') || tx.notes.includes('[تم إصدار الفاتورة]')));
+         tx.status === 'مفوتر' ||
+         tx.invoiced === true ||
+         (tx.notes && (tx.notes.includes('[تمت الفوترة]') || tx.notes.includes('[تم إصدار الفاتورة]')));
 
       const txIsCancelled = tx.status === 'cancelled';
       if (txIsInvoiced) {
@@ -352,15 +352,16 @@ export function useComputedData(dbTransactionsList = [], items = []) {
   const morningBriefData = useMemo(() => {
     if (!items || items.length === 0) return { atRiskItems: [], totalQty: 0 };
     const atRiskItems = items
-      .filter(item => item.stockQty < 50)
+      .filter(item => item.stockQty < lowStockThreshold)
       .map(item => ({
         id: item.id,
         name: item.name,
         company: item.company || 'بدون شركة',
         cat: item.cat || 'أخرى',
+        unit: item.unit || 'كرتونة',
         totalQtyAtRisk: item.stockQty,
         isExpired: false,
-        isUrgent: item.stockQty < 20,
+        isUrgent: item.stockQty < Math.max(1, Math.floor(lowStockThreshold / 2)),
         daysLeft: 0,
       }))
       .sort((a, b) => a.totalQtyAtRisk - b.totalQtyAtRisk);
@@ -369,7 +370,7 @@ export function useComputedData(dbTransactionsList = [], items = []) {
       atRiskItems,
       totalQty: atRiskItems.reduce((sum, item) => sum + item.totalQtyAtRisk, 0),
     };
-  }, [items]);
+  }, [items, lowStockThreshold]);
 
   return {
     voucherTransactionsMemo,

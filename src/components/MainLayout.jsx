@@ -22,7 +22,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAudio } from '../contexts/AudioContext';
 import { useSettings } from '../contexts/SettingsContext';
-import { supabase } from '../lib/supabaseClient';
+import { useData } from '../contexts/DataContext';
 import Sidebar from './Sidebar';
 import { normalizeArabic } from '../lib/arabicTextUtils';
 import { useNavigate, useLocation } from '@tanstack/react-router';
@@ -33,12 +33,11 @@ export default function MainLayout({ children }) {
   const { isDarkMode, toggleTheme } = useTheme();
   const { isMuted, toggleMute } = useAudio();
   const { settings } = useSettings();
+  const { morningBriefData } = useData();
   const navigate = useNavigate();
   const location = useLocation();
   const isDashboard = location.pathname === '/';
   
-  const [criticalItems, setCriticalItems] = useState([]);
-  const [allItems, setAllItems] = useState([]);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const alertsRef = useRef(null);
@@ -48,59 +47,6 @@ export default function MainLayout({ children }) {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   // Removed unused currentTime interval to prevent unnecessary re-renders
-
-  // Fetch critical items for the bell notification
-  useEffect(() => {
-    const fetchItems = async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, company, cat, unit, stock_qty, created_at')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching items:', error);
-        return;
-      }
-
-      const threshold = settings?.lowStockThreshold ?? 50;
-      setCriticalItems(data.filter(i => i.stock_qty < threshold));
-      setAllItems(data);
-    };
-
-    fetchItems();
-
-    // Subscribe to real-time changes
-    const channel = supabase
-      .channel('products-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'products',
-        },
-        (payload) => {
-          setAllItems(prev => {
-            let updated;
-            if (payload.eventType === 'INSERT') {
-              updated = [payload.new, ...prev];
-            } else if (payload.eventType === 'DELETE') {
-              updated = prev.filter(i => i.id !== payload.old.id);
-            } else {
-              updated = prev.map(i => i.id === payload.new.id ? { ...i, ...payload.new } : i);
-            }
-            const newThreshold = settings?.lowStockThreshold ?? 50;
-            setCriticalItems(updated.filter(i => i.stock_qty < newThreshold));
-            return updated;
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [settings?.lowStockThreshold]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -190,8 +136,8 @@ export default function MainLayout({ children }) {
                 {/* Theme Toggle */}
                 <button 
                   onClick={toggleTheme}
-                  className="p-2 text-slate-400 hover:text-primary dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-900 rounded-xl transition-all"
-                  title={isDarkMode ? "الوضع المضيء" : "الوضع المظلم"}
+                  className="p-2 text-slate-400 hover:text-primary dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-900 rounded-xl transition-all opacity-50 cursor-not-allowed"
+                  title="الوضع المظلم (قيد التطوير حالياً)"
                 >
                   {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
                 </button>
@@ -212,7 +158,7 @@ export default function MainLayout({ children }) {
                     className={`p-2 rounded-xl transition-all relative ${isAlertsOpen ? 'bg-white dark:bg-emerald-500/10 text-primary dark:text-emerald-400 shadow-sm' : 'text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-white dark:hover:bg-slate-900'}`}
                   >
                     <Bell size={18} />
-                    {criticalItems.length > 0 && (
+                    {(morningBriefData?.atRiskItems || []).length > 0 && (
                       <span className="absolute top-1 left-1 flex h-3 w-3">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                         <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500 text-white text-[8px] font-black items-center justify-center border border-white dark:border-slate-950"></span>
@@ -232,12 +178,12 @@ export default function MainLayout({ children }) {
                     <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/50">
                       <span className="font-tajawal font-black text-sm text-slate-800 dark:text-white">التنبيهات</span>
                       <span className="bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-[10px] px-2.5 py-1 rounded-full font-black border border-rose-100 dark:border-rose-900/50 shadow-sm">
-                        {criticalItems.length} تنبيه حرج
+                        {(morningBriefData?.atRiskItems || []).length} تنبيه حرج
                       </span>
                     </div>
                     <div className="max-h-80 overflow-y-auto custom-scrollbar">
-                      {criticalItems.length > 0 ? (
-                        criticalItems.map((item, idx) => (
+                      {(morningBriefData?.atRiskItems || []).length > 0 ? (
+                        (morningBriefData?.atRiskItems || []).map((item, idx) => (
                           <div key={idx} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-950/40 transition-colors border-b border-slate-100 dark:border-slate-800 last:border-0 flex items-start gap-3 group/alert">
                             <div className="mt-0.5 p-2 bg-rose-50 dark:bg-rose-950/50 rounded-xl group-hover/alert:bg-rose-100 dark:group-hover/alert:bg-rose-900/50 transition-colors">
                               <AlertOctagon size={16} className="text-rose-500 dark:text-rose-400" />
@@ -245,7 +191,7 @@ export default function MainLayout({ children }) {
                             <div className="flex-1">
                               <p className="text-xs font-black text-slate-800 dark:text-white group-hover/alert:text-rose-600 dark:group-hover/alert:text-rose-400 transition-colors">{item.name}</p>
                               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
-                                المخزون الحالي: <span className="font-black text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 px-1.5 rounded">{item.stock_qty} {item.unit}</span>
+                                المخزون الحالي: <span className="font-black text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/50 px-1.5 rounded">{item.totalQtyAtRisk} {item.unit}</span>
                               </p>
                             </div>
                           </div>
